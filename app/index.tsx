@@ -20,12 +20,14 @@ type KMBResponse = {
 const App = () => {
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<Buses[]>([]);
+  const [generatedTimestamp, setGeneratedTimestamp] = useState<string>('');
 
   const getBUSETA = async () => {
     try {
       const response = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-eta/3M/1');
       const json = (await response.json()) as KMBResponse;
       setData(json.data);
+      setGeneratedTimestamp(json.generated_timestamp);
     } catch (error) {
       console.error(error);
     } finally {
@@ -35,6 +37,10 @@ const App = () => {
 
   useEffect(() => {
     getBUSETA();
+    const intervalId = setInterval(() => {
+      getBUSETA();
+    }, 30000); // 30 seconds
+    return () => clearInterval(intervalId);
   }, []);
 
   // Helper to convert ETA string to HK local time
@@ -58,15 +64,18 @@ const App = () => {
       {isLoading ? (
         <ActivityIndicator />
       ) : (
-        <FlatList
-          data={data}
-          keyExtractor={({route}) => route}
-          renderItem={({item}) => (
-            <Text>
-              {item.route} - {item.dir} ({item.service_type}) to {item.dest_en} ETA: {formatEtaToHKTime(item.eta)}
-            </Text>
-          )}
-        />
+        <>
+          <Text>Generated Timestamp: {generatedTimestamp || 'N/A'}</Text>
+          <FlatList
+            data={data}
+            keyExtractor={({route}) => route}
+            renderItem={({item}) => (
+              <Text>
+                {item.route} - {item.dir} ({item.service_type}) to {item.dest_en} ETA: {formatEtaToHKTime(item.eta)}
+              </Text>
+            )}
+          />
+        </>
       )}
     </View>
   );
