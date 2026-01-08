@@ -99,7 +99,7 @@ const App = () => {
           <Text>Generated Timestamp: {formatEtaToHKTime(generatedTimestamp) || 'N/A'}</Text>
           <FlatList
             data={data}
-            keyExtractor={({route}) => route}
+            keyExtractor={item => `${item.route}-${item.dir}-${item.service_type}-${item.dest_en}-${item.eta}`}
             renderItem={({item}) => (
               <Text>
                 {item.route} will arrive in {getMinutesUntilArrival(item.eta) || '-'} minutes (ETA: {formatEtaToHKTime(item.eta)})

@@ -79,7 +79,7 @@ const App = () => {
           <Text>Generated Timestamp: {formatEtaToHKTime(generatedTimestamp) || 'N/A'}</Text>
           <FlatList
             data={data}
-            keyExtractor={({route}) => route}
+            keyExtractor={item => `${item.route}-${item.dir}-${item.service_type}-${item.dest_en}-${item.eta}`}
             renderItem={({item}) => (
               <Text>
                 {item.route} - {item.dir} ({item.service_type}) to {item.dest_en} ETA: {formatEtaToHKTime(item.eta)}
