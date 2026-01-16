@@ -47,13 +47,13 @@
           "widgets": [
             {
               "name": "Hello",
-              "label": "My Hello Widget",
+              "label": "Bus ETA Widget",
               "minWidth": "320dp",
               "minHeight": "120dp",
-              "targetCellWidth": 5,
-              "targetCellHeight": 2,
-              "description": "A simple hello world widget for the bus app",
-              "updatePeriodMillis": 1800000
+              "targetCellWidth": 3,
+              "targetCellHeight": 1,
+              "description": "Display bus route ETAs (272P, 272X)",
+              "updatePeriodMillis": 300000
             }
           ]
         }
