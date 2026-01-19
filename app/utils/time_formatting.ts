@@ -13,11 +13,18 @@ export const formatEtaToHKTime = (eta: string): string => {
   });
 };
 
-export const getMinutesUntilArrival = (eta: string): number | null => {
+// Optionally pass a referenceTime (ISO string) to use as the 'current' time (e.g., from latest ETA data_timestamp)
+export const getMinutesUntilArrival = (eta: string, referenceTime?: string): number | null => {
   if (!eta) return null;
   const etaDate = new Date(eta);
   if (isNaN(etaDate.getTime())) return null;
-  const now = new Date();
+  let now: Date;
+  if (referenceTime) {
+    now = new Date(referenceTime);
+    if (isNaN(now.getTime())) now = new Date();
+  } else {
+    now = new Date();
+  }
   const diffMs = etaDate.getTime() - now.getTime();
   return Math.max(0, Math.round(diffMs / 60000));
 };

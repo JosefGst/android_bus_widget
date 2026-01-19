@@ -11,6 +11,9 @@ const MyRoutes = () => {
   const [stopNames, setStopNames] = useState<Record<string, string>>({});
 
   // List of routes to fetch
+
+  // State to trigger UI updates for countdown and show current time
+  const [now, setNow] = useState(Date.now());
   const routesToFetch = [
     { stop: 'B464BD6334A93FA1', route: '272P', dir: '1' },
     { stop: 'B644204AEDE7A031', route: '272X', dir: '1' },
@@ -41,17 +44,30 @@ const MyRoutes = () => {
     }
   };
 
+
+  // Fetch ETA data every 30 seconds
   useEffect(() => {
     fetchAll();
-    const intervalId = setInterval(() => {
+    const fetchIntervalId = setInterval(() => {
       fetchAll();
     }, 30000); // 30 seconds
-    return () => clearInterval(intervalId);
+    return () => clearInterval(fetchIntervalId);
+  }, []);
+
+  // Update local clock every second for smooth countdown and current time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
 
   return (
     <View style={{flex: 1, padding: 24}}>
+      <Text style={{fontWeight: 'bold', fontSize: 18, marginBottom: 8}}>
+        Local Time: {new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </Text>
       {isLoading ? (
         <ActivityIndicator />
       ) : (
@@ -100,7 +116,7 @@ const MyRoutes = () => {
                 ) : (
                   group.etas.map((item, idx) => (
                     <Text key={idx}>
-                      {item.route} will arrive in {getMinutesUntilArrival(item.eta) || '-'} minutes (ETA: {formatEtaToHKTime(item.eta)})
+                      {item.route} will arrive in {getMinutesUntilArrival(item.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(item.eta)})
                     </Text>
                   ))
                 )}
