@@ -2,8 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { ETA, fetchRouteETA } from './utils/fetch';
+import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
 
 const RoutesStopScreen = () => {
+  const [now, setNow] = useState(Date.now());
   const router = useRouter();
   const params = useLocalSearchParams();
   const { route, bound, service_type } = params;
@@ -54,7 +56,7 @@ const RoutesStopScreen = () => {
           keyExtractor={(item, index) => `${item.route}-${item.dir}-${item.service_type}-${item.dest_en}-${item.eta}-${index}`}
           renderItem={({ item }) => (
             <Text style={{ fontSize: 16, marginBottom: 8 }}>
-              {item.route} ({item.dir}) [{item.service_type}] → {item.dest_en} ETA: {item.eta}
+              {item.route} ({item.dir}) will arrive in {getMinutesUntilArrival(item.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(item.eta)})
             </Text>
           )}
           ListEmptyComponent={<Text>No ETAs found for this route.</Text>}
