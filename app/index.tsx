@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { ROUTS, fetchBusROUTS } from './utils/fetch';
+import { ROUTS } from './utils/fetch';
 import { formatEtaToHKTime } from './utils/time_formatting';
 
 
@@ -32,7 +32,7 @@ const App = () => {
       }
       // Always try to fetch latest from network
       try {
-        const res = await fetchBusROUTS();
+        const res = await fetchROUTE();
         setRoutes(res.data);
         setGeneratedTimestamp(res.generated_timestamp);
         await AsyncStorage.setItem('bus_routes_cache', JSON.stringify({

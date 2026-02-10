@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { ETA, fetchStopInfo, getAllBUSETAs } from './utils/fetch';
+import { ETA, fetchStop, getAllBUSETAs } from './utils/fetch';
 import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
 
 const MyRoutes = () => {
@@ -29,7 +29,7 @@ const MyRoutes = () => {
 
       // Fetch stop names for all unique stops
       const uniqueStops = Array.from(new Set(routesToFetch.map(r => r.stop)));
-      const stopInfoResults = await Promise.all(uniqueStops.map(stopId => fetchStopInfo(stopId)));
+      const stopInfoResults = await Promise.all(uniqueStops.map(stopId => fetchStop(stopId)));
       const stopNameMap: Record<string, string> = {};
       stopInfoResults.forEach((info, idx) => {
         if (info) {

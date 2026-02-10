@@ -1,6 +1,6 @@
 import React from "react";
 import type { WidgetTaskHandlerProps } from "react-native-android-widget";
-import { fetchStopInfo, getAllBUSETAs } from "../app/utils/fetch";
+import { fetchStop, getAllBUSETAs } from "../app/utils/fetch";
 import { BusETAWidget } from "./BusETAWidget";
 
 // Routes to fetch - same as in my_routes.tsx
@@ -31,7 +31,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
       // Fetch stop names for all unique stops
       const uniqueStops = Array.from(new Set(routesToFetch.map(r => r.stop)));
-      const stopInfoResults = await Promise.all(uniqueStops.map(stopId => fetchStopInfo(stopId)));
+      const stopInfoResults = await Promise.all(uniqueStops.map(stopId => fetchStop(stopId)));
       const stopNameMap: Record<string, string> = {};
       stopInfoResults.forEach((info, idx) => {
         if (info) {
