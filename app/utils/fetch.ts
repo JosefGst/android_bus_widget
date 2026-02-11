@@ -28,7 +28,7 @@ export type KMBResponse<T> = {
 };
 
 
-export type StopInfo = {
+export type Stop = {
   stop: string;
   name_en: string;
   name_tc?: string;
@@ -44,6 +44,13 @@ export const fetchROUTE = async (): Promise<KMBResponse<ROUTS>> => {
   const url = `https://data.etabus.gov.hk/v1/transport/kmb/route`;
   const response = await fetch(url);
   return response.json() as Promise<KMBResponse<ROUTS>>;
+};
+
+// Fetch all BUS STOPS
+export const fetchSTOP = async (): Promise<KMBResponse<Stop>> => {
+  const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop`;
+  const response = await fetch(url);
+  return response.json() as Promise<KMBResponse<Stop>>;
 };
 
 // Fetch all ROUTS Stops for a given route
@@ -69,12 +76,12 @@ export const fetchStopETA = async (stop: string, route: string, dir: string): Pr
 
 
 // Fetch stop info for a given stop ID
-export const fetchStop = async (stop: string): Promise<StopInfo | null> => {
+export const fetchStop = async (stop: string): Promise<Stop | null> => {
   try {
     const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop/${stop}`;
     const response = await fetch(url);
     const json = await response.json();
-    return json.data as StopInfo;
+    return json.data as Stop;
   } catch (e) {
     console.error('Failed to fetch stop info', e);
     return null;

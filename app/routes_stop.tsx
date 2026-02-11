@@ -20,7 +20,6 @@ const RoutesStopScreen = () => {
       try {
         if (typeof route === 'string' && typeof service_type === 'string') {
           // For demo, use route as stopId. Replace with actual stopId logic as needed.
-          const stopId = route; // Replace with actual stopId
           const res = await fetchRouteETA(route, service_type);
           setData(res.data);
         } else {
