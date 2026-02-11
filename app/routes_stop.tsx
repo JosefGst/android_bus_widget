@@ -1,16 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { ETA, fetchRouteETA } from './utils/fetch';
-import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
+import { fetchRouteSTOP, getCachedStops, ROUTS } from './utils/fetch';
 
 const RoutesStopScreen = () => {
-  const [now, setNow] = useState(Date.now());
+  // ...existing code...
   const router = useRouter();
   const params = useLocalSearchParams();
   const { route, bound, service_type } = params;
   const [isLoading, setLoading] = useState(true);
-  const [data, setData] = useState<ETA[]>([]);
+  const [data, setData] = useState<ROUTS[]>([]);
+  const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,10 +18,19 @@ const RoutesStopScreen = () => {
       setLoading(true);
       setError(null);
       try {
-        if (typeof route === 'string' && typeof service_type === 'string') {
-          // For demo, use route as stopId. Replace with actual stopId logic as needed.
-          const res = await fetchRouteETA(route, service_type);
+        if (typeof route === 'string' && typeof bound === 'string' && typeof service_type === 'string') {
+          let apiBound = bound;
+          if (bound === 'I') apiBound = 'inbound';
+          else if (bound === 'O') apiBound = 'outbound';
+          const res = await fetchRouteSTOP(route, apiBound, service_type);
           setData(res.data);
+          // Fetch stop names from cache
+          const { stops } = await getCachedStops();
+          const stopNameMap: { [stopId: string]: string } = {};
+          stops.forEach(stop => {
+            stopNameMap[stop.stop] = stop.name_en;
+          });
+          setStopNames(stopNameMap);
         } else {
           setError('Invalid route, bound, or service type');
         }
@@ -52,13 +61,13 @@ const RoutesStopScreen = () => {
       ) : (
         <FlatList
           data={data}
-          keyExtractor={(item, index) => `${item.route}-${item.dir}-${item.service_type}-${item.dest_en}-${item.eta}-${index}`}
+          keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
           renderItem={({ item }) => (
             <Text style={{ fontSize: 16, marginBottom: 8 }}>
-              {item.route} ({item.dir}) will arrive in {getMinutesUntilArrival(item.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(item.eta)})
+              Stop Seq {item.seq}: {stopNames[item.stop] || item.stop}
             </Text>
           )}
-          ListEmptyComponent={<Text>No ETAs found for this route.</Text>}
+          ListEmptyComponent={<Text>No stops found for this route.</Text>}
         />
       )}
     </View>
