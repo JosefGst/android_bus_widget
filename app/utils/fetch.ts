@@ -92,10 +92,10 @@ export const fetchStop = async (stop: string): Promise<Stop | null> => {
 
 // Fetch all ETAs for a list of routes and combine results
 export const getAllBUSETAs = async (
-  routesToFetch: { stop: string; route: string; dir: string }[]
+  routesToFetch: { stop: string; route: string; service_type: string }[]
 ): Promise<{ allData: ETA[]; generatedTimestamp: string }> => {
   const results = await Promise.all(
-    routesToFetch.map(r => fetchStopETA(r.stop, r.route, r.dir))
+    routesToFetch.map(r => fetchStopETA(r.stop, r.route, r.service_type))
   );
   const allData = results.flatMap(res => res.data);
   const generatedTimestamp = results[0]?.generated_timestamp || '';

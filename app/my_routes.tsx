@@ -143,7 +143,7 @@ const MyRoutes = () => {
                 if (dir === '2' || dir === 'I') return ['2', 'I'];
                 return [dir];
               };
-              const routeObj = routesToFetch.find(r => r.route === eta.route && normalizeDir(r.dir).includes(eta.dir));
+              const routeObj = routesToFetch.find(r => r.route === eta.route && r.service_type === eta.service_type && normalizeDir(r.service_type).includes(eta.dir));
               const stopId = routeObj ? routeObj.stop : routesToFetch[index]?.stop;
               const stopNameRaw = stopNames[stopId] || stopId;
               const stopName = normalizeStopName(stopNameRaw);
