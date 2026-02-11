@@ -1,8 +1,9 @@
 
+import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import { ETA, fetchStop, getAllBUSETAs } from './utils/fetch';
 import { loadFavoriteStopIds } from './utils/storage';
@@ -187,6 +188,33 @@ const MyRoutes = () => {
               </View>
             ));
           })()}
+          {/* List of routes with delete button at the bottom */}
+          <View style={{marginTop: 32}}>
+            <Text style={{fontWeight: 'bold', fontSize: 16, marginBottom: 4}}>My Routes</Text>
+            {routesToFetch.length === 0 ? (
+              <Text>No routes added.</Text>
+            ) : (
+              routesToFetch.map((route, idx) => {
+                const stopName = stopNames[route.stop] || route.stop;
+                return (
+                  <View key={idx} style={{flexDirection: 'row', alignItems: 'center', marginBottom: 2}}>
+                    <Text style={{flex: 1}}>
+                      {route.route} ({stopName})
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setRoutesToFetch(prev => prev.filter(r => !(r.stop === route.stop && r.route === route.route && r.service_type === route.service_type)));
+                      }}
+                      accessibilityLabel={`Remove route ${route.route}`}
+                      style={{marginLeft: 8}}
+                    >
+                      <MaterialIcons name="delete" size={22} color="#c00" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
+            )}
+          </View>
         </>
       )}
     </View>
