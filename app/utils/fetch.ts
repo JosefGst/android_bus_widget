@@ -70,8 +70,8 @@ export const fetchRouteETA = async (route: string, dir: string): Promise<KMBResp
 };
 
 // Fetch ETA for a stop and route
-export const fetchStopETA = async (stop: string, route: string, dir: string): Promise<KMBResponse<ETA>> => {
-  const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stop}/${route}/${dir}`;
+export const fetchStopETA = async (stop: string, route: string, service_type: string): Promise<KMBResponse<ETA>> => {
+  const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stop}/${route}/${service_type}`;
   const response = await fetch(url);
   return response.json() as Promise<KMBResponse<ETA>>;
 };

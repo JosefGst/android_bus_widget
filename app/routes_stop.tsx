@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { fetchRouteSTOP, getCachedStops, ROUTS } from './utils/fetch';
+import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from './utils/fetch';
 
 const RoutesStopScreen = () => {
   // ...existing code...
@@ -11,7 +11,10 @@ const RoutesStopScreen = () => {
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<ROUTS[]>([]);
   const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
+  const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
+  const [loadingEta, setLoadingEta] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,9 +66,55 @@ const RoutesStopScreen = () => {
           data={data}
           keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
           renderItem={({ item }) => (
-            <Text style={{ fontSize: 16, marginBottom: 8 }}>
-              Stop Seq {item.seq}: {stopNames[item.stop] || item.stop}
-            </Text>
+            <View>
+              <Pressable
+                onPress={async () => {
+                  if (expandedStop === item.stop) {
+                    setExpandedStop(null);
+                  } else {
+                    setExpandedStop(item.stop);
+                    // Only fetch if not already fetched
+                    if (!etaMap[item.stop]) {
+                      setLoadingEta(item.stop);
+                      try {
+                        // Use correct direction for API
+                        let apiBound = bound;
+                        if (bound === 'I') apiBound = 'inbound';
+                        else if (bound === 'O') apiBound = 'outbound';
+                        const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${item.stop}/${route}/${service_type}`;
+                        console.log('Fetching ETA URL:', url);
+                        const etaRes = await fetchStopETA(item.stop, route as string, service_type as string);
+                        setEtaMap(prev => ({ ...prev, [item.stop]: etaRes.data }));
+                      } catch (e) {
+                        setEtaMap(prev => ({ ...prev, [item.stop]: [] }));
+                      } finally {
+                        setLoadingEta(null);
+                      }
+                    }
+                  }
+                }}
+                style={{ paddingVertical: 8 }}
+              >
+                <Text style={{ fontSize: 16, marginBottom: expandedStop === item.stop ? 0 : 8 }}>
+                  Stop Seq {item.seq}: {stopNames[item.stop] || item.stop}
+                </Text>
+              </Pressable>
+              {expandedStop === item.stop && (
+                <View style={{ paddingLeft: 16, paddingBottom: 8 }}>
+                  {loadingEta === item.stop ? (
+                    <Text style={{ fontSize: 15, color: '#007aff' }}>Loading ETA...</Text>
+                  ) : etaMap[item.stop] && etaMap[item.stop].length > 0 ? (
+                    etaMap[item.stop].map((eta, idx) => (
+                      <Text key={idx} style={{ fontSize: 15, color: '#007aff' }}>
+                        ETA: {eta.eta ? eta.eta : 'N/A'}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={{ fontSize: 15, color: '#007aff' }}>No ETA available</Text>
+                  )}
+                </View>
+              )}
+            </View>
           )}
           ListEmptyComponent={<Text>No stops found for this route.</Text>}
         />
