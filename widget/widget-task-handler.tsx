@@ -76,14 +76,25 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       });
 
       
-      // Group ETAs by stopName
+      // Group ETAs by normalized stop name (matching MyRoutes logic)
       const groupedEtas: Record<string, any[]> = {};
-      allData.forEach((eta, idx) => {
-        const routeObj = routesToFetch.find(r => r.route === eta.route && r.service_type === eta.service_type);
-        const stopId = routeObj ? routeObj.stop : routesToFetch[idx]?.stop;
-        const stopName = stopId ? stopNameMap[stopId] : 'Unknown Stop';
-        if (!groupedEtas[stopName]) groupedEtas[stopName] = [];
-        groupedEtas[stopName].push({ ...eta, stopName });
+      routesToFetch.forEach(routeObj => {
+        const stopId = routeObj.stop;
+        const stopNameRaw = stopNameMap[stopId] || stopId;
+        const normalizedStopName = require('../app/utils/string_formatting').normalizeStopName(stopNameRaw);
+        if (!groupedEtas[normalizedStopName]) {
+          groupedEtas[normalizedStopName] = [];
+        }
+      });
+
+      // Assign ETAs to the correct stop group by matching stopId
+      allData.forEach((eta) => {
+        const stopId = eta.stop;
+        const stopNameRaw = stopNameMap[stopId] || stopId;
+        const normalizedStopName = require('../app/utils/string_formatting').normalizeStopName(stopNameRaw);
+        if (groupedEtas[normalizedStopName]) {
+          groupedEtas[normalizedStopName].push(eta);
+        }
       });
 
       // Debug: log the grouped ETAs
