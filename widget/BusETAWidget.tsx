@@ -4,6 +4,7 @@ import {
   TextWidget,
 } from "react-native-android-widget";
 import type { ETA } from "../app/utils/fetch";
+import { normalizeStopName } from "../app/utils/string_formatting";
 import { getMinutesUntilArrival } from "../app/utils/time_formatting";
 
 interface BusETAWidgetProps {
@@ -38,8 +39,6 @@ export function BusETAWidget({ groupedEtas, etas, isLoading, error }: BusETAWidg
     });
   };
 
-  // Helper to normalize stop name by removing (PA...)
-  const normalizeStopName = (name: string) => name.replace(/\s*\(PA\d+\)/, '').trim();
 
   // Render grouped routes under each stop name
   const renderGroupedEtas = () => {

@@ -7,6 +7,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import { ETA, fetchStop, getAllBUSETAs } from './utils/fetch';
 import { loadFavoriteStopIds } from './utils/storage';
+import { normalizeStopName } from './utils/string_formatting';
 import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
 
 // Locally extend ETA to include stop
@@ -144,12 +145,8 @@ const MyRoutes = () => {
         <ActivityIndicator />
       ) : (
         <>
-          {/* Group ETAs by normalized stop name (remove (PA...)) */}
+          {/* Group ETAs by normalized stop name (remove (...)) */}
           {(() => {
-            // Helper to normalize stop name by removing (PA...)
-            const normalizeStopName = (name: string) =>
-              typeof name === 'string' ? name.replace(/\s*\(PA\d+\)/, '').trim() : '';
-
             // Build a map: normalizedStopName -> { stopIds: Set, etas: [] }
             const stopGroups: Record<string, { stopIds: Set<string>, etas: ETA[] }> = {};
             routesToFetch.forEach(routeObj => {
