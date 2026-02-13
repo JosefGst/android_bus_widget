@@ -105,9 +105,16 @@ const RoutesStopScreen = () => {
                   }}
                   style={{ flex: 1, paddingVertical: 8 }}
                 >
-                  <Text style={{ fontSize: 16, marginBottom: expandedStop === item.stop ? 0 : 8 }}>
-                    {item.seq}: {stopNames[item.stop] || item.stop}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.seqCircle}>
+                      <Text style={styles.seqText}>
+                        {item.seq}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 16, marginBottom: expandedStop === item.stop ? 0 : 8 }}>
+                      {stopNames[item.stop] || item.stop}
+                    </Text>
+                  </View>
                 </Pressable>
                 <Pressable
                   onPress={async () => {
@@ -118,21 +125,21 @@ const RoutesStopScreen = () => {
                   style={{ padding: 8 }}
                   accessibilityLabel="Favorite this stop"
                 >
-                  <MaterialIcons name="star-border" size={24} color="#FFD700" />
+                  <MaterialIcons name="star" size={24} color="#FFD700" />
                 </Pressable>
               </View>
               {expandedStop === item.stop && (
                 <View style={{ paddingLeft: 16, paddingBottom: 8 }}>
                   {loadingEta === item.stop ? (
-                    <Text style={{ fontSize: 15, color: '#007aff' }}>Loading ETA...</Text>
+                    <Text style={{ fontSize: 15, color: 'black' }}>Loading ETA...</Text>
                   ) : etaMap[item.stop] && etaMap[item.stop].length > 0 ? (
                     etaMap[item.stop].map((eta, idx) => (
-                      <Text key={idx} style={{ fontSize: 15, color: '#007aff' }}>
-                        {item.route} will arrive in {getMinutesUntilArrival(eta.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(eta.eta)})
+                      <Text key={idx} style={{ fontSize: 15, color: 'black' }}>
+                        arrives in {getMinutesUntilArrival(eta.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(eta.eta)})
                       </Text>
                     ))
                   ) : (
-                    <Text style={{ fontSize: 15, color: '#007aff' }}>No ETA available</Text>
+                    <Text style={{ fontSize: 15, color: 'black' }}>No ETA available</Text>
                   )}
                 </View>
               )}
@@ -146,3 +153,22 @@ const RoutesStopScreen = () => {
 };
 
 export default RoutesStopScreen;
+
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+  seqCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  seqText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

@@ -65,7 +65,9 @@ const App = () => {
             renderItem={({item}) => (
               <TouchableOpacity onPress={() => router.push({ pathname: '/routes_stop', params: { route: item.route, bound: item.bound, service_type: item.service_type } })}>
                 <Text style={styles.routeText}>
-                  {item.route} ({item.bound}) [{item.service_type}] {item.orig_en} → {item.dest_en}
+                    <Text style={{ fontWeight: 'bold' }}>
+                    {item.route} 
+                    </Text> {item.orig_en} → {item.dest_en}
                 </Text>
               </TouchableOpacity>
             )}
@@ -98,8 +100,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   routeText: {
-    color: '#007aff',
+    color: 'black',
     paddingVertical: 6,
+    fontSize: 16,
   },
 });
 
