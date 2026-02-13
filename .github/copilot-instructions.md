@@ -6,7 +6,7 @@
 
 ## Architecture & Data Flow
  Widget logic goes in [widget/](../../widget/). Widget names must match the configuration in [app.json](../../app.json).
-- **Screens & Routes:** Route logic in [my_routes.tsx](../../app/my_routes.tsx) and subfolders under `(tabs)/`.
+- **Screens & Routes:** Route logic in [my_favorites.tsx](../../app/my_favorites.tsx) and subfolders under `(tabs)/`.
 - **Widgets:** Android widgets implemented in [widget/](../../widget/), registered via [widget-registration.ts](../../widget-registration.ts) and configured in [app.json](../../app.json).
 - **Data Fetching:** API calls and data formatting in [app/utils/fetch.ts](../../app/utils/fetch.ts) and [app/utils/time_formatting.ts](../../app/utils/time_formatting.ts).
 - **Native Integration:** Android uses Gradle ([android/build.gradle](../../android/build.gradle)), iOS uses CocoaPods ([ios/Podfile](../../ios/Podfile)).

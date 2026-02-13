@@ -3,24 +3,33 @@ import { Tabs } from 'expo-router';
 
 export default function TabLayout() {
   return (
-    <Tabs>
+    <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
-          ),
-        }}
+      name="index"
+      options={{
+        title: 'Home',
+        tabBarIcon: ({ color, size }) => (
+        <Ionicons name="home" color={color} size={size} />
+        ),
+      }}
       />
       <Tabs.Screen
-        name="my_routes"
-        options={{
-          title: 'My Routes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bus" color={color} size={size} />
-          ),
-        }}
+      name="routes_stop"
+      options={{
+        title: 'Routes Stop',
+        tabBarIcon: ({ color, size }) => (
+        <Ionicons name="bus" color={color} size={size} />
+        ),
+      }}
+      />
+      <Tabs.Screen
+      name="my_favorites"
+      options={{
+        title: 'My Routes',
+        tabBarIcon: ({ color, size }) => (
+        <Ionicons name="heart" color={color} size={size} />
+        ),
+      }}
       />
     </Tabs>
   );

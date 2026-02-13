@@ -3,8 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from './utils/fetch';
-import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
 import { appendFavoriteStopId } from './utils/storage';
+import { formatEtaToHKTime, getMinutesUntilArrival } from './utils/time_formatting';
 
 const RoutesStopScreen = () => {
   const [now, setNow] = useState(Date.now());
@@ -112,7 +112,7 @@ const RoutesStopScreen = () => {
                 <Pressable
                   onPress={async () => {
                     await appendFavoriteStopId(item.stop);
-                    router.push({ pathname: '/my_routes', params: { route: item.route, bound: item.bound, service_type: item.service_type, stop_id: item.stop } });
+                    router.push({ pathname: '/my_favorites', params: { route: item.route, bound: item.bound, service_type: item.service_type, stop_id: item.stop } });
                   }}
                   hitSlop={8}
                   style={{ padding: 8 }}
