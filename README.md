@@ -47,7 +47,12 @@ A simple React Native app built with Expo, to fetch KMB bus arrival times and th
 1. long press on the home screen and select "Widgets"
 2. find "Bus ETA Widget" and drag it to the home screen
 3. select a bus stop from the list to display its ETA on the widget
-![Widget Setup](assets/images/widget_instruction1.jpeg){ width="250" }![Widget Setup](assets/images/widget_instruction2.jpeg){ width="250" }![Widget Setup](assets/images/widget_instruction3.jpeg){ width="250" }
+ 
+<div style="display: flex; gap: 16px;">
+  <img src="./assets/images/widget_instruction1.jpeg" alt="Widget Setup Step 1" width="32%" />
+  <img src="./assets/images/widget_instruction2.jpeg" alt="Widget Setup Step 2" width="32%" />
+  <img src="./assets/images/widget_instruction3.jpeg" alt="Widget Setup Step 3" width="32%" />
+</div>
 
 ## 🗂️ Folder Structure
 - `app/` — 🖥️ Main screens, navigation, and routes
