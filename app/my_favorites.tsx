@@ -72,7 +72,7 @@ const MyRoutes = () => {
         return prev;
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [routeFromParam, boundFromParam, serviceTypeFromParam, stopIdFromParam]);
 
   // Fetch all ETAs and combine results using utils
@@ -106,7 +106,7 @@ const MyRoutes = () => {
       fetchAll();
     }, 30000); // 30 seconds
     return () => clearInterval(fetchIntervalId);
-  }, [routesToFetch]);
+  }, [routesToFetch, fetchAll]);
 
 
 
