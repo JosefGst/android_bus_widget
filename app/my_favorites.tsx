@@ -3,7 +3,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+// #region agent log
+try{const jsxRuntime=require('react/jsx-dev-runtime');fetch('http://127.0.0.1:7762/ingest/956c9b76-c79f-4ae9-ad09-1053517c875a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'850410'},body:JSON.stringify({sessionId:'850410',location:'my_favorites.tsx:6',message:'Checking React import and JSX runtime',data:{reactVersion:React.version,hasReact:typeof React!=='undefined',jsxRuntimeAvailable:jsxRuntime!==undefined,jsxDEVType:typeof jsxRuntime?.jsxDEV,hasJsxDEV:typeof jsxRuntime?.jsxDEV==='function'},timestamp:Date.now(),runId:'initial',hypothesisId:'A,D'})}).catch(()=>{});}catch(e){fetch('http://127.0.0.1:7762/ingest/956c9b76-c79f-4ae9-ad09-1053517c875a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'850410'},body:JSON.stringify({sessionId:'850410',location:'my_favorites.tsx:6',message:'JSX runtime check failed',data:{error:String(e),reactVersion:React.version},timestamp:Date.now(),runId:'initial',hypothesisId:'A,D'})}).catch(()=>{});}
+// #endregion
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+// #region agent log
+fetch('http://127.0.0.1:7762/ingest/956c9b76-c79f-4ae9-ad09-1053517c875a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'850410'},body:JSON.stringify({sessionId:'850410',location:'my_favorites.tsx:8',message:'Checking ScrollView import',data:{scrollViewType:typeof ScrollView,hasScrollView:ScrollView!==undefined},timestamp:Date.now(),runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+// #endregion
 
 import { ETA, fetchStop, getAllBUSETAs } from '../utils/fetch';
 import { loadFavoriteStopIds } from '../utils/storage';
@@ -14,6 +20,9 @@ import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatt
 type ETAWithStop = ETA & { stop: string };
 
 const MyRoutes = () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7762/ingest/956c9b76-c79f-4ae9-ad09-1053517c875a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'850410'},body:JSON.stringify({sessionId:'850410',location:'my_favorites.tsx:16',message:'Component initialization started',data:{reactVersion:React.version},timestamp:Date.now(),runId:'initial',hypothesisId:'A,B,D,E'})}).catch(()=>{});
+  // #endregion
   const params = useLocalSearchParams();
   const stopIdFromParam = typeof params.stop_id === 'string' ? params.stop_id : undefined;
   const routeFromParam = typeof params.route === 'string' ? params.route : undefined;
@@ -173,8 +182,12 @@ const MyRoutes = () => {
 
   const [favoriteStopIds, setFavoriteStopIds] = useState<string[]>([]);
 
+  // #region agent log
+  fetch('http://127.0.0.1:7762/ingest/956c9b76-c79f-4ae9-ad09-1053517c875a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'850410'},body:JSON.stringify({sessionId:'850410',location:'my_favorites.tsx:187',message:'Before JSX return - checking JSX runtime',data:{reactVersion:React.version,hasCreateElement:typeof React.createElement!=='undefined',scrollViewAvailable:ScrollView!==undefined,jsxDevRuntime:typeof (React as any).jsxDEV!=='undefined'},timestamp:Date.now(),runId:'initial',hypothesisId:'A,B,D,E'})}).catch(()=>{});
+  // #endregion
+
   return (
-    <View style={{flex: 1, padding: 24}}>
+    <ScrollView style={{flex: 1, padding: 24}}>
       <Text style={{fontWeight: 'bold', fontSize: 18, marginBottom: 8}}>
         Local Time: {new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
       </Text>
@@ -274,7 +287,7 @@ const MyRoutes = () => {
           </View>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
