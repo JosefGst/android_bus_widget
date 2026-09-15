@@ -30,6 +30,7 @@ const RoutesStopScreen = () => {
     }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -39,24 +40,34 @@ const RoutesStopScreen = () => {
           if (bound === 'I') apiBound = 'inbound';
           else if (bound === 'O') apiBound = 'outbound';
           const res = await fetchRouteSTOP(route, apiBound, service_type);
+          if (cancelled) return;
           setData(res.data);
-          // Fetch stop names from cache
-          const { stops } = await getCachedStops();
-          const stopNameMap: { [stopId: string]: string } = {};
-          stops.forEach(stop => {
-            stopNameMap[stop.stop] = stop.name_en;
-          });
-          setStopNames(stopNameMap);
+          // Fetch stop names from cache - failures here must not hide the
+          // route/stop data we already fetched successfully above.
+          try {
+            const { stops } = await getCachedStops();
+            if (cancelled) return;
+            const stopNameMap: { [stopId: string]: string } = {};
+            stops.forEach(stop => {
+              stopNameMap[stop.stop] = stop.name_en;
+            });
+            setStopNames(stopNameMap);
+          } catch (nameErr: any) {
+            console.warn('Failed to load stop names', nameErr);
+          }
         } else {
-          setError('Invalid route, bound, or service type');
+          if (!cancelled) setError('Invalid route, bound, or service type');
         }
       } catch (e: any) {
-        setError(e.message || 'Failed to fetch data');
+        if (!cancelled) setError(e.message || 'Failed to fetch data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [route, bound, service_type]);
 
   return (
