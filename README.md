@@ -66,6 +66,28 @@ Required to build/run on Android, especially on a new machine:
    ```bash
    adb install -r android/app/build/outputs/apk/release/app-release.apk
    ```
+
+### 🤖 Automated release builds (GitHub Actions)
+Pushing a `v*` tag (e.g. `v1.2.0`) triggers [`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml), which builds a signed release APK (`arm64-v8a` + `armeabi-v7a`) and attaches it to an auto-created GitHub Release. `expo.version` is set from the tag and `expo.android.versionCode` from the run number automatically — nothing to bump manually.
+
+Release signing is handled by a local config plugin ([`plugins/withReleaseSigning.js`](plugins/withReleaseSigning.js)) that reads a keystore from environment variables at build time, falling back to the stock debug keystore when they're unset (so local builds are unaffected). One-time setup, before the first tagged release:
+
+1. Generate an upload keystore (keep this file safe — losing it means future releases can no longer update existing installs in place):
+   ```bash
+   keytool -genkeypair -v -storetype PKCS12 -keystore release.keystore \
+     -alias bus-release -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Register it and its credentials as repo secrets:
+   ```bash
+   gh secret set ANDROID_KEYSTORE_BASE64 --body "$(base64 -w0 release.keystore)"
+   gh secret set ANDROID_KEYSTORE_PASSWORD
+   gh secret set ANDROID_KEY_ALIAS
+   gh secret set ANDROID_KEY_PASSWORD
+   ```
+3. Push a tag: `git tag v1.0.0 && git push --tags`.
+
+The workflow fails fast if any of the four secrets are missing, rather than silently shipping a debug-signed APK.
+
 ## Widget Setup
 1. long press on the home screen and select "Widgets"
 2. find "Bus ETA Widget" and drag it to the home screen

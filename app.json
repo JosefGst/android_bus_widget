@@ -32,6 +32,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withReleaseSigning.js",
       [
         "expo-splash-screen",
         {
