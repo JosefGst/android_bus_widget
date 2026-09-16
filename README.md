@@ -67,6 +67,18 @@ Required to build/run on Android, especially on a new machine:
    adb install -r android/app/build/outputs/apk/release/app-release.apk
    ```
 
+### 🐛 Debug APK (no dev server needed)
+A local config plugin ([`plugins/withDebugBundling.js`](plugins/withDebugBundling.js)) makes the debug variant bundle its JS/assets in, same as release, so the APK runs standalone on your phone without `expo start`/Metro running.
+
+1. **📦 Build Android debug APK**
+   ```bash
+   npx expo run:android --variant debug --no-bundler
+   ```
+2. **📲 Install APK on device**
+   ```bash
+   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+   ```
+
 ### 🤖 Automated release builds (GitHub Actions)
 Pushing a `v*` tag (e.g. `v1.2.0`) triggers [`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml), which builds a signed release APK (`arm64-v8a` + `armeabi-v7a`) and attaches it to an auto-created GitHub Release. `expo.version` is set from the tag and `expo.android.versionCode` from the run number automatically — nothing to bump manually.
 
