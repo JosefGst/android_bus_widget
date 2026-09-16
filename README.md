@@ -88,6 +88,11 @@ Release signing is handled by a local config plugin ([`plugins/withReleaseSignin
 
 The workflow fails fast if any of the four secrets are missing, rather than silently shipping a debug-signed APK.
 
+### Web deployment on Github
+
+Enable Pages: repo Settings → Pages → Build and deployment → Source: "GitHub Actions". Until this is set, the deploy-pages step will fail with a "Pages site not found" type error.b.
+
+
 ## Widget Setup
 1. long press on the home screen and select "Widgets"
 2. find "Bus ETA Widget" and drag it to the home screen
