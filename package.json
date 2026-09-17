@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -46,12 +48,14 @@
     "react-native-worklets": "^0.5.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~54.0.0",
+    "serve": "^14.2.6",
     "typescript": "~5.9.2"
   },
   "private": true,

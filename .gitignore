@@ -45,3 +45,7 @@ app-example
 /android
 
 .cursor/*
+
+# Playwright
+/playwright-report/
+/test-results/

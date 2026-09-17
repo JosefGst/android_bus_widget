@@ -134,6 +134,23 @@ The `build-web` job deploys through the `github-pages` environment, which by def
    npm run lint
    ```
 
+## 🧪 Integration Tests (Playwright)
+End-to-end tests drive the **web** build (`npm run web`'s target) in a real browser with [Playwright](https://playwright.dev/). They mock all `data.etabus.gov.hk` API calls, so they run offline and don't depend on the live KMB API.
+
+1. **One-time setup** — install the Chromium browser Playwright drives:
+   ```bash
+   npx playwright install --with-deps chromium
+   ```
+2. **Run the tests:**
+   ```bash
+   npm run test:e2e
+   ```
+   This builds the static web export (`expo export --platform web`), serves it locally, and runs the specs in `e2e/` against it — the same artifact that ships to GitHub Pages.
+3. **Interactive/debug mode** (watch the browser, step through, inspect selectors):
+   ```bash
+   npm run test:e2e:ui
+   ```
+
 ## 🧩 Widget Integration
 - Android widgets are implemented in `widget/` and registered via `widget-registration.ts`.
 - Widget configuration is managed in `app.json`.
