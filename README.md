@@ -87,29 +87,33 @@ A local config plugin ([`plugins/withDebugBundling.js`](plugins/withDebugBundlin
    ```
 
 ### 🤖 Automated release builds (GitHub Actions)
-Pushing a `v*` tag (e.g. `v1.2.0`) triggers [`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml), which builds a signed release APK (`arm64-v8a` + `armeabi-v7a`) and attaches it to an auto-created GitHub Release. `expo.version` is set from the tag and `expo.android.versionCode` from the run number automatically — nothing to bump manually.
+Pushing a `v*` tag (e.g. `v1.2.0`) triggers [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which builds a signed release APK (`arm64-v8a` + `armeabi-v7a`) and attaches it to an auto-created GitHub Release. `expo.version` is set from the tag and `expo.android.versionCode` from the run number automatically — nothing to bump manually.
 
 Release signing is handled by a local config plugin ([`plugins/withReleaseSigning.js`](plugins/withReleaseSigning.js)) that reads a keystore from environment variables at build time, falling back to the stock debug keystore when they're unset (so local builds are unaffected). One-time setup, before the first tagged release:
 
-1. Generate an upload keystore (keep this file safe — losing it means future releases can no longer update existing installs in place):
+1. Generate an upload keystore in the repo root (keep this file safe and back it up somewhere private — losing it, or its passwords, means future releases can no longer update existing installs in place):
    ```bash
    keytool -genkeypair -v -storetype PKCS12 -keystore release.keystore \
      -alias bus-release -keyalg RSA -keysize 2048 -validity 10000
    ```
-2. Register it and its credentials as repo secrets:
+   You'll be prompted for a keystore password, your name/org details, and a key password (Enter reuses the keystore password). `release.keystore` is covered by `.gitignore` — **never commit it**, and double check `git status` shows nothing after this step.
+2. Register it and its credentials as repo secrets — either with the `gh` CLI:
    ```bash
    gh secret set ANDROID_KEYSTORE_BASE64 --body "$(base64 -w0 release.keystore)"
-   gh secret set ANDROID_KEYSTORE_PASSWORD
-   gh secret set ANDROID_KEY_ALIAS
-   gh secret set ANDROID_KEY_PASSWORD
+   gh secret set ANDROID_KEYSTORE_PASSWORD   # value from step 1
+   gh secret set ANDROID_KEY_ALIAS           # the -alias value from step 1, e.g. bus-release
+   gh secret set ANDROID_KEY_PASSWORD        # value from step 1
    ```
+   or via the web UI at `Settings → Secrets and variables → Actions → New repository secret`, adding the same four names/values.
 3. Push a tag: `git tag v1.0.0 && git push --tags`.
 
 The workflow fails fast if any of the four secrets are missing, rather than silently shipping a debug-signed APK.
 
 ### Web deployment on Github
 
-Enable Pages: repo Settings → Pages → Build and deployment → Source: "GitHub Actions". Until this is set, the deploy-pages step will fail with a "Pages site not found" type error.b.
+Enable Pages: repo Settings → Pages → Build and deployment → Source: "GitHub Actions". Until this is set, the deploy-pages step will fail with a "Pages site not found" type error.
+
+The `build-web` job deploys through the `github-pages` environment, which by default only allows deploys from the `main` branch. To let tagged releases (`v*`) deploy too, add a matching tag rule under `Settings → Environments → github-pages → Deployment branches and tags`.
 
 
 ## Widget Setup
