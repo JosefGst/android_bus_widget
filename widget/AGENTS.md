@@ -28,15 +28,17 @@
 ```
 widgetTaskHandler (entry)
   ├─ getRoutesWithTimeout() → AsyncStorage (1.5s timeout, falls back to defaultRoutes)
+  │     └─ utils/routes_storage.ts: parseStoredRoutes()
   ├─ getAllBUSETAs() → KMB API (from utils/fetch.ts)
   ├─ fetchStop() → stop name lookup
-  ├─ Group ETAs by normalized stop name
+  ├─ utils/eta_grouping.ts: buildGroupedEtas() — group ETAs by normalized stop name
   └─ props.renderWidget(<BusETAWidget groupedEtas={...} />)
 ```
 
 - **Timeout:** `withTimeout(12000, ...)` wraps the entire fetch+render to prevent widget stuck on "Loading...".
-- **Fallback routes:** If AsyncStorage read fails or times out, uses hardcoded `defaultRoutes` (272P, 272X).
+- **Fallback routes:** If AsyncStorage read fails or times out, uses hardcoded `defaultRoutes` from `utils/routes_storage.ts` (272P, 272X) — shared with `app/my_favorites.tsx`.
 - **`nameToWidget` map** (line 59): Maps widget name string → component. Must include any new widgets.
+- **ETA grouping:** `getRouteETAs` (earliest-arrival-per-route) lives in `utils/eta_grouping.ts`, imported by `BusETAWidget.tsx` — not defined inline, so it can be unit-tested without rendering.
 
 ---
 

@@ -9,57 +9,51 @@ let operationQueue: Promise<void> = Promise.resolve();
  * Append a stop ID to favorites with race condition protection.
  * Returns true if successful, false otherwise.
  */
-export async function appendFavoriteStopId(stopId: string): Promise<boolean> {
-  // Wait for previous operation to complete, then execute this one
-  await operationQueue;
-  
-  // Create a new promise that will be awaited by the next operation
-  let resolveNext: () => void;
-  const nextOperation = new Promise<void>((resolve) => {
-    resolveNext = resolve;
-  });
-  
-  // Update the queue BEFORE starting the operation (critical for race condition prevention)
-  operationQueue = nextOperation;
-  
-  try {
-    const existing = await AsyncStorage.getItem(FAVORITE_STOP_KEY);
-    let ids: string[] = [];
-    if (existing) {
-      try {
-        ids = JSON.parse(existing);
-        if (!Array.isArray(ids)) {
+export function appendFavoriteStopId(stopId: string): Promise<boolean> {
+  // Chain onto the queue synchronously (no await before this point) so concurrent
+  // callers each see the previous caller's link, not the same pre-await snapshot.
+  const result = operationQueue.then(async () => {
+    try {
+      const existing = await AsyncStorage.getItem(FAVORITE_STOP_KEY);
+      let ids: string[] = [];
+      if (existing) {
+        try {
+          ids = JSON.parse(existing);
+          if (!Array.isArray(ids)) {
+            ids = [];
+          }
+        } catch (parseError) {
           ids = [];
         }
-      } catch (parseError) {
-        ids = [];
       }
+
+      let success = false;
+      if (!ids.includes(stopId)) {
+        ids.push(stopId);
+        await AsyncStorage.setItem(FAVORITE_STOP_KEY, JSON.stringify(ids));
+
+        // Verify the write succeeded by reading back
+        const verify = await AsyncStorage.getItem(FAVORITE_STOP_KEY);
+        const verifyIds = verify ? JSON.parse(verify) : [];
+        success = Array.isArray(verifyIds) && verifyIds.includes(stopId);
+      } else {
+        success = true; // Already exists, consider it success
+      }
+
+      return success;
+    } catch (e) {
+      console.error('Failed to append favorite stop id', e);
+      return false;
     }
-    
-    let success = false;
-    if (!ids.includes(stopId)) {
-      ids.push(stopId);
-      await AsyncStorage.setItem(FAVORITE_STOP_KEY, JSON.stringify(ids));
-      
-      // Verify the write succeeded by reading back
-      const verify = await AsyncStorage.getItem(FAVORITE_STOP_KEY);
-      const verifyIds = verify ? JSON.parse(verify) : [];
-      success = Array.isArray(verifyIds) && verifyIds.includes(stopId);
-    } else {
-      success = true; // Already exists, consider it success
-    }
-    
-    // Signal next operation can proceed
-    resolveNext!();
-    
-    return success;
-  } catch (e) {
-    // Signal next operation can proceed even on error
-    resolveNext!();
-    
-    console.error('Failed to append favorite stop id', e);
-    return false;
-  }
+  });
+
+  // Keep the queue itself always-resolved so one failed operation doesn't stall later ones.
+  operationQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+
+  return result;
 }
 
 export async function loadFavoriteStopIds(): Promise<string[]> {

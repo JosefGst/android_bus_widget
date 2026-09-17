@@ -21,6 +21,9 @@ utils/                    # Shared utilities (NOT inside app/)
   storage.ts              # Favorite stop persistence with mutex queue
   string_formatting.ts    # normalizeStopName()
   time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival()
+  eta_grouping.ts         # getRouteETAs(), buildGroupedEtas() — shared by widget/ and app/
+  routes_storage.ts       # ROUTES_KEY, defaultRoutes, load/save/parse routes-to-fetch — shared by widget/ and app/my_favorites.tsx
+  *.test.ts               # Jest unit tests, colocated with the module they cover
 widget/                   # Android widget (background task context) → see widget/AGENTS.md
   BusETAWidget.tsx         # Widget UI renderer
   widget-task-handler.tsx  # Widget data fetch + render orchestration
@@ -42,9 +45,11 @@ npm run web                                      # Run on Web
 npm run lint                                     # ESLint (expo flat config)
 npx expo run:android --variant release           # Build release APK
 adb install -r android/app/build/outputs/apk/release/app-release.apk  # Install APK
+npm test                                         # Run Jest unit tests
+npm run test:watch                               # Jest in watch mode
 ```
 
-**No test suite.** Do not create tests unless explicitly asked.
+**Tests:** Jest (`jest-expo` preset). Unit tests cover `utils/*` — pure logic and AsyncStorage/network-backed functions — colocated as `*.test.ts` next to the module they test. Widget rendering (`FlexWidget`/`TextWidget` trees) and screen components are not covered; keep business logic in `utils/` (not inline in components/handlers) so it stays unit-testable. Mocking conventions: `@react-native-async-storage/async-storage` is mocked globally via `jest.setup.js` (official `.../jest/async-storage-mock`); global `fetch` is mocked per-test with `jest.spyOn(global, 'fetch')`. CI runs `npm test` on every push and gates the APK build job on it (`.github/workflows/ci.yml`).
 
 ---
 
@@ -77,6 +82,8 @@ index.ts
 | Add/modify API calls | `utils/fetch.ts` | Use `fetchJson<T>()` helper |
 | Change ETA formatting | `utils/time_formatting.ts` | `formatEtaToHKTime`, `getMinutesUntilArrival` |
 | Modify favorite logic | `utils/storage.ts` | Mutex-protected `appendFavoriteStopId` |
+| Change ETA grouping logic | `utils/eta_grouping.ts` | `getRouteETAs`, `buildGroupedEtas` — used by both `widget/BusETAWidget.tsx` and `widget/widget-task-handler.tsx` |
+| Change default/stored routes-to-fetch | `utils/routes_storage.ts` | `defaultRoutes`, `loadRoutesToFetch`/`saveRoutesToFetch` — used by both `widget/widget-task-handler.tsx` and `app/my_favorites.tsx` |
 | Widget UI/data | `widget/` | See `widget/AGENTS.md` — different execution context |
 | Expo/widget config | `app.json` | Widget names must match code exactly |
 | React Compiler exclusion | `babel.config.js` | Widget files excluded from compiler |
@@ -129,7 +136,6 @@ index.ts
 - **NEVER** call `fetch()` directly — use `fetchJson<T>()` from `utils/fetch.ts`.
 - **NEVER** import from `app/` into `utils/` or `widget/` (breaks dependency graph).
 - **NEVER** use React hooks in `widget/` files — they run outside React lifecycle.
-- **NEVER** create tests unless explicitly asked.
 - **NEVER** modify `app-example/` — reference only.
 - **Widget names** in code must exactly match `app.json` plugin config (`"BusETAWidget"`).
 - Do not hardcode debug/telemetry URLs (known violations in `routes_stop.tsx`).

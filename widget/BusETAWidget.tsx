@@ -3,9 +3,9 @@ import {
   FlexWidget,
   TextWidget,
 } from "react-native-android-widget";
+import { getRouteETAs } from "../utils/eta_grouping";
 import type { ETA } from "../utils/fetch";
 import { normalizeStopName } from "../utils/string_formatting";
-import { getMinutesUntilArrival } from "../utils/time_formatting";
 
 interface BusETAWidgetProps {
   groupedEtas?: Record<string, ETA[]>;
@@ -15,31 +15,6 @@ interface BusETAWidgetProps {
 }
 
 export function BusETAWidget({ groupedEtas, etas, isLoading, error }: BusETAWidgetProps) {
-  // Helper function to group ETAs by route and get the earliest arrival
-  const getRouteETAs = (etaList: ETA[] | undefined) => {
-    if (!etaList || etaList.length === 0) return [];
-    const routeMap = new Map<string, { route: string; minutes: number | null }>();
-    etaList.forEach(eta => {
-      const minutes = getMinutesUntilArrival(eta.eta);
-      const routeKey = `${eta.route}${eta.dir}`;
-      if (
-        !routeMap.has(routeKey) ||
-        (minutes !== null &&
-          (routeMap.get(routeKey)?.minutes === null ||
-            minutes < ((routeMap.get(routeKey)?.minutes ?? Infinity)))
-        )
-      ) {
-        routeMap.set(routeKey, { route: eta.route, minutes });
-      }
-    });
-    return Array.from(routeMap.values()).sort((a, b) => {
-      if (a.minutes === null) return 1;
-      if (b.minutes === null) return -1;
-      return a.minutes - b.minutes;
-    });
-  };
-
-
   // Render grouped routes under each stop name
   const renderGroupedEtas = () => {
     let children = [];

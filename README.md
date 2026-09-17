@@ -123,17 +123,10 @@ Enable Pages: repo Settings → Pages → Build and deployment → Source: "GitH
   <img src="./assets/images/widget_instruction3.jpeg" alt="Widget Setup Step 3" width="32%" />
 </div>
 
-## 🗂️ Folder Structure
-- `app/` — 🖥️ Main screens, navigation, and routes
-- `widget/` — 📱 Android widget implementations and handlers
-- `app-example/` — 🧪 Demo screens, advanced UI, hooks, and components
-- `utils/` — 🛠️ Shared utility functions (API, formatting, storage)
-- `android/` & `ios/` — 🤖🍏 Native platform integration
-- `assets/` — 🖼️ Images and static assets
-
 ## 🔄 Key Workflows
 - **🧹 Lint:**
    ```bash
+   npm test
    npm run lint
    ```
 
@@ -142,8 +135,8 @@ Enable Pages: repo Settings → Pages → Build and deployment → Source: "GitH
 - Widget configuration is managed in `app.json`.
 
 ## TODO's and Bugs:
-- [ ] :star:star button sometimes doesen't add the bus stop to favorites
-- [ ] :warning: widget sometimes get stuck on "Loading..."
+- [x] :star:star button sometimes doesen't add the bus stop to favorites
+- [x] :warning: widget sometimes get stuck on "Loading..."
 - [ ] :iphone: IOS support for widget (currently only Android is supported)
 
 ## 📚 Resources

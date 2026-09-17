@@ -1,14 +1,10 @@
 import React from "react";
 import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 
+import { buildGroupedEtas } from "../utils/eta_grouping";
 import { fetchStop, getAllBUSETAs } from "../utils/fetch";
+import { defaultRoutes, parseStoredRoutes, ROUTES_KEY } from "../utils/routes_storage";
 import { BusETAWidget } from "./BusETAWidget";
-
-const ROUTES_KEY = "baseRoutesToFetch";
-const defaultRoutes = [
-  { stop: "B464BD6334A93FA1", route: "272P", service_type: "1" },
-  { stop: "B644204AEDE7A031", route: "272X", service_type: "1" },
-];
 
 /** Reject after ms so we never leave the widget stuck on Loading (e.g. when app is closed). */
 function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
@@ -38,18 +34,8 @@ async function getRoutesWithTimeout(): Promise<typeof defaultRoutes> {
   if (!AsyncStorage?.getItem) return defaultRoutes;
   try {
     const saved = await withTimeout(1500, AsyncStorage.getItem(ROUTES_KEY));
-    if (!saved) return defaultRoutes;
-    const parsed = JSON.parse(saved as string);
-    if (
-      Array.isArray(parsed) &&
-      parsed.every((r: any) => r.stop && r.route && r.service_type)
-    ) {
-      return parsed.map((r: any) => ({
-        stop: r.stop,
-        route: r.route,
-        service_type: r.service_type,
-      }));
-    }
+    const parsed = parseStoredRoutes(saved as string | null);
+    if (parsed) return parsed;
   } catch {
     // Ignore; use default routes
   }
@@ -95,20 +81,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
           if (info) stopNameMap[uniqueStops[idx]] = info.name_en;
         });
 
-        const { normalizeStopName } = require("../utils/string_formatting");
-        const groupedEtas: Record<string, any[]> = {};
-        routesToFetch.forEach((routeObj) => {
-          const stopId = routeObj.stop;
-          const stopNameRaw = stopNameMap[stopId] ?? stopId;
-          const key = normalizeStopName(stopNameRaw);
-          if (!groupedEtas[key]) groupedEtas[key] = [];
-        });
-        allData.forEach((eta: any) => {
-          const stopId = eta.stop;
-          const stopNameRaw = stopNameMap[stopId] ?? stopId;
-          const key = normalizeStopName(stopNameRaw);
-          if (groupedEtas[key]) groupedEtas[key].push(eta);
-        });
+        const groupedEtas = buildGroupedEtas(routesToFetch, stopNameMap, allData);
 
         props.renderWidget(<Widget {...widgetInfo} groupedEtas={groupedEtas} />);
       })();

@@ -1,23 +1,16 @@
 
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { ETA, fetchStop, getAllBUSETAs } from '../utils/fetch';
+import { defaultRoutes, loadRoutesToFetch, saveRoutesToFetch } from '../utils/routes_storage';
 import { normalizeStopName } from '../utils/string_formatting';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 // Locally extend ETA to include stop
 type ETAWithStop = ETA & { stop: string };
-
-const ROUTES_KEY = 'baseRoutesToFetch';
-const defaultRoutes = [
-  { stop: 'B464BD6334A93FA1', route: '272P', service_type: '1' },
-  { stop: 'B644204AEDE7A031', route: '272X', service_type: '1' },
-  // Add more routes here, e.g. { stop: 'SOME_STOP_ID', route: 'SOME_ROUTE', service_type: '1' }
-];
 
 const MyRoutes = () => {
   const params = useLocalSearchParams();
@@ -44,9 +37,9 @@ const MyRoutes = () => {
     (async () => {
       let routes = defaultRoutes;
       try {
-        const saved = await AsyncStorage.getItem(ROUTES_KEY);
+        const saved = await loadRoutesToFetch();
         if (saved) {
-          routes = JSON.parse(saved);
+          routes = saved;
         }
       } catch (e) {
         // ignore, use default
@@ -74,7 +67,7 @@ const MyRoutes = () => {
     // Wait for previous save to complete
     routesStorageQueueRef.current = routesStorageQueueRef.current.then(async () => {
       try {
-        await AsyncStorage.setItem(ROUTES_KEY, JSON.stringify(routesToFetch));
+        await saveRoutesToFetch(routesToFetch);
       } catch (e) {
         console.error('Failed to save routes to storage', e);
       }
