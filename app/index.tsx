@@ -43,9 +43,9 @@ const App = () => {
   });
 
   // Letters that can follow the currently typed route prefix, e.g. "272" -> A E K P S X
+  // With no digits typed yet, this surfaces routes that start with a letter, e.g. N, K.
   const availableLetters = useMemo(() => {
     const prefix = searchQuery.trim().toUpperCase();
-    if (!prefix) return [];
     const letters = new Set<string>();
     routes.forEach((item) => {
       const route = item.route.toUpperCase();
