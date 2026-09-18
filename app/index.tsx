@@ -63,24 +63,25 @@ const App = () => {
             showSoftInputOnFocus={false}
             caretHidden={false}
           />
-          <NumericKeypad
-            onPressDigit={(digit) => setSearchQuery(prev => prev + digit)}
-            onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
-            onClear={() => setSearchQuery('')}
-          />
           <FlatList
+            style={styles.list}
             data={filteredRoutes}
             keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.orig_en}-${item.dest_en}-${index}`}
             renderItem={({item}) => (
               <TouchableOpacity onPress={() => router.push({ pathname: '/routes_stop', params: { route: item.route, bound: item.bound, service_type: item.service_type } })}>
                 <Text style={styles.routeText}>
                     <Text style={{ fontWeight: 'bold' }}>
-                    {item.route} 
+                    {item.route}
                     </Text> {item.orig_en} → {item.dest_en}
                 </Text>
               </TouchableOpacity>
             )}
             ListEmptyComponent={<Text>No routes found.</Text>}
+          />
+          <NumericKeypad
+            onPressDigit={(digit) => setSearchQuery(prev => prev + digit)}
+            onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
+            onClear={() => setSearchQuery('')}
           />
         </>
       )}
@@ -92,6 +93,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+  },
+  list: {
+    flex: 1,
   },
   headerText: {
     fontWeight: 'bold',

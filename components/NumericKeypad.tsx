@@ -41,26 +41,26 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    justifyContent: 'space-between',
   },
   key: {
-    width: '33.33%',
-    aspectRatio: 2,
+    width: '30%',
+    height: 48,
+    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
+    borderRadius: 8,
+    backgroundColor: '#1976D2',
   },
   keyText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'black',
+    color: '#fff',
   },
   keyTextSmall: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: 'black',
+    color: '#fff',
   },
 });
 
