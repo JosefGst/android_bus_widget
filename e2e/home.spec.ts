@@ -17,9 +17,29 @@ test('searching filters the route list', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
 
-  await page.getByPlaceholder('Search by route, origin, or destination...').fill('967');
+  await page.getByPlaceholder('Search by route number...').fill('967');
 
   await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
   await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
   await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toHaveCount(0);
+});
+
+test('numeric keypad enters digits and backspace removes them', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
+
+  await page.getByText('9', { exact: true }).click();
+  await page.getByText('6', { exact: true }).click();
+  await page.getByText('7', { exact: true }).click();
+
+  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
+  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
+
+  await page.getByText('⌫', { exact: true }).click();
+  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
+  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
+
+  await page.getByText('Clear', { exact: true }).click();
+  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
+  await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toBeVisible();
 });

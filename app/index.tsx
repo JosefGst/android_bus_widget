@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import NumericKeypad from '../components/NumericKeypad';
 import { ROUTS, getCachedRoutes } from '../utils/fetch';
 import { formatEtaToHKTime } from '../utils/time_formatting';
 
@@ -52,13 +53,20 @@ const App = () => {
           </Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by route, origin, or destination..."
+            placeholder="Search by route number..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
             autoCapitalize="none"
             clearButtonMode="while-editing"
             placeholderTextColor="black"
+            showSoftInputOnFocus={false}
+            caretHidden={false}
+          />
+          <NumericKeypad
+            onPressDigit={(digit) => setSearchQuery(prev => prev + digit)}
+            onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
+            onClear={() => setSearchQuery('')}
           />
           <FlatList
             data={filteredRoutes}
