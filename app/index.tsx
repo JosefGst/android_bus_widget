@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpac
 import LetterKeypad from '../components/LetterKeypad';
 import NumericKeypad from '../components/NumericKeypad';
 import { ROUTS, getCachedRoutes } from '../utils/fetch';
+import { filterRoutesByQuery, getAvailableLetters } from '../utils/route_search';
 import { formatEtaToHKTime } from '../utils/time_formatting';
 
 
@@ -31,31 +32,15 @@ const App = () => {
     loadRoutes();
   }, []);
 
-  // Filter routes by the route code the keypads build up, e.g. "N" then "N2" then "N24".
-  // A prefix match (rather than substring) keeps single letters like "N" from also
-  // matching unrelated routes through their origin/destination names.
-  const filteredRoutes = routes.filter(item => {
-    const q = searchQuery.trim().toUpperCase();
-    if (!q) return true;
-    return item.route.toUpperCase().startsWith(q);
-  });
+  const filteredRoutes = useMemo(
+    () => filterRoutesByQuery(routes, searchQuery),
+    [routes, searchQuery]
+  );
 
-  // Letters that can follow the currently typed route prefix, e.g. "272" -> A E K P S X
-  // With no digits typed yet, this surfaces routes that start with a letter, e.g. N, K.
-  const availableLetters = useMemo(() => {
-    const prefix = searchQuery.trim().toUpperCase();
-    const letters = new Set<string>();
-    routes.forEach((item) => {
-      const route = item.route.toUpperCase();
-      if (route.length > prefix.length && route.startsWith(prefix)) {
-        const nextChar = route.charAt(prefix.length);
-        if (/[A-Z]/.test(nextChar)) {
-          letters.add(nextChar);
-        }
-      }
-    });
-    return Array.from(letters).sort();
-  }, [routes, searchQuery]);
+  const availableLetters = useMemo(
+    () => getAvailableLetters(routes, searchQuery),
+    [routes, searchQuery]
+  );
 
 
   return (
