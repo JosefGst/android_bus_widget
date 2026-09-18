@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import LetterKeypad from '../components/LetterKeypad';
 import NumericKeypad from '../components/NumericKeypad';
 import { ROUTS, getCachedRoutes } from '../utils/fetch';
 import { formatEtaToHKTime } from '../utils/time_formatting';
@@ -41,6 +42,23 @@ const App = () => {
     );
   });
 
+  // Letters that can follow the currently typed route prefix, e.g. "272" -> A E K P S X
+  const availableLetters = useMemo(() => {
+    const prefix = searchQuery.trim().toUpperCase();
+    if (!prefix) return [];
+    const letters = new Set<string>();
+    routes.forEach((item) => {
+      const route = item.route.toUpperCase();
+      if (route.length > prefix.length && route.startsWith(prefix)) {
+        const nextChar = route.charAt(prefix.length);
+        if (/[A-Z]/.test(nextChar)) {
+          letters.add(nextChar);
+        }
+      }
+    });
+    return Array.from(letters).sort();
+  }, [routes, searchQuery]);
+
 
   return (
     <View style={styles.container}>
@@ -78,11 +96,21 @@ const App = () => {
             )}
             ListEmptyComponent={<Text>No routes found.</Text>}
           />
-          <NumericKeypad
-            onPressDigit={(digit) => setSearchQuery(prev => prev + digit)}
-            onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
-            onClear={() => setSearchQuery('')}
-          />
+          <View style={styles.keypadRow}>
+            <View style={styles.numericKeypad}>
+              <NumericKeypad
+                onPressDigit={(digit) => setSearchQuery(prev => prev + digit)}
+                onBackspace={() => setSearchQuery(prev => prev.slice(0, -1))}
+                onClear={() => setSearchQuery('')}
+              />
+            </View>
+            <View style={styles.letterKeypad}>
+              <LetterKeypad
+                letters={availableLetters}
+                onPressLetter={(letter) => setSearchQuery(prev => prev + letter)}
+              />
+            </View>
+          </View>
         </>
       )}
     </View>
@@ -96,6 +124,16 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  keypadRow: {
+    flexDirection: 'row',
+  },
+  numericKeypad: {
+    flex: 3,
+  },
+  letterKeypad: {
+    flex: 2,
+    marginLeft: 10,
   },
   headerText: {
     fontWeight: 'bold',
