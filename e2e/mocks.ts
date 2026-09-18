@@ -5,7 +5,6 @@ import { Page } from '@playwright/test';
 const API_HOST = 'https://data.etabus.gov.hk';
 
 const NOW = new Date().toISOString();
-const FUTURE_ETA = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
 export const MOCK_ROUTES = [
   { route: '272P', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', dest_en: 'CAUSEWAY BAY' },
@@ -87,7 +86,10 @@ export async function mockKmbApi(page: Page) {
 
   // ETA for a stop+route: /eta/{stop}/{route}/{service_type}
   await page.route(`${API_HOST}/v1/transport/kmb/eta/*/*/*`, route => {
-    const [stopId, routeCode, svcType] = new URL(route.request().url()).pathname.split('/').slice(-3);
+    const [, routeCode, svcType] = new URL(route.request().url()).pathname.split('/').slice(-3);
+    // Computed per-request (not at module load) so the ETA stays a few minutes
+    // ahead of "now" no matter how long the preceding web export/build took.
+    const futureEta = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     route.fulfill(
       jsonFulfill({
         type: 'ETA',
@@ -99,7 +101,7 @@ export async function mockKmbApi(page: Page) {
             dir: 'O',
             service_type: svcType,
             dest_en: 'CAUSEWAY BAY',
-            eta: FUTURE_ETA,
+            eta: futureEta,
             data_timestamp: NOW,
           },
         ],

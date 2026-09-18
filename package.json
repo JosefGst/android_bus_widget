@@ -68,7 +68,8 @@
       "/node_modules/",
       "/android/",
       "/ios/",
-      "/app-example/"
+      "/app-example/",
+      "/e2e/"
     ]
   }
 }
