@@ -31,15 +31,13 @@ const App = () => {
     loadRoutes();
   }, []);
 
-  // Filter routes based on search query
+  // Filter routes by the route code the keypads build up, e.g. "N" then "N2" then "N24".
+  // A prefix match (rather than substring) keeps single letters like "N" from also
+  // matching unrelated routes through their origin/destination names.
   const filteredRoutes = routes.filter(item => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim().toUpperCase();
     if (!q) return true;
-    return (
-      item.route.toLowerCase().includes(q) ||
-      item.orig_en.toLowerCase().includes(q) ||
-      item.dest_en.toLowerCase().includes(q)
-    );
+    return item.route.toUpperCase().startsWith(q);
   });
 
   // Letters that can follow the currently typed route prefix, e.g. "272" -> A E K P S X

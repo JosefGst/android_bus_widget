@@ -10,6 +10,7 @@ export const MOCK_ROUTES = [
   { route: '272P', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', dest_en: 'CAUSEWAY BAY' },
   { route: '272X', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', dest_en: 'CENTRAL' },
   { route: '967', bound: 'O', service_type: '1', orig_en: 'TIN SHUI WAI', dest_en: 'ADMIRALTY' },
+  { route: 'N29', bound: 'O', service_type: '1', orig_en: 'MONG KOK', dest_en: 'TSUEN WAN' },
 ];
 
 export const MOCK_STOP_NAMES: Record<string, string> = {
