@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
@@ -23,6 +23,29 @@ const RoutesStopScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
+  const listRef = useRef<FlatList<ROUTS>>(null);
+
+  // The one selected Stop: drives the expanded row and the highlighted marker.
+  const selectStop = useCallback(async (stopId: string | null) => {
+    setExpandedStop(stopId);
+    if (!stopId || etaMap[stopId]) return;
+    setLoadingEta(stopId);
+    try {
+      const etaRes = await fetchStopETA(stopId, route as string, service_type as string);
+      setEtaMap(prev => ({ ...prev, [stopId]: etaRes.data }));
+    } catch {
+      setEtaMap(prev => ({ ...prev, [stopId]: [] }));
+    } finally {
+      setLoadingEta(null);
+    }
+  }, [etaMap, route, service_type]);
+
+  // A marker tap selects the Stop and brings its row into view.
+  const onMarkerPress = useCallback((stopId: string) => {
+    selectStop(stopId);
+    const index = data.findIndex(item => item.stop === stopId);
+    if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
+  }, [data, selectStop]);
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -93,37 +116,25 @@ const RoutesStopScreen = () => {
         <>
         <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
           {markers.length > 0 ? (
-            <StopMap markers={markers} />
+            <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
           ) : (
             <Text style={styles.mapUnavailable}>Map unavailable</Text>
           )}
         </View>
         <FlatList
+          ref={listRef}
           data={data}
+          onScrollToIndexFailed={info => {
+            // Row not measured yet: jump near it, then retry once it has rendered.
+            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 100);
+          }}
           keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
           renderItem={({ item }) => (
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Pressable
-                  onPress={async () => {
-                    if (expandedStop === item.stop) {
-                      setExpandedStop(null);
-                    } else {
-                      setExpandedStop(item.stop);
-                      // Only fetch if not already fetched
-                      if (!etaMap[item.stop]) {
-                        setLoadingEta(item.stop);
-                        try {
-                          const etaRes = await fetchStopETA(item.stop, route as string, service_type as string);
-                          setEtaMap(prev => ({ ...prev, [item.stop]: etaRes.data }));
-                        } catch {
-                          setEtaMap(prev => ({ ...prev, [item.stop]: [] }));
-                        } finally {
-                          setLoadingEta(null);
-                        }
-                      }
-                    }
-                  }}
+                  onPress={() => selectStop(expandedStop === item.stop ? null : item.stop)}
                   style={{ flex: 1, paddingVertical: 8 }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>

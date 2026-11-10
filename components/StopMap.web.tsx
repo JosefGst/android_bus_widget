@@ -3,11 +3,14 @@ import { parseFromMapMessage, ToMapMessage } from '../utils/route_stop_map'
 import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 
 /** Web host: the Leaflet page in an iframe. Android uses StopMap.tsx. */
-export function StopMap({ markers }: StopMapProps): React.JSX.Element | null {
+export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps): React.JSX.Element | null {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
-  const markersRef = useRef(markers)
-  markersRef.current = markers
+  // Latest props, read when the page reports ready.
+  const latest = useRef({ markers, selectedStop, onMarkerPress })
+  useEffect(() => {
+    latest.current = { markers, selectedStop, onMarkerPress }
+  })
   // Render the iframe only in the browser, never in the static pre-render.
   const [mounted, setMounted] = useState(false)
 
@@ -15,6 +18,12 @@ export function StopMap({ markers }: StopMapProps): React.JSX.Element | null {
     if (!readyRef.current) return
     iframeRef.current?.contentWindow?.postMessage(JSON.stringify(msg), '*')
   }, [])
+
+  // setMarkers resets the page's selection, so always follow it with the current one.
+  const syncAll = useCallback(() => {
+    send({ type: 'setMarkers', markers: latest.current.markers })
+    send({ type: 'select', stop: latest.current.selectedStop })
+  }, [send])
 
   useEffect(() => {
     setMounted(true)
@@ -26,16 +35,22 @@ export function StopMap({ markers }: StopMapProps): React.JSX.Element | null {
       const msg = parseFromMapMessage(event.data)
       if (msg?.type === 'ready') {
         readyRef.current = true
-        send({ type: 'setMarkers', markers: markersRef.current })
+        syncAll()
+      } else if (msg?.type === 'markerPress') {
+        latest.current.onMarkerPress(msg.stop)
       }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [send])
+  }, [syncAll])
 
   useEffect(() => {
-    send({ type: 'setMarkers', markers })
-  }, [markers, send])
+    syncAll()
+  }, [markers, syncAll])
+
+  useEffect(() => {
+    send({ type: 'select', stop: selectedStop })
+  }, [selectedStop, send])
 
   if (!mounted) return null
   return (

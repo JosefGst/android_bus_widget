@@ -4,7 +4,12 @@ import { LEAFLET_CSS, LEAFLET_JS } from './generated/leaflet_assets'
 /** Props shared by both StopMap hosts (StopMap.tsx on Android, StopMap.web.tsx on Web). */
 export interface StopMapProps {
   markers: RouteMarker[]
+  selectedStop: string | null
+  onMarkerPress: (stop: string) => void
 }
+
+/** Zoom level used when the map focuses on one selected Stop. */
+const SELECTED_ZOOM = 17
 
 const BASEMAP_URL = 'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/WGS84/{z}/{x}/{y}.png'
 const LABEL_URL = 'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/en/WGS84/{z}/{x}/{y}.png'
@@ -19,6 +24,8 @@ const PAGE_SCRIPT = `
   L.tileLayer(${JSON.stringify(BASEMAP_URL)}, { maxZoom: 19, attribution: ${JSON.stringify(ATTRIBUTION)} }).addTo(map);
   L.tileLayer(${JSON.stringify(LABEL_URL)}, { maxZoom: 19 }).addTo(map);
   var layer = L.layerGroup().addTo(map);
+  var byStop = {};
+  var selected = null;
 
   function send(msg) {
     var s = JSON.stringify(msg);
@@ -32,31 +39,52 @@ const PAGE_SCRIPT = `
     });
   }
 
-  function icon(m) {
+  function icon(m, isSelected) {
+    var size = isSelected ? 38 : 28;
     return L.divIcon({
       className: 'stop-marker',
-      html: '<div class="stop-pin" data-stop="' + esc(m.stop) + '">' + esc(m.seq) + '</div>',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
+      html: '<div class="stop-pin' + (isSelected ? ' selected' : '') + '" data-stop="' + esc(m.stop) + '">' + esc(m.seq) + '</div>',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     });
+  }
+
+  function fitAll() {
+    var points = Object.keys(byStop).map(function (k) { return [byStop[k].data.lat, byStop[k].data.lng]; });
+    if (points.length === 1) map.setView(points[0], 16);
+    else if (points.length > 1) map.fitBounds(points, { padding: [24, 24] });
   }
 
   function setMarkers(markers) {
     layer.clearLayers();
-    var points = [];
+    byStop = {};
+    selected = null;
     markers.forEach(function (m) {
-      var marker = L.marker([m.lat, m.lng], { icon: icon(m), title: m.name, keyboard: false });
+      var marker = L.marker([m.lat, m.lng], { icon: icon(m, false), title: m.name, keyboard: false });
       marker.on('click', function () { send({ type: 'markerPress', stop: m.stop }); });
       marker.addTo(layer);
-      points.push([m.lat, m.lng]);
+      byStop[m.stop] = { marker: marker, data: m };
     });
-    if (points.length === 1) map.setView(points[0], 16);
-    else if (points.length > 1) map.fitBounds(points, { padding: [24, 24] });
+    fitAll();
+  }
+
+  function select(stop) {
+    if (selected && byStop[selected]) {
+      byStop[selected].marker.setIcon(icon(byStop[selected].data, false));
+      byStop[selected].marker.setZIndexOffset(0);
+    }
+    selected = stop;
+    var entry = stop ? byStop[stop] : null;
+    if (!entry) return;  // cleared, or a Stop without a marker: leave the view alone
+    entry.marker.setIcon(icon(entry.data, true));
+    entry.marker.setZIndexOffset(1000);
+    map.setView([entry.data.lat, entry.data.lng], ${SELECTED_ZOOM});
   }
 
   window.receive = function (msg) {
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'setMarkers' && Array.isArray(msg.markers)) setMarkers(msg.markers);
+    else if (msg.type === 'select') select(typeof msg.stop === 'string' ? msg.stop : null);
   };
 
   // Web host: messages arrive via postMessage from the parent window.
@@ -77,6 +105,11 @@ html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
   background: red; color: white; border: 2px solid white;
   font: bold 13px/24px sans-serif; text-align: center;
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.stop-pin.selected {
+  width: 38px; height: 38px; border-radius: 19px;
+  background: #007aff; border-width: 3px;
+  font-size: 16px; line-height: 32px;
 }
 `
 
