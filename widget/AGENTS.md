@@ -17,8 +17,9 @@
 
 | File | Purpose | Exports |
 |------|---------|---------|
-| `widget-task-handler.tsx` | Entry point for widget lifecycle events. Fetches routes from AsyncStorage, fetches ETAs, renders widget. | `widgetTaskHandler(props: WidgetTaskHandlerProps)` |
-| `BusETAWidget.tsx` | UI renderer. Converts grouped ETA data into `FlexWidget`/`TextWidget` tree. | `BusETAWidget({ groupedEtas, etas, isLoading, error })` |
+| `widget-task-handler.tsx` | Entry point for widget lifecycle events. Shows Loading, then awaits `renderBusWidget()`. | `widgetTaskHandler(props)`, `renderBusWidget()`, `BUS_WIDGET_NAME` |
+| `refresh_widget.tsx` | Re-renders the widget immediately via `requestWidgetUpdate`. Subscribed to `onFavoritesChanged` in `widget-registration.ts` (Android only). | `refreshBusWidget()` |
+| `BusETAWidget.tsx` | UI renderer. Shows each Stop group with the next arrival per Route. | `BusETAWidget({ groups, isLoading, error })` |
 | `HelloWidget.tsx` | Unused example widget. | `HelloWidget()` |
 
 ---
@@ -26,19 +27,17 @@
 ## Data Flow
 
 ```
-widgetTaskHandler (entry)
-  ├─ getRoutesWithTimeout() → AsyncStorage (1.5s timeout, falls back to defaultRoutes)
-  │     └─ utils/routes_storage.ts: parseStoredRoutes()
-  ├─ getAllBUSETAs() → KMB API (from utils/fetch.ts)
-  ├─ fetchStop() → stop name lookup
-  ├─ utils/eta_grouping.ts: buildGroupedEtas() — group ETAs by normalized stop name
-  └─ props.renderWidget(<BusETAWidget groupedEtas={...} />)
+widgetTaskHandler (scheduled update, tap, add, resize)      refreshBusWidget (Favorite added/removed)
+  ├─ renderWidget(<BusETAWidget isLoading />)                 └─ requestWidgetUpdate(renderBusWidget)
+  └─ renderWidget(await renderBusWidget())
+        renderBusWidget()  (never rejects; 12s timeout → "Tap to refresh")
+          ├─ utils/favorites.ts: listForWidget()   (1.5s timeout → starter Favorites)
+          └─ utils/favorite_board.ts: loadFavoriteBoard()   (rejects only if every ETA request fails)
 ```
 
-- **Timeout:** `withTimeout(12000, ...)` wraps the entire fetch+render to prevent widget stuck on "Loading...".
-- **Fallback routes:** If AsyncStorage read fails or times out, uses hardcoded `defaultRoutes` from `utils/routes_storage.ts` (272P, 272X) — shared with `app/my_favorites.tsx`.
-- **`nameToWidget` map** (line 59): Maps widget name string → component. Must include any new widgets.
-- **ETA grouping:** `getRouteETAs` (earliest-arrival-per-route) lives in `utils/eta_grouping.ts`, imported by `BusETAWidget.tsx` — not defined inline, so it can be unit-tested without rendering.
+- **One render path:** both the task handler and the immediate refresh use `renderBusWidget()`. Change data loading there, not in two places.
+- **Widget name:** `BUS_WIDGET_NAME` must match `app.json`. A new widget needs its own name check in `widgetTaskHandler` and an `app.json` entry.
+- **Grouping/ordering** live in `utils/favorite_board.ts` and are unit-tested there; this folder only formats.
 
 ---
 
@@ -46,17 +45,17 @@ widgetTaskHandler (entry)
 
 | Task | File | Notes |
 |------|------|-------|
-| Add new widget | Create `NewWidget.tsx`, add to `nameToWidget` in `widget-task-handler.tsx`, register in `app.json` |
-| Change widget refresh timeout | `widget-task-handler.tsx` line 63 (`WIDGET_FETCH_TIMEOUT_MS`) |
-| Change widget appearance | `BusETAWidget.tsx` — FlexWidget/TextWidget styles |
-| Change default routes | `widget-task-handler.tsx` line 8 (`defaultRoutes`) |
-| Change AsyncStorage read timeout | `widget-task-handler.tsx` line 40 (`withTimeout(1500, ...)`) |
+| Add new widget | Create `NewWidget.tsx`, handle its name in `widgetTaskHandler`, register in `app.json` | |
+| Change widget refresh timeout | `widget-task-handler.tsx` (`WIDGET_FETCH_TIMEOUT_MS`) | |
+| Change widget appearance | `BusETAWidget.tsx` | FlexWidget/TextWidget styles |
+| Change starter Favorites | `utils/favorites.ts` (`STARTER_FAVORITES`) | Shared with the app |
+| Change storage read timeout | `utils/favorites.ts` (`listForWidget`) | |
 
 ---
 
 ## Anti-Patterns
 
-- **Known `as any` violations:** `widget-task-handler.tsx` line 70 (Widget type cast) and `BusETAWidget.tsx` lines 91-92 (legacy `stopName` access). Fix with type guards — do not add more.
+- **NEVER** use `as any` — this folder has none; keep it that way.
 - **NEVER** use React hooks in these files.
-- **NEVER** import from `app/` — only from `utils/` and widget-internal files.
+- **NEVER** import from `app/` — only from `utils/` and widget-internal files. `utils/` must never import from here either (use `onFavoritesChanged` to react to changes).
 - **NEVER** add blocking async operations without timeout wrapper.

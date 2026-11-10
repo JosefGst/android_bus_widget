@@ -37,6 +37,15 @@ const byMinutes = (a: number | null, b: number | null): number => {
   return a - b
 }
 
+const nextMinutes = (route: RouteArrivals): number | null => route.arrivals[0]?.minutes ?? null
+
+// Each Route's arrivals soonest first, then Routes ordered by their next arrival.
+function sortRoutes(routes: Iterable<RouteArrivals>): RouteArrivals[] {
+  const sorted = Array.from(routes)
+  sorted.forEach(route => route.arrivals.sort((a, b) => byMinutes(a.minutes, b.minutes)))
+  return sorted.sort((a, b) => byMinutes(nextMinutes(a), nextMinutes(b)))
+}
+
 export async function loadFavoriteBoard(favorites: Favorite[], now: Date): Promise<FavoriteBoard> {
   const [etaResponses, stopNames] = await Promise.all([
     Promise.all(favorites.map(loadEtas)),
@@ -55,11 +64,10 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date): Promi
     const group = groups.get(stopName) ?? { stopIds: new Set<string>(), routes: new Map<string, RouteArrivals>() }
     groups.set(stopName, group)
     group.stopIds.add(favorite.stop)
-    const { routes } = group
     etaResponses[i]?.data.forEach(row => {
       const key = `${row.route}|${row.dir}`
-      const entry = routes.get(key) ?? { route: row.route, arrivals: [] }
-      routes.set(key, entry)
+      const entry = group.routes.get(key) ?? { route: row.route, arrivals: [] }
+      group.routes.set(key, entry)
       entry.arrivals.push({ eta: row.eta, minutes: getMinutesUntilArrival(row.eta, reference) })
     })
   })
@@ -68,9 +76,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date): Promi
     groups: Array.from(groups, ([stopName, { stopIds, routes }]) => ({
       stopName,
       stopIds: Array.from(stopIds),
-      routes: Array.from(routes.values())
-        .map(r => ({ ...r, arrivals: [...r.arrivals].sort((a, b) => byMinutes(a.minutes, b.minutes)) }))
-        .sort((a, b) => byMinutes(a.arrivals[0]?.minutes ?? null, b.arrivals[0]?.minutes ?? null)),
+      routes: sortRoutes(routes.values()),
     })),
     generatedTimestamp: etaResponses.find(r => r !== null)?.generated_timestamp ?? '',
   }

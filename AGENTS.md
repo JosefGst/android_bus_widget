@@ -18,15 +18,15 @@ app/                      # Expo Router screens (tab-based)
   my_favorites.tsx         # Saved favorites with real-time ETA countdown
 utils/                    # Shared utilities (NOT inside app/)
   fetch.ts                # KMB API calls, types, 24h AsyncStorage cache
-  storage.ts              # Favorite stop persistence with mutex queue
+  favorites.ts            # Favorites: the only reader/writer of the Favorite list (list/add/remove/listForWidget/onFavoritesChanged)
+  favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/my_favorites.tsx
   string_formatting.ts    # normalizeStopName()
   time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival()
-  eta_grouping.ts         # getRouteETAs(), buildGroupedEtas() — shared by widget/ and app/
-  routes_storage.ts       # ROUTES_KEY, defaultRoutes, load/save/parse routes-to-fetch — shared by widget/ and app/my_favorites.tsx
   *.test.ts               # Jest unit tests, colocated with the module they cover
 widget/                   # Android widget (background task context) → see widget/AGENTS.md
   BusETAWidget.tsx         # Widget UI renderer
-  widget-task-handler.tsx  # Widget data fetch + render orchestration
+  widget-task-handler.tsx  # Widget lifecycle events + renderBusWidget()
+  refresh_widget.tsx       # refreshBusWidget(): immediate re-render after a Favorites change
   HelloWidget.tsx          # Example widget (unused)
 app-example/              # Expo scaffold — reference only, do not modify
 assets/                   # Images, icons
@@ -58,18 +58,20 @@ npm run test:watch                               # Jest in watch mode
 ```
 index.ts
   ├─ widget-registration.ts  →  widget/widget-task-handler.tsx  →  widget/BusETAWidget.tsx
-  │                                    └─ utils/* (fetch, string_formatting, time_formatting)
+  │     │                              └─ utils/favorites (listForWidget), utils/favorite_board
+  │     └─ onFavoritesChanged → widget/refresh_widget.tsx (Android only)
   └─ expo-router/entry
       └─ app/_layout.tsx (3 tabs)
           ├─ app/index.tsx          → utils/fetch, utils/time_formatting
-          ├─ app/routes_stop.tsx    → utils/fetch, utils/storage, utils/time_formatting
-          └─ app/my_favorites.tsx   → utils/fetch, utils/storage, utils/string_formatting, utils/time_formatting
+          ├─ app/routes_stop.tsx    → utils/fetch, utils/favorites, utils/time_formatting
+          └─ app/my_favorites.tsx   → utils/favorites, utils/favorite_board, utils/time_formatting
 ```
 
 - **No circular dependencies.** Dependency direction: `app/` and `widget/` → `utils/`. Never import from `app/` into `utils/` or `widget/`.
 - **API:** KMB public API (`data.etabus.gov.hk`). All fetch logic in `utils/fetch.ts`. Use `fetchJson<T>()` for all API calls — never call `fetch()` directly.
 - **Caching:** `getCachedRoutes()` / `getCachedStops()` — 24h AsyncStorage cache with `isCacheStale()` check.
-- **Storage:** `utils/storage.ts` uses a mutex queue (`operationQueue`) to serialize AsyncStorage writes. Screens use a ref-based queue (`routesStorageQueueRef`) for the same purpose.
+- **Favorites:** `utils/favorites.ts` is the only module that reads or writes the Favorite list. Writes are serialized internally; screens must not keep their own copies or queues. Never pass Favorite data through navigation params.
+- **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Favorites and the widget. It rejects only when every ETA request fails, so callers keep their last board.
 - **Widget:** Runs as Android background task. See `widget/AGENTS.md` for critical constraints.
 
 ---
@@ -81,9 +83,9 @@ index.ts
 | Add a new tab screen | `app/` + `app/_layout.tsx` | Create file, register in Tabs |
 | Add/modify API calls | `utils/fetch.ts` | Use `fetchJson<T>()` helper |
 | Change ETA formatting | `utils/time_formatting.ts` | `formatEtaToHKTime`, `getMinutesUntilArrival` |
-| Modify favorite logic | `utils/storage.ts` | Mutex-protected `appendFavoriteStopId` |
-| Change ETA grouping logic | `utils/eta_grouping.ts` | `getRouteETAs`, `buildGroupedEtas` — used by both `widget/BusETAWidget.tsx` and `widget/widget-task-handler.tsx` |
-| Change default/stored routes-to-fetch | `utils/routes_storage.ts` | `defaultRoutes`, `loadRoutesToFetch`/`saveRoutesToFetch` — used by both `widget/widget-task-handler.tsx` and `app/my_favorites.tsx` |
+| Modify Favorite logic or starter Favorites | `utils/favorites.ts` | `add`/`remove`/`list`, `STARTER_FAVORITES`; storage key must not change |
+| Change ETA grouping/ordering | `utils/favorite_board.ts` | `loadFavoriteBoard` — used by `app/my_favorites.tsx` and `widget/widget-task-handler.tsx` |
+| React to Favorites changes | `utils/favorites.ts` | `onFavoritesChanged(listener)` |
 | Widget UI/data | `widget/` | See `widget/AGENTS.md` — different execution context |
 | Expo/widget config | `app.json` | Widget names must match code exactly |
 | React Compiler exclusion | `babel.config.js` | Widget files excluded from compiler |
@@ -132,7 +134,6 @@ index.ts
 ## Anti-Patterns (THIS PROJECT)
 
 - **NEVER** suppress types with `as any`, `@ts-ignore`, `@ts-expect-error`.
-  - Known violations exist in `widget/BusETAWidget.tsx` (legacy fallback) and `widget/widget-task-handler.tsx` (widget type mapping). Fix with proper type guards, do not add more.
 - **NEVER** call `fetch()` directly — use `fetchJson<T>()` from `utils/fetch.ts`.
 - **NEVER** import from `app/` into `utils/` or `widget/` (breaks dependency graph).
 - **NEVER** use React hooks in `widget/` files — they run outside React lifecycle.
@@ -149,7 +150,8 @@ index.ts
 | Entry point ordering | `index.ts` — widget registration BEFORE expo-router |
 | Tab navigation | `app/_layout.tsx` |
 | KMB API + caching | `utils/fetch.ts` |
-| Favorite persistence | `utils/storage.ts` (mutex queue) |
+| Favorite persistence | `utils/favorites.ts` |
+| Favorite board (ETAs by Stop) | `utils/favorite_board.ts` |
 | Widget UI | `widget/BusETAWidget.tsx` |
 | Widget data handler | `widget/widget-task-handler.tsx` |
 | Widget config | `app.json` (`react-native-android-widget` plugin) |
@@ -163,4 +165,5 @@ index.ts
 - `app/(tabs)/` exists but is empty — tabs are defined directly in `_layout.tsx`.
 - `package.json` `"main": "index.ts"` is required for widget registration ordering.
 - iOS widget support is a known TODO.
-- Known bugs: star button sometimes fails to save; widget sometimes stuck on "Loading..." (timeout handler mitigates).
+- Known bugs: widget sometimes stuck on "Loading..." (timeout handler mitigates). Web only: My Favorites logs a React hydration error (#418) on direct load because the "Local Time" clock differs from the pre-rendered HTML.
+- Domain terms (Route, Stop, ETA, Favorite, Favorite board) are defined in `GLOSSARY.md`.

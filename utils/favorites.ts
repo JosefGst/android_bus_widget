@@ -64,6 +64,31 @@ export async function listForWidget(): Promise<Favorite[]> {
   }
 }
 
+type FavoritesListener = () => void
+const listeners = new Set<FavoritesListener>()
+
+/**
+ * Subscribes to changes of the persisted list: fires after an add or remove that actually
+ * changed it, never for no-ops or failed writes. Returns a function that unsubscribes.
+ */
+export function onFavoritesChanged(listener: FavoritesListener): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+// A throwing listener must not fail the write or starve the other listeners.
+function notifyChanged(): void {
+  listeners.forEach(listener => {
+    try {
+      listener()
+    } catch (e) {
+      console.error('Favorites listener failed', e)
+    }
+  })
+}
+
 // Serializes every write. The tail is kept always-resolved so one failed write doesn't stall the rest.
 let writeQueue: Promise<unknown> = Promise.resolve()
 
@@ -76,6 +101,7 @@ function mutate(change: (current: Favorite[]) => Favorite[]): Promise<boolean> {
       const next = change(current)
       if (next !== current) {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+        notifyChanged()
       }
       return true
     } catch (e) {

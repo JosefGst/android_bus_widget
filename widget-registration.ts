@@ -4,4 +4,11 @@ if (Platform.OS === 'android' && !Platform.isTV) {
 	const { registerWidgetTaskHandler } = require('react-native-android-widget');
 	const { widgetTaskHandler } = require('./widget/widget-task-handler');
 	registerWidgetTaskHandler(widgetTaskHandler);
+
+	// Refresh the home-screen widget as soon as the user adds or removes a Favorite.
+	const { onFavoritesChanged } = require('./utils/favorites');
+	const { refreshBusWidget } = require('./widget/refresh_widget');
+	onFavoritesChanged(() => {
+		refreshBusWidget();
+	});
 }
