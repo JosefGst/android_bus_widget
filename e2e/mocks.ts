@@ -17,7 +17,31 @@ export const MOCK_STOP_NAMES: Record<string, string> = {
   B464BD6334A93FA1: 'Default Stop One',
   B644204AEDE7A031: 'Default Stop Two',
   MOCKSTOP001: 'Causeway Bay Station',
+  MAPSTOP001: 'Mong Kok Map Stop',
+  MAPSTOP002: 'Yau Ma Tei Map Stop',
+  MAPSTOP003: 'Jordan Map Stop',
 };
+
+// Coordinates (inside Hong Kong) so the Routes Stop map can place markers.
+export const MOCK_STOP_COORDS: Record<string, { lat: string; long: string }> = {
+  B464BD6334A93FA1: { lat: '22.3930', long: '113.9730' },
+  B644204AEDE7A031: { lat: '22.3940', long: '113.9740' },
+  MOCKSTOP001: { lat: '22.2800', long: '114.1830' },
+  MAPSTOP001: { lat: '22.3190', long: '114.1690' },
+  MAPSTOP002: { lat: '22.3120', long: '114.1700' },
+  MAPSTOP003: { lat: '22.3050', long: '114.1710' },
+};
+
+// Route N29 has several Stops so the map test can pick between markers;
+// every other Route has a single Stop so its star button stays unambiguous.
+export const MAP_ROUTE = 'N29';
+const MAP_ROUTE_STOPS = ['MAPSTOP001', 'MAPSTOP002', 'MAPSTOP003'];
+
+// 1x1 transparent PNG served for every map tile, so tests never hit the tile server.
+const BLANK_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
 
 const jsonFulfill = (data: unknown) => ({
   status: 200,
@@ -27,6 +51,10 @@ const jsonFulfill = (data: unknown) => ({
 
 /** Install mocked responses for every KMB API endpoint the app calls. */
 export async function mockKmbApi(page: Page) {
+  await page.route('https://mapapi.geodata.gov.hk/**', route =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: BLANK_PNG })
+  );
+
   await page.route(`${API_HOST}/v1/transport/kmb/route`, route =>
     route.fulfill(
       jsonFulfill({
@@ -45,7 +73,7 @@ export async function mockKmbApi(page: Page) {
         type: 'STOP',
         version: '1',
         generated_timestamp: NOW,
-        data: Object.entries(MOCK_STOP_NAMES).map(([stop, name_en]) => ({ stop, name_en })),
+        data: Object.entries(MOCK_STOP_NAMES).map(([stop, name_en]) => ({ stop, name_en, ...MOCK_STOP_COORDS[stop] })),
       })
     )
   );
@@ -72,15 +100,13 @@ export async function mockKmbApi(page: Page) {
         type: 'ROUTE-STOP',
         version: '1',
         generated_timestamp: NOW,
-        data: [
-          {
-            route: routeCode,
-            bound: boundDir === 'inbound' ? 'I' : 'O',
-            service_type: svcType,
-            seq: '1',
-            stop: 'MOCKSTOP001',
-          },
-        ],
+        data: (routeCode === MAP_ROUTE ? MAP_ROUTE_STOPS : ['MOCKSTOP001']).map((stop, i) => ({
+          route: routeCode,
+          bound: boundDir === 'inbound' ? 'I' : 'O',
+          service_type: svcType,
+          seq: String(i + 1),
+          stop,
+        })),
       })
     );
   });
