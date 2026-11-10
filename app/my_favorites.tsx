@@ -1,23 +1,21 @@
 
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
+import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites';
 import { ETA, fetchStop, getAllBUSETAs } from '../utils/fetch';
-import { defaultRoutes, loadRoutesToFetch, saveRoutesToFetch } from '../utils/routes_storage';
 import { normalizeStopName } from '../utils/string_formatting';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 // Locally extend ETA to include stop
 type ETAWithStop = ETA & { stop: string };
 
+// Stable empty list so hooks depending on it don't re-run every render.
+const NO_FAVORITES: Favorite[] = [];
+
 const MyRoutes = () => {
-  const params = useLocalSearchParams();
-  const stopIdFromParam = typeof params.stop_id === 'string' ? params.stop_id : undefined;
-  const routeFromParam = typeof params.route === 'string' ? params.route : undefined;
-  const boundFromParam = typeof params.bound === 'string' ? params.bound : undefined;
-  const serviceTypeFromParam = typeof params.service_type === 'string' ? params.service_type : undefined;
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<ETAWithStop[]>([]);
   const [generatedTimestamp, setGeneratedTimestamp] = useState<string>('');
@@ -27,52 +25,24 @@ const MyRoutes = () => {
   const [now, setNow] = useState(Date.now());
 
 
-  const [routesToFetch, setRoutesToFetch] = useState(defaultRoutes);
+  // null until the first read from storage completes.
+  const [favorites, setFavorites] = useState<Favorite[] | null>(null);
+  const routesToFetch = favorites ?? NO_FAVORITES;
 
-  // Mutex to serialize AsyncStorage operations for routes
-  const routesStorageQueueRef = React.useRef<Promise<void>>(Promise.resolve());
+  const reloadFavorites = useCallback(async () => {
+    try {
+      setFavorites(await listFavorites());
+    } catch (e) {
+      console.error('Failed to load Favorites', e);
+    }
+  }, []);
 
-  // Load routes from storage, THEN append from params (fixes race condition)
-  useEffect(() => {
-    (async () => {
-      let routes = defaultRoutes;
-      try {
-        const saved = await loadRoutesToFetch();
-        if (saved) {
-          routes = saved;
-        }
-      } catch (e) {
-        // ignore, use default
-      }
-
-      // Append new bus stop from params if present and not already in the array
-      if (routeFromParam && boundFromParam && serviceTypeFromParam && stopIdFromParam) {
-        const exists = routes.some(
-          r => r.stop === stopIdFromParam && r.route === routeFromParam && r.service_type === serviceTypeFromParam
-        );
-        if (!exists) {
-          routes = [
-            ...routes,
-            { stop: stopIdFromParam, route: routeFromParam, service_type: serviceTypeFromParam },
-          ];
-        }
-      }
-
-      setRoutesToFetch(routes);
-    })();
-  }, [routeFromParam, boundFromParam, serviceTypeFromParam, stopIdFromParam]);
-
-  // Save routes to storage whenever they change (serialized to prevent race conditions)
-  useEffect(() => {
-    // Wait for previous save to complete
-    routesStorageQueueRef.current = routesStorageQueueRef.current.then(async () => {
-      try {
-        await saveRoutesToFetch(routesToFetch);
-      } catch (e) {
-        console.error('Failed to save routes to storage', e);
-      }
-    });
-  }, [routesToFetch]);
+  // Re-read on every focus: this tab stays mounted while the user stars Stops elsewhere.
+  useFocusEffect(
+    useCallback(() => {
+      reloadFavorites();
+    }, [reloadFavorites])
+  );
 
   // Fetch all ETAs and combine results using utils
   const fetchAll = useCallback(async () => {
@@ -98,8 +68,9 @@ const MyRoutes = () => {
     }
   }, [routesToFetch]);
 
-  // Fetch ETA data every 30 seconds
+  // Fetch ETA data every 30 seconds, once the Favorites have loaded
   useEffect(() => {
+    if (favorites === null) return;
     fetchAll();
     const fetchIntervalId = setInterval(() => {
       fetchAll();
@@ -107,7 +78,7 @@ const MyRoutes = () => {
     return () => {
       clearInterval(fetchIntervalId);
     };
-  }, [routesToFetch, fetchAll]);
+  }, [favorites, fetchAll]);
 
   // Update local clock every second for smooth countdown and current time
   useEffect(() => {
@@ -181,11 +152,9 @@ const MyRoutes = () => {
                       {route.route} ({stopName})
                     </Text>
                     <TouchableOpacity
-                      onPress={() => {
-                        setRoutesToFetch(prev => {
-                          const filtered = prev.filter(r => !(r.stop === route.stop && r.route === route.route && r.service_type === route.service_type));
-                          return filtered;
-                        });
+                      onPress={async () => {
+                        await removeFavorite(route);
+                        await reloadFavorites();
                       }}
                       accessibilityLabel={`Remove route ${route.route}`}
                       style={{marginLeft: 8}}
