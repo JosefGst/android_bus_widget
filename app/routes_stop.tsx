@@ -24,6 +24,7 @@ const RoutesStopScreen = () => {
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
   const listRef = useRef<FlatList<ROUTS>>(null);
+  const [mapVisible, setMapVisible] = useState(true);
 
   // The one selected Stop: drives the expanded row and the highlighted marker.
   const selectStop = useCallback(async (stopId: string | null) => {
@@ -114,13 +115,24 @@ const RoutesStopScreen = () => {
         <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
       ) : (
         <>
-        <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
-          {markers.length > 0 ? (
-            <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
-          ) : (
-            <Text style={styles.mapUnavailable}>Map unavailable</Text>
-          )}
-        </View>
+        {mapVisible && (
+          <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
+            {markers.length > 0 ? (
+              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
+            ) : (
+              <Text style={styles.mapUnavailable}>Map unavailable</Text>
+            )}
+          </View>
+        )}
+        <Pressable
+          onPress={() => setMapVisible(v => !v)}
+          style={styles.mapToggle}
+          accessibilityRole="button"
+          accessibilityLabel={mapVisible ? 'Hide map' : 'Show map'}
+        >
+          <MaterialIcons name={mapVisible ? 'expand-less' : 'map'} size={22} color="#007aff" />
+          <Text style={styles.mapToggleText}>{mapVisible ? 'Hide map' : 'Show map'}</Text>
+        </Pressable>
         <FlatList
           ref={listRef}
           data={data}
@@ -193,9 +205,20 @@ export default RoutesStopScreen;
 
 const styles = StyleSheet.create({
   mapContainer: {
-    marginBottom: 8,
     backgroundColor: '#e5e5e5',
     justifyContent: 'center',
+  },
+  mapToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  mapToggleText: {
+    color: '#007aff',
+    fontSize: 15,
+    marginLeft: 4,
   },
   mapUnavailable: {
     textAlign: 'center',
