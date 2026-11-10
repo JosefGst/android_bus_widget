@@ -1,9 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { add as addFavorite } from '../utils/favorites';
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from '../utils/fetch';
-import { appendFavoriteStopId } from '../utils/storage';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 const RoutesStopScreen = () => {
@@ -18,8 +18,6 @@ const RoutesStopScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
-  // Track favorite operations in progress to prevent rapid clicks
-  const favoriteInProgress = useRef<{ [stopId: string]: boolean }>({});
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -131,27 +129,12 @@ const RoutesStopScreen = () => {
                 </Pressable>
                 <Pressable
                   onPress={async () => {
-                    // Debounce: prevent rapid clicks
-                    if (favoriteInProgress.current[item.stop]) {
-                      return;
-                    }
-
-                    favoriteInProgress.current[item.stop] = true;
-                    try {
-                      const success = await appendFavoriteStopId(item.stop);
-
-                      if (success) {
-                        router.push({ pathname: '/my_favorites', params: { route: item.route, bound: item.bound, service_type: item.service_type, stop_id: item.stop } });
-                      } else {
-                        console.error('Failed to save favorite stop');
-                      }
-                    } catch (e) {
-                      console.error('Error saving favorite stop', e);
-                    } finally {
-                      // Clear the debounce flag after a short delay
-                      setTimeout(() => {
-                        favoriteInProgress.current[item.stop] = false;
-                      }, 500);
+                    // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
+                    const saved = await addFavorite({ route: item.route, service_type: item.service_type, stop: item.stop });
+                    if (saved) {
+                      router.push('/my_favorites');
+                    } else {
+                      console.error('Failed to save Favorite');
                     }
                   }}
                   hitSlop={8}

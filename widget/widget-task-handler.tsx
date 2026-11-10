@@ -2,8 +2,8 @@ import React from "react";
 import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 
 import { buildGroupedEtas } from "../utils/eta_grouping";
+import { listForWidget } from "../utils/favorites";
 import { fetchStop, getAllBUSETAs } from "../utils/fetch";
-import { defaultRoutes, parseStoredRoutes, ROUTES_KEY } from "../utils/routes_storage";
 import { BusETAWidget } from "./BusETAWidget";
 
 /** Reject after ms so we never leave the widget stuck on Loading (e.g. when app is closed). */
@@ -21,25 +21,6 @@ function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
       }
     );
   });
-}
-
-/** Get routes from storage with a short timeout; never block the widget. */
-async function getRoutesWithTimeout(): Promise<typeof defaultRoutes> {
-  let AsyncStorage: any = null;
-  try {
-    AsyncStorage = require("@react-native-async-storage/async-storage").default;
-  } catch {
-    return defaultRoutes;
-  }
-  if (!AsyncStorage?.getItem) return defaultRoutes;
-  try {
-    const saved = await withTimeout(1500, AsyncStorage.getItem(ROUTES_KEY));
-    const parsed = parseStoredRoutes(saved as string | null);
-    if (parsed) return parsed;
-  } catch {
-    // Ignore; use default routes
-  }
-  return defaultRoutes;
 }
 
 const nameToWidget = {
@@ -62,12 +43,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   };
 
   const fetchAndRenderETAs = async () => {
-    let routesToFetch = defaultRoutes;
-    try {
-      routesToFetch = await getRoutesWithTimeout();
-    } catch {
-      // use defaultRoutes
-    }
+    const routesToFetch = await listForWidget();
 
     try {
       const work = (async () => {
