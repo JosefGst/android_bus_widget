@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { add as addFavorite } from '../utils/favorites';
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from '../utils/fetch';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
@@ -100,13 +100,9 @@ const RoutesStopScreen = () => {
                       if (!etaMap[item.stop]) {
                         setLoadingEta(item.stop);
                         try {
-                          // Use correct direction for API
-                          let apiBound = bound;
-                          if (bound === 'I') apiBound = 'inbound';
-                          else if (bound === 'O') apiBound = 'outbound';
                           const etaRes = await fetchStopETA(item.stop, route as string, service_type as string);
                           setEtaMap(prev => ({ ...prev, [item.stop]: etaRes.data }));
-                        } catch (e) {
+                        } catch {
                           setEtaMap(prev => ({ ...prev, [item.stop]: [] }));
                         } finally {
                           setLoadingEta(null);
@@ -168,8 +164,6 @@ const RoutesStopScreen = () => {
 };
 
 export default RoutesStopScreen;
-
-import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   seqCircle: {
