@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { add, list, listForWidget, remove, STARTER_FAVORITES } from './favorites'
+import { add, list, listForWidget, onFavoritesChanged, remove, STARTER_FAVORITES } from './favorites'
 
 // The storage key is part of the persisted contract: existing users' Favorites live under it.
 const STORAGE_KEY = 'baseRoutesToFetch'
@@ -147,5 +147,91 @@ describe('listForWidget', () => {
   it('returns the starter Favorites when storage throws', async () => {
     jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('unavailable'))
     expect(await listForWidget()).toEqual(STARTER_FAVORITES)
+  })
+})
+
+describe('onFavoritesChanged', () => {
+  const fav = { route: '967', service_type: '1', stop: 'STOP_A' }
+  let unsubscribe: () => void = () => {}
+
+  beforeEach(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, '[]')
+  })
+
+  afterEach(() => {
+    unsubscribe()
+  })
+
+  it('notifies once after an add that changes the list', async () => {
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+
+    await add(fav)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('notifies once after a remove that changes the list', async () => {
+    await add(fav)
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+
+    await remove(fav)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not notify when adding a Favorite that already exists', async () => {
+    await add(fav)
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+
+    await add(fav)
+
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('does not notify when removing a Favorite that is not there', async () => {
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+
+    await remove(fav)
+
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('does not notify when the write fails', async () => {
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+    jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('disk full'))
+    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    await add(fav)
+
+    expect(listener).not.toHaveBeenCalled()
+    errorLog.mockRestore()
+  })
+
+  it('stops notifying after unsubscribing', async () => {
+    const listener = jest.fn()
+    onFavoritesChanged(listener)()
+
+    await add(fav)
+
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('still saves and notifies other listeners when one listener throws', async () => {
+    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const broken = onFavoritesChanged(() => { throw new Error('boom') })
+    const listener = jest.fn()
+    unsubscribe = onFavoritesChanged(listener)
+
+    expect(await add(fav)).toBe(true)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(await list()).toEqual([fav])
+    broken()
+    errorLog.mockRestore()
   })
 })

@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Starring a Stop now always saves it as a Favorite, including re-starring one that was just removed.
+- A removed Favorite no longer reappears after reloading My Favorites.
+- One failed ETA request no longer blanks the whole favorites list; when the network is down entirely, My Favorites keeps showing the last loaded arrivals.
+
+### Changed
+- The home-screen widget refreshes immediately when a Favorite is added or removed (Android).
+- My Favorites and the widget now share one ETA pipeline, so both group arrivals under the same Stop names. Arrivals on My Favorites are sorted soonest first, and Stop names drop platform suffixes such as "(PA215)".
+- Internal: new `utils/favorites.ts` and `utils/favorite_board.ts` modules replace `utils/storage.ts`, `utils/routes_storage.ts` and `utils/eta_grouping.ts`. Existing Favorites are kept (same storage key).
+
 ## [v1.1.0] - 2026-09-18
 
 ### Added

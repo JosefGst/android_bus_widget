@@ -49,3 +49,6 @@ app-example
 # Playwright
 /playwright-report/
 /test-results/
+
+# Playwright MCP output
+/.playwright-mcp/
