@@ -52,3 +52,4 @@ app-example
 
 # Playwright MCP output
 /.playwright-mcp/
+.playwright-mcp/

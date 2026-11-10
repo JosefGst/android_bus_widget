@@ -1,9 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
-import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from '../utils/fetch';
+import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS, Stop } from '../utils/fetch';
+import { buildRouteMarkers } from '../utils/route_stop_map';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 const RoutesStopScreen = () => {
@@ -14,6 +16,9 @@ const RoutesStopScreen = () => {
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<ROUTS[]>([]);
   const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
+  const [stops, setStops] = useState<Stop[]>([]);
+  const markers = useMemo(() => buildRouteMarkers(data, stops), [data, stops]);
+  const { height: windowHeight } = useWindowDimensions();
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
@@ -50,6 +55,7 @@ const RoutesStopScreen = () => {
               stopNameMap[stop.stop] = stop.name_en;
             });
             setStopNames(stopNameMap);
+            setStops(stops);
           } catch (nameErr: any) {
             console.warn('Failed to load stop names', nameErr);
           }
@@ -84,6 +90,14 @@ const RoutesStopScreen = () => {
       ) : error ? (
         <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
       ) : (
+        <>
+        <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
+          {markers.length > 0 ? (
+            <StopMap markers={markers} />
+          ) : (
+            <Text style={styles.mapUnavailable}>Map unavailable</Text>
+          )}
+        </View>
         <FlatList
           data={data}
           keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
@@ -158,6 +172,7 @@ const RoutesStopScreen = () => {
           )}
           ListEmptyComponent={<Text>No stops found for this route.</Text>}
         />
+        </>
       )}
     </View>
   );
@@ -166,6 +181,15 @@ const RoutesStopScreen = () => {
 export default RoutesStopScreen;
 
 const styles = StyleSheet.create({
+  mapContainer: {
+    marginBottom: 8,
+    backgroundColor: '#e5e5e5',
+    justifyContent: 'center',
+  },
+  mapUnavailable: {
+    textAlign: 'center',
+    color: '#666',
+  },
   seqCircle: {
     width: 42,
     height: 42,
