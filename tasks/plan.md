@@ -56,33 +56,34 @@ T1, T2 and T3 don't depend on each other and could be done in any order or at th
 ## Task list
 
 ### Phase 1: Foundation
-- [ ] T1: `buildRouteMarkers()`, with tests (S)
-- [ ] T2: Map message types and `parseFromMapMessage()`, with tests (S)
-- [ ] T3: Bundle Leaflet with a generator script (S)
+- [x] T1: `buildRouteMarkers()`, with tests (S)
+- [x] T2: Map message types and `parseFromMapMessage()`, with tests (S)
+- [x] T3: Bundle Leaflet with a generator script (S)
 
 ### Checkpoint A: Foundation
-- [ ] `npm test`, `npm run lint`, `npx tsc --noEmit` pass
+- [x] `npm test`, `npm run lint`, `npx tsc --noEmit` pass
 
 ### Phase 2: Map on screen (highest risk)
-- [ ] T4: Static map with fitted markers on Web and Android (M)
+- [x] T4: Static map with fitted markers on Web and Android (M)
 
 ### Checkpoint B: Map renders on both platforms (human check on device)
-- [ ] Web: markers and tiles visible, view fitted to the Route
-- [ ] Android: same, and pinch and pan work in the WebView
+- [x] Web: markers and tiles visible, view fitted to the Route
+- [ ] (pending device) Android: same, and pinch and pan work in the WebView
 
 ### Phase 3: Interaction
-- [ ] T5: Shared selection between markers and rows (M)
-- [ ] T6: Collapse and show the map (S)
+- [x] T5: Shared selection between markers and rows (M)
+- [x] T6: Collapse and show the map (S)
 
 ### Checkpoint C: Feature complete (human check on device)
-- [ ] Spec behaviours B1–B9 work on Android and Web
+- [x] Spec behaviours B1–B9 work on Web
+- [ ] Spec behaviours B1–B9 verified on an Android device (pending)
 
 ### Phase 4: Hardening
-- [ ] T7: E2E test for the map flow (M)
-- [ ] T8: Docs: AGENTS.md and the spec status (XS)
+- [x] T7: E2E test for the map flow (M)
+- [x] T8: Docs: AGENTS.md and the spec status (XS)
 
 ### Checkpoint D: Done
-- [ ] All spec success criteria 1–7 met; ready for PR
+- [x] All spec success criteria 1–7 met; ready for PR
 
 ## Risks and mitigations
 

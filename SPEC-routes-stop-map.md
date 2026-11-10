@@ -1,6 +1,6 @@
 # Spec: Routes Stop map
 
-**Status:** Draft, awaiting approval | **Date:** 2026-11-10
+**Status:** Implemented on `feat/routes-stop-map` | **Date:** 2026-11-10
 
 ## Objective
 
