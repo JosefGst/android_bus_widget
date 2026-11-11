@@ -17,7 +17,8 @@ export default function TabLayout() {
         <Tabs
           tabBarPosition="bottom"
           screenOptions={{
-            swipeEnabled: true,
+            // Tabs switch by tapping only: swiping would fight panning the Route map.
+            swipeEnabled: false,
             animationEnabled: true,
             tabBarIndicatorStyle: { height: 0 },
             tabBarActiveTintColor: '#0a84ff',

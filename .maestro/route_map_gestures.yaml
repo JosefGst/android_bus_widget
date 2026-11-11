@@ -1,0 +1,36 @@
+# Swipes never switch tabs (map pans stay on the map); tapping a tab still does.
+appId: com.anonymous.bus
+tags:
+  - routes_stop
+  - map
+---
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- runFlow: subflows/open_route_1a.yaml
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000
+
+# Horizontal pans on the map stay on Routes Stop.
+- swipe:
+    from:
+      id: "route-map"
+    direction: LEFT
+- assertVisible: "Route: 1A"
+- swipe:
+    from:
+      id: "route-map"
+    direction: RIGHT
+- assertVisible: "Route: 1A"
+
+# A horizontal swipe on the Stop list does not switch tabs either.
+- swipe:
+    start: 80%, 85%
+    end: 15%, 85%
+- assertVisible: "Route: 1A"
+
+# Tabs still switch by tapping.
+- tapOn: "My Favorites"
+- assertNotVisible: "Route: 1A"
