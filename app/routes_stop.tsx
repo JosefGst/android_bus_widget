@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
-import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS, Stop } from '../utils/fetch';
+import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
 import { buildRouteMarkers } from '../utils/route_stop_map';
+import { getStopsFor } from '../utils/stops';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 const RoutesStopScreen = () => {
@@ -18,6 +19,11 @@ const RoutesStopScreen = () => {
   const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
   const [stops, setStops] = useState<Stop[]>([]);
   const markers = useMemo(() => buildRouteMarkers(data, stops), [data, stops]);
+  // The Stop list whose names finished loading; null while a load is running.
+  const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null);
+  // Bumped by the Retry row to load the Stop names again.
+  const [namesAttempt, setNamesAttempt] = useState(0);
+  const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop]);
   const { height: windowHeight } = useWindowDimensions();
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,20 +75,6 @@ const RoutesStopScreen = () => {
           const res = await fetchRouteSTOP(route, apiBound, service_type);
           if (cancelled) return;
           setData(res.data);
-          // Fetch stop names from cache - failures here must not hide the
-          // route/stop data we already fetched successfully above.
-          try {
-            const { stops } = await getCachedStops();
-            if (cancelled) return;
-            const stopNameMap: { [stopId: string]: string } = {};
-            stops.forEach(stop => {
-              stopNameMap[stop.stop] = stop.name_en;
-            });
-            setStopNames(stopNameMap);
-            setStops(stops);
-          } catch (nameErr: any) {
-            console.warn('Failed to load stop names', nameErr);
-          }
         } else {
           if (!cancelled) setError('Invalid route, bound, or service type');
         }
@@ -97,6 +89,33 @@ const RoutesStopScreen = () => {
       cancelled = true;
     };
   }, [route, bound, service_type]);
+
+  // Stop names and coordinates for the Route's Stops. A failure here must not
+  // hide the Stop list fetched above; rows fall back to Stop ids and a Retry row.
+  useEffect(() => {
+    let cancelled = false;
+    const loadStopNames = async () => {
+      setNamesLoadedFor(null);
+      try {
+        const found = await getStopsFor(data.map(item => item.stop));
+        if (cancelled) return;
+        const stopNameMap: { [stopId: string]: string } = {};
+        found.forEach(stop => {
+          stopNameMap[stop.stop] = stop.name_en;
+        });
+        setStopNames(stopNameMap);
+        setStops(found);
+      } catch (e) {
+        console.error('Failed to load stop names', e);
+      } finally {
+        if (!cancelled) setNamesLoadedFor(data);
+      }
+    };
+    loadStopNames();
+    return () => {
+      cancelled = true;
+    };
+  }, [data, namesAttempt]);
 
   return (
     <View style={{ flex: 1, paddingTop: 40 }}>
@@ -133,6 +152,17 @@ const RoutesStopScreen = () => {
           <MaterialIcons name={mapVisible ? 'expand-less' : 'map'} size={22} color="#007aff" />
           <Text style={styles.mapToggleText}>{mapVisible ? 'Hide map' : 'Show map'}</Text>
         </Pressable>
+        {namesMissing && (
+          <Pressable
+            onPress={() => setNamesAttempt(n => n + 1)}
+            style={styles.namesRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading stop names"
+          >
+            <MaterialIcons name="refresh" size={20} color="#007aff" />
+            <Text style={styles.mapToggleText}>Couldn&apos;t load stop names — Retry</Text>
+          </Pressable>
+        )}
         <FlatList
           ref={listRef}
           data={data}
@@ -219,6 +249,13 @@ const styles = StyleSheet.create({
     color: '#007aff',
     fontSize: 15,
     marginLeft: 4,
+  },
+  namesRetry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    marginBottom: 4,
   },
   mapUnavailable: {
     textAlign: 'center',

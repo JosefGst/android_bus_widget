@@ -17,7 +17,8 @@ app/                      # Expo Router screens (tab-based)
   routes_stop.tsx         # Stop list for a route + ETA + favorite button + Route map
   my_favorites.tsx         # Saved favorites with real-time ETA countdown
 utils/                    # Shared utilities (NOT inside app/)
-  fetch.ts                # KMB API calls, types, 24h AsyncStorage cache
+  fetch.ts                # KMB API calls, types, 24h Route cache
+  stops.ts                # getStopsFor(): Stop names/coords — no-expiry Stop cache, fills gaps via /stop/{id}
   favorites.ts            # Favorites: the only reader/writer of the Favorite list (list/add/remove/listForWidget/onFavoritesChanged)
   favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/my_favorites.tsx
   string_formatting.ts    # normalizeStopName()
@@ -72,14 +73,14 @@ index.ts
       └─ app/_layout.tsx (3 tabs)
           ├─ app/index.tsx          → utils/fetch, utils/time_formatting
           ├─ app/routes_stop.tsx    → utils/fetch, utils/favorites, utils/time_formatting,
-          │                            utils/route_stop_map, components/StopMap
+          │                            utils/route_stop_map, utils/stops, components/StopMap
           └─ app/my_favorites.tsx   → utils/favorites, utils/favorite_board, utils/time_formatting
 ```
 
 - **No circular dependencies.** Dependency direction: `app/` → `components/` → `utils/`, and `widget/` → `utils/`. Never import from `app/` into `components/`, `utils/` or `widget/`; `widget/` never imports `components/`.
 - **Route map:** the Leaflet page is a dumb view. React owns the state (the selected Stop is `expandedStop` in `routes_stop.tsx`) and talks to the page with JSON `postMessage` (`setMarkers`/`select` in, `ready`/`markerPress` out). Messages from the page are untrusted: always parse them with `parseFromMapMessage()`. Hosts re-send markers + selection on `ready`, which also restores the map after it is hidden and shown again.
 - **API:** KMB public API (`data.etabus.gov.hk`). All fetch logic in `utils/fetch.ts`. Use `fetchJson<T>()` for all API calls — never call `fetch()` directly.
-- **Caching:** `getCachedRoutes()` / `getCachedStops()` — 24h AsyncStorage cache with `isCacheStale()` check.
+- **Caching:** `getCachedRoutes()` — 24h AsyncStorage cache with `isCacheStale()` check. Stops: `getStopsFor(stopIds)` in `utils/stops.ts` — the full `/stop` list is downloaded only when there is no cache (it never expires); Stops missing from it are fetched one by one (max 4 parallel) and added; calls are queued so overlapping screens never download the list twice. Never re-download the full Stop list on a timer: bursts get the app 403'd. See `docs/ideas/stop-names-cache.md`.
 - **Favorites:** `utils/favorites.ts` is the only module that reads or writes the Favorite list. Writes are serialized internally; screens must not keep their own copies or queues. Never pass Favorite data through navigation params.
 - **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Favorites and the widget. It rejects only when every ETA request fails, so callers keep their last board.
 - **Widget:** Runs as Android background task. See `widget/AGENTS.md` for critical constraints.

@@ -14,6 +14,8 @@ tags:
 # Stop names come from /stop; when that fails the rows show ids and the map is unavailable.
 - assertVisible: "1, SAU MAU PING \\(CENTRAL\\)"
 - assertNotVisible: "Map unavailable"
+# The Retry row only appears when Stop names could not be loaded.
+- assertNotVisible: "Couldn't load stop names.*"
 - extendedWaitUntil:
     visible: ".*Map information from Lands Department"
     timeout: 15000
