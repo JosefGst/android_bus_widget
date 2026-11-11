@@ -3,13 +3,13 @@ import { parseFromMapMessage, ToMapMessage } from '../utils/route_stop_map'
 import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 
 /** Web host: the Leaflet page in an iframe. Android uses StopMap.tsx. */
-export function StopMap({ markers, selectedStop, onMarkerPress, onTouchActiveChange }: StopMapProps): React.JSX.Element | null {
+export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps): React.JSX.Element | null {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
-  const latest = useRef({ markers, selectedStop, onMarkerPress, onTouchActiveChange })
+  const latest = useRef({ markers, selectedStop, onMarkerPress })
   useEffect(() => {
-    latest.current = { markers, selectedStop, onMarkerPress, onTouchActiveChange }
+    latest.current = { markers, selectedStop, onMarkerPress }
   })
   // Render the iframe only in the browser, never in the static pre-render.
   const [mounted, setMounted] = useState(false)
@@ -38,8 +38,6 @@ export function StopMap({ markers, selectedStop, onMarkerPress, onTouchActiveCha
         syncAll()
       } else if (msg?.type === 'markerPress') {
         latest.current.onMarkerPress(msg.stop)
-      } else if (msg?.type === 'touchStart' || msg?.type === 'touchEnd') {
-        latest.current.onTouchActiveChange?.(msg.type === 'touchStart')
       }
     }
     window.addEventListener('message', onMessage)

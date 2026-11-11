@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, MAP_SIZE_KEY, saveMapSize, snapFraction } from './map_size'
+import { DEFAULT_MAP_FRACTION, growForMarker, mapSizeName, loadMapSize, MAP_SIZE_KEY, saveMapSize, snapFraction } from './map_size'
 
 beforeEach(async () => {
   await AsyncStorage.clear()
@@ -53,5 +53,16 @@ describe('loadMapSize / saveMapSize', () => {
     jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('boom'))
     jest.spyOn(console, 'error').mockImplementationOnce(() => {})
     expect(await loadMapSize()).toBeCloseTo(DEFAULT_MAP_FRACTION)
+  })
+})
+
+describe('mapSizeName', () => {
+  it.each([
+    [1 / 3, 'small'],
+    [1 / 2, 'half'],
+    [0.85, 'large'],
+    [0.6, 'half'],
+  ])('names %p as %p', (fraction, name) => {
+    expect(mapSizeName(fraction)).toBe(name)
   })
 })

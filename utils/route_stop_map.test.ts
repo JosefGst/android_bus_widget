@@ -65,10 +65,6 @@ describe('parseFromMapMessage', () => {
     expect(parseFromMapMessage('{"type":"markerPress","stop":"A1"}')).toEqual({ type: 'markerPress', stop: 'A1' })
   })
 
-  it.each(['touchStart', 'touchEnd'] as const)('accepts a %s message', type => {
-    expect(parseFromMapMessage(JSON.stringify({ type }))).toEqual({ type })
-  })
-
   it.each([
     ['a non-string', 42],
     ['bad JSON', '{nope'],

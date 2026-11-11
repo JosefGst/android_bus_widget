@@ -1,4 +1,4 @@
-# Route map gestures: panning the map must not switch tabs; swiping elsewhere still does.
+# Swipes never switch tabs (map pans stay on the map); tapping a tab still does.
 appId: com.anonymous.bus
 tags:
   - routes_stop
@@ -25,8 +25,12 @@ tags:
     direction: RIGHT
 - assertVisible: "Route: 1A"
 
-# A swipe on the Stop list still switches tabs.
+# A horizontal swipe on the Stop list does not switch tabs either.
 - swipe:
     start: 80%, 85%
     end: 15%, 85%
+- assertVisible: "Route: 1A"
+
+# Tabs still switch by tapping.
+- tapOn: "My Favorites"
 - assertNotVisible: "Route: 1A"

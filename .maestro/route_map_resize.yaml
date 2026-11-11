@@ -1,0 +1,85 @@
+# Route map resizing: drag handle snaps to ⅓ / ½ / 85%, the size is remembered,
+# and tapping a marker grows the smallest map to ½.
+appId: com.anonymous.bus
+tags:
+  - routes_stop
+  - map
+---
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+# Opened inline: a saved large map leaves the list too short for open_route_1a's "1, …" row check.
+- tapOn: "Clear"
+- tapOn: "1"
+- tapOn: "A"
+- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- extendedWaitUntil:
+    visible: "Route: 1A"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000
+
+# Start from the smallest size, whatever was saved: drag up from each possible handle position
+# (large ~82%, half ~53% on a 1200x1920 screen). A drag that misses the handle just pans the map or list.
+- swipe:
+    start: 50%, 82%
+    end: 50%, 15%
+    duration: 800
+- swipe:
+    start: 50%, 53%
+    end: 50%, 15%
+    duration: 800
+- assertVisible: "Resize map, small"
+
+# Handle positions on a 1200x1920 screen: small ~39%, half ~53%, large ~82%.
+- swipe:
+    start: 50%, 39%
+    end: 50%, 54%
+    duration: 800
+- assertVisible: "Resize map, half"
+- swipe:
+    start: 50%, 53%
+    end: 50%, 82%
+    duration: 800
+- assertVisible: "Resize map, large"
+
+# The size is remembered after leaving and reopening the Route.
+- tapOn: "Home"
+- tapOn: "Clear"
+- tapOn: "1"
+- tapOn: "A"
+- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- extendedWaitUntil:
+    visible: "Route: 1A"
+    timeout: 10000
+- assertVisible: "Resize map, large"
+# Let the reopened screen finish laying out before dragging.
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000
+
+# Back to small, then a marker tap grows the map to half.
+- swipe:
+    start: 50%, 82%
+    end: 50%, 15%
+    duration: 800
+- assertVisible: "Resize map, small"
+# Marker pins expose their Stop seq as text; low seqs overlap near the terminus, so use 30.
+- extendedWaitUntil:
+    visible: "30"
+    timeout: 15000
+- tapOn: "30"
+- assertVisible: "Resize map, half"
+
+# Clean up for other flows: map back to small, list back to the first Stop.
+- swipe:
+    start: 50%, 53%
+    end: 50%, 15%
+    duration: 800
+- assertVisible: "Resize map, small"
+- scrollUntilVisible:
+    element: "1, SAU MAU PING \\(CENTRAL\\)"
+    direction: UP
+    timeout: 20000

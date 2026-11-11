@@ -1,10 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { MapResizeHandle } from '../components/MapResizeHandle';
 import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
 import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
+import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, saveMapSize, snapFraction } from '../utils/map_size';
 import { buildRouteMarkers } from '../utils/route_stop_map';
 import { getStopsFor } from '../utils/stops';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
@@ -25,12 +27,27 @@ const RoutesStopScreen = () => {
   const [namesAttempt, setNamesAttempt] = useState(0);
   const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop]);
   const { height: windowHeight } = useWindowDimensions();
+  // Height of the area below the header; map sizes are fractions of it so the handle and list stay on screen.
+  const [contentHeight, setContentHeight] = useState(0);
+  const areaHeight = contentHeight || windowHeight;
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
   const listRef = useRef<FlatList<ROUTS>>(null);
   const [mapVisible, setMapVisible] = useState(true);
+  // Map height as a fraction of the window: the saved snap size, or the live value while dragging.
+  const [mapFraction, setMapFraction] = useState(DEFAULT_MAP_FRACTION);
+  useEffect(() => {
+    let cancelled = false;
+    loadMapSize().then(f => { if (!cancelled) setMapFraction(f); });
+    return () => { cancelled = true; };
+  }, []);
+  const onMapResizeRelease = useCallback((fraction: number) => {
+    const snapped = snapFraction(fraction);
+    setMapFraction(snapped);
+    saveMapSize(snapped);
+  }, []);
 
   // The one selected Stop: drives the expanded row and the highlighted marker.
   const selectStop = useCallback(async (stopId: string | null) => {
@@ -47,20 +64,13 @@ const RoutesStopScreen = () => {
     }
   }, [etaMap, route, service_type]);
 
-  // A marker tap selects the Stop and brings its row into view.
+  // A marker tap selects the Stop, grows a small map (not saved) and brings its row into view.
   const onMarkerPress = useCallback((stopId: string) => {
     selectStop(stopId);
+    setMapFraction(growForMarker);
     const index = data.findIndex(item => item.stop === stopId);
     if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
   }, [data, selectStop]);
-
-  // Tab swiping is off while a finger is on the map, so pans move the map instead of
-  // switching tabs. Always turn it back on when the screen loses focus or unmounts.
-  const navigation = useNavigation();
-  const onMapTouchActiveChange = useCallback((active: boolean) => {
-    navigation.setOptions({ swipeEnabled: !active });
-  }, [navigation]);
-  useFocusEffect(useCallback(() => () => navigation.setOptions({ swipeEnabled: true }), [navigation]));
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -141,15 +151,23 @@ const RoutesStopScreen = () => {
       ) : error ? (
         <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
       ) : (
-        <>
+        <View style={{ flex: 1 }} onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
         {mapVisible && (
-          <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
+          <View style={[styles.mapContainer, { height: Math.round(areaHeight * mapFraction) }]} testID="route-map">
             {markers.length > 0 ? (
-              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} onTouchActiveChange={onMapTouchActiveChange} />
+              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
             ) : (
               <Text style={styles.mapUnavailable}>Map unavailable</Text>
             )}
           </View>
+        )}
+        {mapVisible && (
+          <MapResizeHandle
+            fraction={mapFraction}
+            areaHeight={areaHeight}
+            onDrag={setMapFraction}
+            onRelease={onMapResizeRelease}
+          />
         )}
         <Pressable
           onPress={() => setMapVisible(v => !v)}
@@ -233,7 +251,7 @@ const RoutesStopScreen = () => {
           )}
           ListEmptyComponent={<Text>No stops found for this route.</Text>}
         />
-        </>
+        </View>
       )}
     </View>
   );

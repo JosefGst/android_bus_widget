@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-/** Route map heights, as fractions of the window height. */
+/** Route map heights, as fractions of the screen area below the header. */
 export const MAP_SNAP_FRACTIONS = [1 / 3, 1 / 2, 0.85] as const
 export const DEFAULT_MAP_FRACTION = MAP_SNAP_FRACTIONS[0]
 export const MAP_SIZE_KEY = 'route_map_size'
@@ -35,4 +35,12 @@ export async function saveMapSize(fraction: number): Promise<void> {
   } catch (e) {
     console.error('Failed to save map size', e)
   }
+}
+
+/** Spoken name of a map size, used in the resize handle's label. */
+export function mapSizeName(fraction: number): 'small' | 'half' | 'large' {
+  const snapped = snapFraction(fraction)
+  if (snapped === MAP_SNAP_FRACTIONS[0]) return 'small'
+  if (snapped === MAP_SNAP_FRACTIONS[1]) return 'half'
+  return 'large'
 }
