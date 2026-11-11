@@ -18,6 +18,8 @@ export type ToMapMessage =
 export type FromMapMessage =
   | { type: 'ready' }
   | { type: 'markerPress'; stop: string }
+  | { type: 'touchStart' }
+  | { type: 'touchEnd' }
 
 // Rough bounding box of Hong Kong; anything outside is bad data.
 const HK_BOUNDS = { minLat: 22.1, maxLat: 22.6, minLng: 113.8, maxLng: 114.5 }
@@ -59,6 +61,8 @@ export function parseFromMapMessage(raw: unknown): FromMapMessage | null {
   }
   if (typeof data !== 'object' || data === null || !('type' in data)) return null
   if (data.type === 'ready') return { type: 'ready' }
+  if (data.type === 'touchStart') return { type: 'touchStart' }
+  if (data.type === 'touchEnd') return { type: 'touchEnd' }
   if (data.type === 'markerPress' && 'stop' in data && typeof data.stop === 'string' && data.stop !== '') {
     return { type: 'markerPress', stop: data.stop }
   }

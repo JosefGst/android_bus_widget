@@ -6,6 +6,8 @@ export interface StopMapProps {
   markers: RouteMarker[]
   selectedStop: string | null
   onMarkerPress: (stop: string) => void
+  /** Called with true while a finger is on the map, false when it lifts. */
+  onTouchActiveChange?: (active: boolean) => void
 }
 
 /** Zoom level used when the map focuses on one selected Stop. */
@@ -92,6 +94,13 @@ const PAGE_SCRIPT = `
     if (e.source !== window.parent || typeof e.data !== 'string') return;
     try { window.receive(JSON.parse(e.data)); } catch (_) {}
   });
+
+  // Tell the host while a finger is on the map, so it can stop tab swiping from stealing pans.
+  var container = map.getContainer();
+  container.addEventListener('touchstart', function () { send({ type: 'touchStart' }); }, { passive: true });
+  function touchEnd(e) { if (!e.touches || e.touches.length === 0) send({ type: 'touchEnd' }); }
+  container.addEventListener('touchend', touchEnd, { passive: true });
+  container.addEventListener('touchcancel', touchEnd, { passive: true });
 
   send({ type: 'ready' });
 })();

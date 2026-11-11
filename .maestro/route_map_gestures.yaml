@@ -1,0 +1,32 @@
+# Route map gestures: panning the map must not switch tabs; swiping elsewhere still does.
+appId: com.anonymous.bus
+tags:
+  - routes_stop
+  - map
+---
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- runFlow: subflows/open_route_1a.yaml
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000
+
+# Horizontal pans on the map stay on Routes Stop.
+- swipe:
+    from:
+      id: "route-map"
+    direction: LEFT
+- assertVisible: "Route: 1A"
+- swipe:
+    from:
+      id: "route-map"
+    direction: RIGHT
+- assertVisible: "Route: 1A"
+
+# A swipe on the Stop list still switches tabs.
+- swipe:
+    start: 80%, 85%
+    end: 15%, 85%
+- assertNotVisible: "Route: 1A"

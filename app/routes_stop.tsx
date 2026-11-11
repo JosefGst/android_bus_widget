@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StopMap } from '../components/StopMap';
@@ -53,6 +53,14 @@ const RoutesStopScreen = () => {
     const index = data.findIndex(item => item.stop === stopId);
     if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
   }, [data, selectStop]);
+
+  // Tab swiping is off while a finger is on the map, so pans move the map instead of
+  // switching tabs. Always turn it back on when the screen loses focus or unmounts.
+  const navigation = useNavigation();
+  const onMapTouchActiveChange = useCallback((active: boolean) => {
+    navigation.setOptions({ swipeEnabled: !active });
+  }, [navigation]);
+  useFocusEffect(useCallback(() => () => navigation.setOptions({ swipeEnabled: true }), [navigation]));
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -137,7 +145,7 @@ const RoutesStopScreen = () => {
         {mapVisible && (
           <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
             {markers.length > 0 ? (
-              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
+              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} onTouchActiveChange={onMapTouchActiveChange} />
             ) : (
               <Text style={styles.mapUnavailable}>Map unavailable</Text>
             )}

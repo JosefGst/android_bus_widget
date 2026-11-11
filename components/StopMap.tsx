@@ -7,13 +7,13 @@ import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 const SOURCE = { html: STOP_MAP_HTML }
 
 /** Android host: the Leaflet page in a WebView. Web uses StopMap.web.tsx. */
-export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps): React.JSX.Element {
+export function StopMap({ markers, selectedStop, onMarkerPress, onTouchActiveChange }: StopMapProps): React.JSX.Element {
   const webViewRef = useRef<WebView>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
-  const latest = useRef({ markers, selectedStop, onMarkerPress })
+  const latest = useRef({ markers, selectedStop, onMarkerPress, onTouchActiveChange })
   useEffect(() => {
-    latest.current = { markers, selectedStop, onMarkerPress }
+    latest.current = { markers, selectedStop, onMarkerPress, onTouchActiveChange }
   })
 
   const send = useCallback((msg: ToMapMessage) => {
@@ -42,6 +42,8 @@ export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps):
       syncAll()
     } else if (msg?.type === 'markerPress') {
       latest.current.onMarkerPress(msg.stop)
+    } else if (msg?.type === 'touchStart' || msg?.type === 'touchEnd') {
+      latest.current.onTouchActiveChange?.(msg.type === 'touchStart')
     }
   }, [syncAll])
 
