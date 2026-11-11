@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { fetchROUTE, getCachedRoutes, getCachedStops, isCacheStale } from './fetch';
+import { fetchROUTE, getCachedRoutes, isCacheStale } from './fetch';
 
 const jsonResponse = (body: unknown, status = 200): Response =>
   ({ status, text: async () => JSON.stringify(body) }) as Response;
@@ -48,7 +48,7 @@ describe('isCacheStale', () => {
   });
 });
 
-describe('getCachedRoutes / getCachedStops', () => {
+describe('getCachedRoutes', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.restoreAllMocks();
@@ -81,23 +81,5 @@ describe('getCachedRoutes / getCachedStops', () => {
     expect(result).toEqual({ routes: [{ route: '2' }], generatedTimestamp: 'gen-2' });
     const saved = JSON.parse((await AsyncStorage.getItem('bus_routes_cache'))!);
     expect(saved.data).toEqual([{ route: '2' }]);
-  });
-
-  it('refetches stops when the cache is stale', async () => {
-    await AsyncStorage.setItem(
-      'bus_stops_cache',
-      JSON.stringify({
-        data: [{ stop: 'old' }],
-        generatedTimestamp: 'old-gen',
-        cacheTimestamp: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
-      })
-    );
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      jsonResponse({ type: 'a', version: '1', generated_timestamp: 'new-gen', data: [{ stop: 'new' }] })
-    );
-
-    const result = await getCachedStops();
-
-    expect(result).toEqual({ stops: [{ stop: 'new' }], generatedTimestamp: 'new-gen' });
   });
 });

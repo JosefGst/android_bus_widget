@@ -1,9 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
-import { ETA, fetchRouteSTOP, fetchStopETA, getCachedStops, ROUTS } from '../utils/fetch';
+import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
+import { buildRouteMarkers } from '../utils/route_stop_map';
+import { getStopsFor } from '../utils/stops';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
 
 const RoutesStopScreen = () => {
@@ -14,10 +17,42 @@ const RoutesStopScreen = () => {
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<ROUTS[]>([]);
   const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
+  const [stops, setStops] = useState<Stop[]>([]);
+  const markers = useMemo(() => buildRouteMarkers(data, stops), [data, stops]);
+  // The Stop list whose names finished loading; null while a load is running.
+  const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null);
+  // Bumped by the Retry row to load the Stop names again.
+  const [namesAttempt, setNamesAttempt] = useState(0);
+  const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop]);
+  const { height: windowHeight } = useWindowDimensions();
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
+  const listRef = useRef<FlatList<ROUTS>>(null);
+  const [mapVisible, setMapVisible] = useState(true);
+
+  // The one selected Stop: drives the expanded row and the highlighted marker.
+  const selectStop = useCallback(async (stopId: string | null) => {
+    setExpandedStop(stopId);
+    if (!stopId || etaMap[stopId]) return;
+    setLoadingEta(stopId);
+    try {
+      const etaRes = await fetchStopETA(stopId, route as string, service_type as string);
+      setEtaMap(prev => ({ ...prev, [stopId]: etaRes.data }));
+    } catch {
+      setEtaMap(prev => ({ ...prev, [stopId]: [] }));
+    } finally {
+      setLoadingEta(null);
+    }
+  }, [etaMap, route, service_type]);
+
+  // A marker tap selects the Stop and brings its row into view.
+  const onMarkerPress = useCallback((stopId: string) => {
+    selectStop(stopId);
+    const index = data.findIndex(item => item.stop === stopId);
+    if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
+  }, [data, selectStop]);
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -40,19 +75,6 @@ const RoutesStopScreen = () => {
           const res = await fetchRouteSTOP(route, apiBound, service_type);
           if (cancelled) return;
           setData(res.data);
-          // Fetch stop names from cache - failures here must not hide the
-          // route/stop data we already fetched successfully above.
-          try {
-            const { stops } = await getCachedStops();
-            if (cancelled) return;
-            const stopNameMap: { [stopId: string]: string } = {};
-            stops.forEach(stop => {
-              stopNameMap[stop.stop] = stop.name_en;
-            });
-            setStopNames(stopNameMap);
-          } catch (nameErr: any) {
-            console.warn('Failed to load stop names', nameErr);
-          }
         } else {
           if (!cancelled) setError('Invalid route, bound, or service type');
         }
@@ -67,6 +89,33 @@ const RoutesStopScreen = () => {
       cancelled = true;
     };
   }, [route, bound, service_type]);
+
+  // Stop names and coordinates for the Route's Stops. A failure here must not
+  // hide the Stop list fetched above; rows fall back to Stop ids and a Retry row.
+  useEffect(() => {
+    let cancelled = false;
+    const loadStopNames = async () => {
+      setNamesLoadedFor(null);
+      try {
+        const found = await getStopsFor(data.map(item => item.stop));
+        if (cancelled) return;
+        const stopNameMap: { [stopId: string]: string } = {};
+        found.forEach(stop => {
+          stopNameMap[stop.stop] = stop.name_en;
+        });
+        setStopNames(stopNameMap);
+        setStops(found);
+      } catch (e) {
+        console.error('Failed to load stop names', e);
+      } finally {
+        if (!cancelled) setNamesLoadedFor(data);
+      }
+    };
+    loadStopNames();
+    return () => {
+      cancelled = true;
+    };
+  }, [data, namesAttempt]);
 
   return (
     <View style={{ flex: 1, paddingTop: 40 }}>
@@ -84,32 +133,50 @@ const RoutesStopScreen = () => {
       ) : error ? (
         <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
       ) : (
+        <>
+        {mapVisible && (
+          <View style={[styles.mapContainer, { height: Math.round(windowHeight / 3) }]} testID="route-map">
+            {markers.length > 0 ? (
+              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
+            ) : (
+              <Text style={styles.mapUnavailable}>Map unavailable</Text>
+            )}
+          </View>
+        )}
+        <Pressable
+          onPress={() => setMapVisible(v => !v)}
+          style={styles.mapToggle}
+          accessibilityRole="button"
+          accessibilityLabel={mapVisible ? 'Hide map' : 'Show map'}
+        >
+          <MaterialIcons name={mapVisible ? 'expand-less' : 'map'} size={22} color="#007aff" />
+          <Text style={styles.mapToggleText}>{mapVisible ? 'Hide map' : 'Show map'}</Text>
+        </Pressable>
+        {namesMissing && (
+          <Pressable
+            onPress={() => setNamesAttempt(n => n + 1)}
+            style={styles.namesRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading stop names"
+          >
+            <MaterialIcons name="refresh" size={20} color="#007aff" />
+            <Text style={styles.mapToggleText}>Couldn&apos;t load stop names — Retry</Text>
+          </Pressable>
+        )}
         <FlatList
+          ref={listRef}
           data={data}
+          onScrollToIndexFailed={info => {
+            // Row not measured yet: jump near it, then retry once it has rendered.
+            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 100);
+          }}
           keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
           renderItem={({ item }) => (
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Pressable
-                  onPress={async () => {
-                    if (expandedStop === item.stop) {
-                      setExpandedStop(null);
-                    } else {
-                      setExpandedStop(item.stop);
-                      // Only fetch if not already fetched
-                      if (!etaMap[item.stop]) {
-                        setLoadingEta(item.stop);
-                        try {
-                          const etaRes = await fetchStopETA(item.stop, route as string, service_type as string);
-                          setEtaMap(prev => ({ ...prev, [item.stop]: etaRes.data }));
-                        } catch {
-                          setEtaMap(prev => ({ ...prev, [item.stop]: [] }));
-                        } finally {
-                          setLoadingEta(null);
-                        }
-                      }
-                    }
-                  }}
+                  onPress={() => selectStop(expandedStop === item.stop ? null : item.stop)}
                   style={{ flex: 1, paddingVertical: 8 }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -158,6 +225,7 @@ const RoutesStopScreen = () => {
           )}
           ListEmptyComponent={<Text>No stops found for this route.</Text>}
         />
+        </>
       )}
     </View>
   );
@@ -166,6 +234,33 @@ const RoutesStopScreen = () => {
 export default RoutesStopScreen;
 
 const styles = StyleSheet.create({
+  mapContainer: {
+    backgroundColor: '#e5e5e5',
+    justifyContent: 'center',
+  },
+  mapToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  mapToggleText: {
+    color: '#007aff',
+    fontSize: 15,
+    marginLeft: 4,
+  },
+  namesRetry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  mapUnavailable: {
+    textAlign: 'center',
+    color: '#666',
+  },
   seqCircle: {
     width: 42,
     height: 42,

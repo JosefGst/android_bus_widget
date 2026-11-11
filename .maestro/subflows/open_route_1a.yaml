@@ -1,0 +1,15 @@
+# From Home, searches for Route 1A (outbound) and opens its Routes Stop screen.
+appId: com.anonymous.bus
+---
+- tapOn: "Clear"
+- tapOn: "1"
+- tapOn: "A"
+- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- extendedWaitUntil:
+    visible: "Route: 1A"
+    timeout: 10000
+- assertVisible: "Direction: O Service Type: 1"
+# Stop rows are labelled "<seq>, <Stop name or id>"; wait for the list.
+- extendedWaitUntil:
+    visible: "1, .*"
+    timeout: 20000

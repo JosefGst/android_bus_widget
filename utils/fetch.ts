@@ -99,7 +99,6 @@ export const fetchStop = async (stop: string): Promise<Stop | null> => {
 
 // Cache keys
 const ROUTE_CACHE_KEY = 'bus_routes_cache';
-const STOP_CACHE_KEY = 'bus_stops_cache';
 
 // Helper: Get current timestamp (ISO string)
 const getNowTimestamp = () => new Date().toISOString();
@@ -138,16 +137,4 @@ export const getCachedRoutes = async (): Promise<{ routes: ROUTS[]; generatedTim
   const res = await fetchROUTE();
   await saveCache(ROUTE_CACHE_KEY, res.data, res.generated_timestamp);
   return { routes: res.data, generatedTimestamp: res.generated_timestamp };
-};
-
-// High-level: Get stops with daily cache
-export const getCachedStops = async (): Promise<{ stops: Stop[]; generatedTimestamp: string }> => {
-  const cached = await loadCache(STOP_CACHE_KEY);
-  if (cached && !isCacheStale(cached.cacheTimestamp)) {
-    return { stops: cached.data, generatedTimestamp: cached.generatedTimestamp };
-  }
-  // Fetch from API and update cache
-  const res = await fetchSTOP();
-  await saveCache(STOP_CACHE_KEY, res.data, res.generated_timestamp);
-  return { stops: res.data, generatedTimestamp: res.generated_timestamp };
 };

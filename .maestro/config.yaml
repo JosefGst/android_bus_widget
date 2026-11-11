@@ -1,0 +1,6 @@
+# Maestro workspace config. Run all flows with `npm run test:maestro`.
+# Flows run against the real KMB API on a connected Android device.
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: true

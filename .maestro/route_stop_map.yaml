@@ -1,0 +1,42 @@
+# Routes Stop: Stop list, Route map (WebView), Stop selection with ETA, map toggle.
+appId: com.anonymous.bus
+tags:
+  - routes_stop
+  - map
+---
+# Keeps storage so the 24h Route/Stop caches are reused (see subflows/open_app.yaml).
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- runFlow: subflows/open_route_1a.yaml
+
+# Stop names come from /stop; when that fails the rows show ids and the map is unavailable.
+- assertVisible: "1, SAU MAU PING \\(CENTRAL\\)"
+- assertNotVisible: "Map unavailable"
+# The Retry row only appears when Stop names could not be loaded.
+- assertNotVisible: "Couldn't load stop names.*"
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000
+
+# Selecting a Stop row expands it with its ETAs (or the empty state).
+- tapOn: "1, SAU MAU PING \\(CENTRAL\\)"
+- extendedWaitUntil:
+    visible: "(arrives in .* minutes \\(ETA: .*\\))|(No ETA available)"
+    timeout: 15000
+# Tapping the selected row again collapses it.
+- tapOn: "1, SAU MAU PING \\(CENTRAL\\)"
+- assertNotVisible: "(arrives in .* minutes \\(ETA: .*\\))|(No ETA available)"
+
+# Hide map removes the map; Show map brings it back and the page re-renders.
+- tapOn: "Hide map"
+- assertVisible: "Show map"
+- assertNotVisible:
+    id: "route-map"
+- tapOn: "Show map"
+- assertVisible:
+    id: "route-map"
+- extendedWaitUntil:
+    visible: ".*Map information from Lands Department"
+    timeout: 15000

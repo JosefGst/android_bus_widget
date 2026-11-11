@@ -1,0 +1,26 @@
+# Starts the app from a clean state and waits for the Home screen with Routes loaded.
+#
+# Uses openLink instead of launchApp: on Honor/Huawei ROMs launchApp's
+# activity start is blocked from the background and the app never appears.
+# Pass CLEAR_STATE=false to keep storage (Favorites and the 24h API caches).
+# Prefer it unless the flow needs a fresh install: every cleared start downloads
+# ~2 MB of Routes and Stops, and bursts of these get the device 403'd by the KMB CDN.
+#
+# The KMB API sometimes answers 403 and Home does not retry ("Generated
+# Timestamp: N/A", "No routes found."), so the launch is retried here; flows
+# that use this subflow are not testing startup.
+appId: com.anonymous.bus
+---
+- runFlow:
+    when:
+      true: ${CLEAR_STATE != 'false'}
+    commands:
+      - clearState
+- retry:
+    maxRetries: 2
+    commands:
+      - killApp
+      - openLink: "bus://"
+      - extendedWaitUntil:
+          visible: "Generated Timestamp: \\d\\d:\\d\\d:\\d\\d"
+          timeout: 30000

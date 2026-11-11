@@ -1,0 +1,34 @@
+# Home: Route list loads from the API and the on-screen keypads filter it.
+appId: com.anonymous.bus
+tags:
+  - home
+---
+# Keeps storage so the 24h Route cache is reused (see subflows/open_app.yaml).
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- tapOn: "Clear"
+- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+
+# Numeric + letter keypad narrow the list to Route 1A.
+- tapOn: "1"
+- assertVisible: "A"
+- tapOn: "A"
+- assertVisible: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- assertVisible: "1A STAR FERRY → SAU MAU PING \\(CENTRAL\\)"
+- assertNotVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+
+# Backspace removes the letter, so Route 1 is back.
+- tapOn: "⌫"
+- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+
+# A search with no matching Route shows the empty state.
+- tapOn: "0"
+- tapOn: "0"
+- tapOn: "0"
+- assertVisible: "No routes found."
+
+# Clear resets the search.
+- tapOn: "Clear"
+- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
