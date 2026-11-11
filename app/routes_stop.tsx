@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MapResizeHandle } from '../components/MapResizeHandle';
 import { StopMap } from '../components/StopMap';
 import { add as addFavorite } from '../utils/favorites';
@@ -26,10 +26,9 @@ const RoutesStopScreen = () => {
   // Bumped by the Retry row to load the Stop names again.
   const [namesAttempt, setNamesAttempt] = useState(0);
   const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop]);
-  const { height: windowHeight } = useWindowDimensions();
-  // Height of the area below the header; map sizes are fractions of it so the handle and list stay on screen.
+  // Height of the area below the header; map sizes are fractions of it so the handle and list stay on
+  // screen. The map waits for this measurement so it never flashes at the wrong size.
   const [contentHeight, setContentHeight] = useState(0);
-  const areaHeight = contentHeight || windowHeight;
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
@@ -152,8 +151,8 @@ const RoutesStopScreen = () => {
         <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
       ) : (
         <View style={{ flex: 1 }} onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
-        {mapVisible && (
-          <View style={[styles.mapContainer, { height: Math.round(areaHeight * mapFraction) }]} testID="route-map">
+        {mapVisible && contentHeight > 0 && (
+          <View style={[styles.mapContainer, { height: Math.round(contentHeight * mapFraction) }]} testID="route-map">
             {markers.length > 0 ? (
               <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
             ) : (
@@ -161,10 +160,10 @@ const RoutesStopScreen = () => {
             )}
           </View>
         )}
-        {mapVisible && (
+        {mapVisible && contentHeight > 0 && (
           <MapResizeHandle
             fraction={mapFraction}
-            areaHeight={areaHeight}
+            areaHeight={contentHeight}
             onDrag={setMapFraction}
             onRelease={onMapResizeRelease}
           />
