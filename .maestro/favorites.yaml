@@ -1,0 +1,50 @@
+# Favorites: starter Favorites, starring a Stop, removing it, and persistence.
+appId: com.anonymous.bus
+tags:
+  - favorites
+---
+- runFlow: subflows/open_app.yaml
+
+# A fresh install shows the two starter Favorites.
+- tapOn: "My Favorites"
+- extendedWaitUntil:
+    visible: "My Routes"
+    timeout: 20000
+- assertVisible: "272P \\(.*\\)"
+- assertVisible: "272X \\(.*\\)"
+- assertNotVisible: "1A \\(.*\\)"
+
+# Starring the first Stop of 1A saves it and jumps to My Favorites.
+- tapOn: "Home"
+- runFlow: subflows/open_route_1a.yaml
+- tapOn:
+    text: "Favorite this stop"
+    index: 0
+- extendedWaitUntil:
+    visible: "1A \\(.*\\)"
+    timeout: 20000
+
+# The Favorite survives an app restart.
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- tapOn: "My Favorites"
+- extendedWaitUntil:
+    visible: "1A \\(.*\\)"
+    timeout: 20000
+
+# Removing it takes it off the list, and it stays removed after a restart.
+- tapOn: "Remove route 1A"
+- assertNotVisible: "1A \\(.*\\)"
+- assertVisible: "272P \\(.*\\)"
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- tapOn: "My Favorites"
+- extendedWaitUntil:
+    visible: "My Routes"
+    timeout: 20000
+- assertNotVisible: "1A \\(.*\\)"
+- assertVisible: "272P \\(.*\\)"

@@ -12,7 +12,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:maestro": "maestro test .maestro"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -54,6 +54,7 @@ npx expo run:android --variant release           # Build release APK
 adb install -r android/app/build/outputs/apk/release/app-release.apk  # Install APK
 npm test                                         # Run Jest unit tests
 npm run test:watch                               # Jest in watch mode
+npm run test:maestro                             # Maestro UI flows on a connected Android device (release APK installed)
 ```
 
 **Tests:** Jest (`jest-expo` preset). Unit tests cover `utils/*` — pure logic and AsyncStorage/network-backed functions — colocated as `*.test.ts` next to the module they test. Widget rendering (`FlexWidget`/`TextWidget` trees) and screen components are not covered; keep business logic in `utils/` (not inline in components/handlers) so it stays unit-testable. Mocking conventions: `@react-native-async-storage/async-storage` is mocked globally via `jest.setup.js` (official `.../jest/async-storage-mock`); global `fetch` is mocked per-test with `jest.spyOn(global, 'fetch')`. CI runs `npm test` on every push and gates the APK build job on it (`.github/workflows/ci.yml`).
@@ -181,6 +182,8 @@ index.ts
 - `package.json` `"main": "index.ts"` is required for widget registration ordering.
 - iOS widget support is a known TODO.
 - Known bugs: widget sometimes stuck on "Loading..." (timeout handler mitigates). Web only: My Favorites logs a React hydration error (#418) on direct load because the "Local Time" clock differs from the pre-rendered HTML.
-- Web only: the KMB CDN sometimes serves `/stop` without the CORS header, so stop names and the Route map show IDs / "Map unavailable" in the browser. Android is unaffected.
+- Web only: the KMB CDN sometimes serves `/stop` without the CORS header, so stop names and the Route map show IDs / "Map unavailable" in the browser.
+- Android too: the KMB CDN sometimes answers the app with 403 (seen after bursts of cold starts, while the device browser still gets 200). Nothing retries, so Home shows "No routes found." and Routes Stop shows Stop IDs / "Map unavailable" until the screen reloads.
+- Maestro flows (`.maestro/`) run against the real KMB API on a device — no mocks. Start the app with `subflows/open_app.yaml` (uses `openLink: bus://`; `launchApp` is blocked on Honor/Huawei ROMs). Keep `CLEAR_STATE: "false"` unless a flow needs a fresh install, to avoid tripping the 403s. Map markers in the WebView carry their Stop name as text, so tap list rows by their label (`"1, <Stop name>"`), not by the bare name.
 - E2E (`npm run test:e2e`, Playwright against the web export) mocks the KMB API and map tiles in `e2e/mocks.ts`; Route `N29` has three mock Stops for the map tests.
 - Domain terms (Route, Stop, ETA, Favorite, Favorite board) are defined in `GLOSSARY.md`.
