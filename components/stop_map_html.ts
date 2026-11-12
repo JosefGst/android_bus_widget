@@ -1,4 +1,4 @@
-import type { RouteMarker } from '../utils/route_stop_map'
+import type { RouteMarker, UserLocation } from '../utils/route_stop_map'
 import { LEAFLET_CSS, LEAFLET_JS } from './generated/leaflet_assets'
 
 /** Props shared by both StopMap hosts (StopMap.tsx on Android, StopMap.web.tsx on Web). */
@@ -6,6 +6,12 @@ export interface StopMapProps {
   markers: RouteMarker[]
   selectedStop: string | null
   onMarkerPress: (stop: string) => void
+  /** The user's position (Android only; the Web host ignores it). */
+  userLocation?: UserLocation | null
+  /** Goes up by one on each "locate me" tap; the map then centers on the user once. */
+  centerOnUserToken?: number
+  /** Goes up by one on each "Show route" tap; the map then fits all Stops once. */
+  fitRouteToken?: number
 }
 
 /** Zoom level used when the map focuses on one selected Stop. */
@@ -78,13 +84,46 @@ const PAGE_SCRIPT = `
     if (!entry) return;  // cleared, or a Stop without a marker: leave the view alone
     entry.marker.setIcon(icon(entry.data, true));
     entry.marker.setZIndexOffset(1000);
-    map.setView([entry.data.lat, entry.data.lng], ${SELECTED_ZOOM});
+    // Not animated: a marker tap also resizes the map, and a resize during Leaflet's zoom
+    // animation can leave it stuck, so every later setView/fitBounds is ignored.
+    map.setView([entry.data.lat, entry.data.lng], ${SELECTED_ZOOM}, { animate: false });
+  }
+
+  // The user's own position: a dot plus an accuracy circle, kept apart from the
+  // Stop markers so setMarkers/fitAll never touch it.
+  var userDot = null;
+  var userCircle = null;
+
+  function setUserLocation(loc) {
+    var ok = loc && typeof loc === 'object' && isFinite(loc.lat) && isFinite(loc.lng) && isFinite(loc.accuracy);
+    if (!ok) {
+      if (userDot) { map.removeLayer(userDot); map.removeLayer(userCircle); }
+      userDot = null;
+      userCircle = null;
+      return;
+    }
+    var ll = [loc.lat, loc.lng];
+    if (!userDot) {
+      userCircle = L.circle(ll, { radius: loc.accuracy, className: 'user-accuracy', interactive: false }).addTo(map);
+      userDot = L.circleMarker(ll, { radius: 8, className: 'user-dot', interactive: false }).addTo(map);
+    } else {
+      userCircle.setLatLng(ll).setRadius(loc.accuracy);
+      userDot.setLatLng(ll);
+    }
+  }
+
+  function centerOnUser() {
+    if (!userDot) return;
+    map.setView(userDot.getLatLng(), Math.max(map.getZoom(), 16));
   }
 
   window.receive = function (msg) {
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'setMarkers' && Array.isArray(msg.markers)) setMarkers(msg.markers);
     else if (msg.type === 'select') select(typeof msg.stop === 'string' ? msg.stop : null);
+    else if (msg.type === 'setUserLocation') setUserLocation(msg.location);
+    else if (msg.type === 'centerOnUser') centerOnUser();
+    else if (msg.type === 'fitRoute') fitAll();
   };
 
   // Web host: messages arrive via postMessage from the parent window.
@@ -111,6 +150,8 @@ html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
   background: #007aff; border-width: 3px;
   font-size: 16px; line-height: 32px;
 }
+.user-dot { fill: #1a73e8; fill-opacity: 1; stroke: white; stroke-width: 3; }
+.user-accuracy { fill: #1a73e8; fill-opacity: 0.12; stroke: #1a73e8; stroke-opacity: 0.3; stroke-width: 1; }
 `
 
 /** The self-contained Leaflet page shown by both hosts. Built once. */

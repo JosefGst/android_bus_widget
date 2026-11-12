@@ -1,103 +1,60 @@
-# Implementation Plan: Routes Stop map
+# Implementation Plan: GPS Blue Dot on Route Map
 
-Source spec: [`SPEC-routes-stop-map.md`](../SPEC-routes-stop-map.md). Tasks are in [`tasks/todo.md`](todo.md).
+Source idea: [`docs/ideas/gps-blue-dot.md`](../docs/ideas/gps-blue-dot.md). Tasks are in [`tasks/todo.md`](todo.md).
 
 ## Overview
+Show the user's own position as a blue dot with an accuracy circle on the Routes Stop map, Android only. A React Native "locate me" button over the map asks for permission, starts location updates and centers the map on the user once. Updates run only while the screen has focus and the map is shown. If permission is denied, the button is hidden and the map behaves as today.
 
-Add a Leaflet map (HK Lands Department tiles) above the stop list on the Routes Stop screen:
-- One numbered marker per Stop.
-- Tapping a marker selects the Stop: the map zooms and highlights it, and the list scrolls to the row and expands it.
-- Tapping a row selects the Stop the same way.
-- The map can be collapsed.
-- The same HTML page runs in `react-native-webview` on Android and in an `<iframe srcDoc>` on Web.
+## Architecture Decisions
+- **React owns the location; the page only draws it.** `@react-native-community/geolocation` (Android `LocationManager` provider) runs in React, which sends a new `ToMapMessage` to the page: `{ type: 'setUserLocation', location: { lat, lng, accuracy } | null }`, plus `{ type: 'centerOnUser' }` when the button is tapped. The page stays a dumb view, as for markers and selection.
+- **A pure `toUserLocation()` in `utils/route_stop_map.ts`** turns an `expo-location` reading into that location and returns `null` for invalid input (non-finite or out-of-range numbers). It is unit-tested.
+- **Location logic lives in a hook in `components/`**, `useUserLocation(active)`, so `app/routes_stop.tsx` stays thin. It returns `{ permission: 'unknown' | 'granted' | 'denied', location, start() }`. It watches the position at balanced accuracy only while `active` is true (the screen has focus and the map is shown), and checks the permission again each time the screen gets focus, so a permission granted later in Android settings is picked up.
+- **The Android host `components/StopMap.tsx`** takes new optional props `userLocation` and `centerOnUserToken`, a number that goes up on each "locate me" tap. It re-sends the last location on `ready`, like markers. `StopMap.web.tsx` ignores both props, so the shared `StopMapProps` type stays valid.
+- **The map never follows the user automatically.** It centers only on a button tap.
+- **The location is never stored or logged.**
 
-**Order:**
-1. Pure logic, with tests.
-2. The bundled Leaflet assets.
-3. **The riskiest step:** a working map on both platforms. A WebView on Android plus an iframe on Web is where things are most likely to break, so it gets proven before any interaction is built.
-4. Selection.
-5. Collapse.
-6. E2E test and docs.
+- **Not `expo-location`:** it only uses Google Play Services' fused provider, so on devices without GMS (the Honor test tablet) no position ever arrives. Permissions use React Native's `PermissionsAndroid`; the manifest permissions come from `android.permissions` in `app.json`.
 
-## Architecture decisions
-
-- **One selected Stop.** The existing `expandedStop` state in `routes_stop.tsx` becomes the selection. A single `selectStop(stopId | null)` function handles row taps and marker taps. It expands the row, fetches ETAs if needed (the existing logic moves here), and scrolls the list. The map gets `selectedStop` as a prop and reacts to changes, so the list and map can't get out of sync.
-- **The map is a dumb view.** The HTML page only renders what it's told (`setMarkers`, `select`) and reports `ready` / `markerPress`. All decisions stay in React.
-- **One HTML string, two hosts.** `buildMapHtml()` runs once at module level, because the inlined Leaflet code is about 160 KB. `StopMap.tsx` (Android) and `StopMap.web.tsx` (Web) only handle messages:
-  - Android: `injectJavaScript` / `onMessage`, with `window.ReactNativeWebView.postMessage` on the page side.
-  - Web: `iframe.contentWindow.postMessage` / `window` `message` events.
-  - The page listens on both `window` and `document`, since Android WebView sends messages to `document`.
-- **Messages are queued until `ready`.** The host keeps the latest markers and selection and sends them when the page says `ready`. The same thing happens after a remount (for example when the map is re-shown), which is how B6 works without extra code.
-- **Collapse unmounts the map.** Re-showing it mounts a fresh page, which receives the current markers and selection on `ready`. This is simpler than keeping a hidden WebView alive and avoids layout bugs from zero height.
-- **Leaflet assets are generated and committed.** `scripts/gen_leaflet_assets.js` turns `node_modules/leaflet/dist/leaflet.{js,css}` into `components/generated/leaflet_assets.ts`. ESLint ignores `components/generated/`.
-- **`components/` is a new top-level folder.** Dependencies point one way: `app/` → `components/` → `utils/`.
-
-## Dependency graph
-
+## Dependency Graph
 ```
-utils/route_stop_map.ts (RouteMarker, buildRouteMarkers, parseFromMapMessage)   [T1, T2]
-components/generated/leaflet_assets.ts  ← scripts/gen_leaflet_assets.js          [T3]
-        │
-        ▼
-components/stop_map_html.ts (buildMapHtml)                                       [T4]
-        │
-        ├── components/StopMap.tsx      (react-native-webview)                   [T4]
-        └── components/StopMap.web.tsx  (iframe srcDoc)                          [T4]
-                │
-                ▼
-app/routes_stop.tsx: map shown (T4) → selectStop sync (T5) → collapse (T6)
-                │
-                ▼
-e2e/route-stop-map.spec.ts (T7), AGENTS.md (T8)
+geolocation lib + app.json permissions (native rebuild)
+  └─ useUserLocation hook ─────────────┐
+utils/route_stop_map.ts (types + toUserLocation) ─┐
+  └─ stop_map_html.ts (draw dot / center) ─┐      │
+       └─ StopMap.tsx (send, re-send on ready) ── app/routes_stop.tsx (button + wiring)
 ```
 
-T1, T2 and T3 don't depend on each other and could be done in any order or at the same time. Everything from T4 on is sequential.
-
-## Task list
+## Task List
 
 ### Phase 1: Foundation
-- [x] T1: `buildRouteMarkers()`, with tests (S)
-- [x] T2: Map message types and `parseFromMapMessage()`, with tests (S)
-- [x] T3: Bundle Leaflet with a generator script (S)
+- [x] Task 1: Message contract and `toUserLocation()` with unit tests
+- [x] Task 2: The page draws the dot and accuracy circle and handles `centerOnUser`
 
-### Checkpoint A: Foundation
-- [x] `npm test`, `npm run lint`, `npx tsc --noEmit` pass
+### Checkpoint: Foundation
+- [x] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
 
-### Phase 2: Map on screen (highest risk)
-- [x] T4: Static map with fitted markers on Web and Android (M)
+### Phase 2: Android wiring (high risk: native module)
+- [x] Task 3: Add `expo-location`, permissions and the `useUserLocation` hook
+- [x] Task 4: StopMap host props and the locate-me button in Routes Stop
 
-### Checkpoint B: Map renders on both platforms (human check on device)
-- [x] Web: markers and tiles visible, view fitted to the Route
-- [ ] (pending device) Android: same, and pinch and pan work in the WebView
+### Checkpoint: Device
+- [x] Release APK builds; dot, centering, denial and blur behaviour verified on device
 
-### Phase 3: Interaction
-- [x] T5: Shared selection between markers and rows (M)
-- [x] T6: Collapse and show the map (S)
+### Phase 3: Polish
+- [x] Task 5: Documentation (AGENTS.md, GLOSSARY if needed) and a Maestro check that the button exists
 
-### Checkpoint C: Feature complete (human check on device)
-- [x] Spec behaviours B1–B9 work on Web
-- [ ] Spec behaviours B1–B9 verified on an Android device (pending)
+### Checkpoint: Complete
+- [ ] All acceptance criteria met, human review
 
-### Phase 4: Hardening
-- [x] T7: E2E test for the map flow (M)
-- [x] T8: Docs: AGENTS.md and the spec status (XS)
-
-### Checkpoint D: Done
-- [x] All spec success criteria 1–7 met; ready for PR
-
-## Risks and mitigations
-
+## Risks and Mitigations
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Android WebView and iframe deliver `postMessage` differently | High | T4 proves the `ready` round trip on both platforms before any interaction is built. The page listens on both `window` and `document`. |
-| Messages sent before Leaflet is ready are lost | Med | The host queues the latest state and sends it on `ready`. |
-| `FlatList.scrollToIndex` fails for rows that aren't rendered yet or have changing heights (expanded rows) | Med | Handle `onScrollToIndexFailed`: jump to the estimated position (`scrollToOffset`), then retry `scrollToIndex` after one frame. |
-| A 160 KB HTML string is rebuilt on every render | Low | Build it once at module level and pass the same `source` / `srcDoc` value every time. |
-| Web static export: the iframe is rendered on the server | Low | Render the iframe only after mount (the screen already sets client state in effects). |
-| The map makes the existing Web hydration error (#418) worse | Low | The map renders nothing on the server. Check during Checkpoint B. |
-| The E2E mock Stops have no coordinates | Low | T7 adds `lat`/`long` to `e2e/mocks.ts`. The existing tests ignore those fields. |
-| `react-native-webview` needs a native rebuild | Low | Rebuild with `npx expo run:android` at Checkpoint B. The CI APK build picks it up automatically. |
+| The location module needs a native rebuild; the dev client or CI APK job may break | High | Do Task 3 early and build the release APK right after |
+| A jumping GPS reading makes the dot misleading | Med | Always draw the accuracy circle |
+| Battery drain from watching location | Med | Watch only while focused and visible, balanced accuracy, `distanceInterval` of about 10 m |
+| The dot is lost after the map is hidden and shown again | Med | Re-send the last location on `ready` |
+| Web build breaks from importing the location module | Low | Use the hook only on Android (`Platform.OS` check), with Web as a no-op |
+| Maestro can't fake GPS on the device | Low | Maestro only checks the button exists; the dot is checked by hand |
 
-## Open questions
-
-- None that block the work. Reviewing the Lands Department terms only matters if the app is ever published.
+## Open Questions
+- None blocking. The button's icon and position (for example the bottom-right corner of the map) can be decided in Task 4.

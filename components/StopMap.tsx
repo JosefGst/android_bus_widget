@@ -7,13 +7,20 @@ import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 const SOURCE = { html: STOP_MAP_HTML }
 
 /** Android host: the Leaflet page in a WebView. Web uses StopMap.web.tsx. */
-export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps): React.JSX.Element {
+export function StopMap({
+  markers,
+  selectedStop,
+  onMarkerPress,
+  userLocation = null,
+  centerOnUserToken = 0,
+  fitRouteToken = 0,
+}: StopMapProps): React.JSX.Element {
   const webViewRef = useRef<WebView>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
-  const latest = useRef({ markers, selectedStop, onMarkerPress })
+  const latest = useRef({ markers, selectedStop, onMarkerPress, userLocation })
   useEffect(() => {
-    latest.current = { markers, selectedStop, onMarkerPress }
+    latest.current = { markers, selectedStop, onMarkerPress, userLocation }
   })
 
   const send = useCallback((msg: ToMapMessage) => {
@@ -25,6 +32,7 @@ export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps):
   const syncAll = useCallback(() => {
     send({ type: 'setMarkers', markers: latest.current.markers })
     send({ type: 'select', stop: latest.current.selectedStop })
+    send({ type: 'setUserLocation', location: latest.current.userLocation })
   }, [send])
 
   useEffect(() => {
@@ -34,6 +42,20 @@ export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps):
   useEffect(() => {
     send({ type: 'select', stop: selectedStop })
   }, [selectedStop, send])
+
+  // Fit only on a new tap (token > 0), never on mount.
+  useEffect(() => {
+    if (fitRouteToken > 0) send({ type: 'fitRoute' })
+  }, [fitRouteToken, send])
+
+  useEffect(() => {
+    send({ type: 'setUserLocation', location: userLocation })
+  }, [userLocation, send])
+
+  // Center only on a new tap (token > 0), never on mount or when the location moves.
+  useEffect(() => {
+    if (centerOnUserToken > 0) send({ type: 'centerOnUser' })
+  }, [centerOnUserToken, send])
 
   const onMessage = useCallback((event: WebViewMessageEvent) => {
     const msg = parseFromMapMessage(event.nativeEvent.data)
