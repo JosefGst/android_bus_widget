@@ -1,8 +1,8 @@
 
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { FavoriteBoard, loadFavoriteBoard } from '../utils/favorite_board';
 import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites';
@@ -11,6 +11,7 @@ import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatt
 const EMPTY_BOARD: FavoriteBoard = { groups: [], generatedTimestamp: '' };
 
 const MyRoutes = () => {
+  const router = useRouter();
   const [isLoading, setLoading] = useState(true);
   const [board, setBoard] = useState<FavoriteBoard>(EMPTY_BOARD);
 
@@ -85,14 +86,28 @@ const MyRoutes = () => {
               {group.routes.length === 0 ? (
                 <Text>No buses found for this stop.</Text>
               ) : (
-                group.routes.flatMap((route, routeIdx) =>
-                  route.arrivals.map((arrival, idx) => (
-                    <Text key={`${routeIdx}-${idx}`}>
-                      {/* Recomputed from the ETA every tick so the countdown stays live between board refreshes. */}
-                      {route.route} will arrive in {getMinutesUntilArrival(arrival.eta, nowIso) || '-'} minutes (ETA: {formatEtaToHKTime(arrival.eta)})
-                    </Text>
-                  ))
-                )
+                group.routes.map(route => (
+                  <Pressable
+                    key={`${route.stop}|${route.route}|${route.bound}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${route.route} at ${group.stopName}`}
+                    onPress={() => router.push({
+                      pathname: '/routes_stop',
+                      params: { route: route.route, bound: route.bound, service_type: route.service_type, stop: route.stop },
+                    })}
+                    style={{flexDirection: 'row', alignItems: 'center'}}
+                  >
+                    <View style={{flex: 1}}>
+                      {route.arrivals.map((arrival, idx) => (
+                        <Text key={idx}>
+                          {/* Recomputed from the ETA every tick so the countdown stays live between board refreshes. */}
+                          {route.route} will arrive in {getMinutesUntilArrival(arrival.eta, nowIso) || '-'} minutes (ETA: {formatEtaToHKTime(arrival.eta)})
+                        </Text>
+                      ))}
+                    </View>
+                    <MaterialIcons name="chevron-right" size={22} color="#888" />
+                  </Pressable>
+                ))
               )}
             </View>
           ))}
