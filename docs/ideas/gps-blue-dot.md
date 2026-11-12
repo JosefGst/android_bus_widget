@@ -36,3 +36,6 @@ A React Native "locate me" button sits on top of the map. Tapping it asks for pe
 
 ## Open Questions
 - After a denial, how does the user turn location back on? Android settings only, or check the permission again when the screen gets focus? Checking costs little, so it's probably worth doing.
+
+## Update: precise GPS with fallback
+GPS fixes are preferred; when there has been no GPS fix for 30 s (e.g. indoors) the Wi-Fi/cell position is shown. With only approximate permission, only Wi-Fi/cell is used. See `pickUserLocation()` in `utils/route_stop_map.ts`.

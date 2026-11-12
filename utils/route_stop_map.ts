@@ -39,6 +39,25 @@ export function toUserLocation(reading: LocationReading): UserLocation | null {
   return { lat: latitude, lng: longitude, accuracy }
 }
 
+/** A UserLocation with the time (ms) it was received. */
+export type TimedLocation = { location: UserLocation; at: number }
+
+/** A GPS fix older than this counts as lost (e.g. indoors), and the network position is used. */
+export const GPS_STALE_MS = 30_000
+
+/**
+ * The position to show: a recent GPS fix if there is one, otherwise the
+ * Wi-Fi/cell (network) position, otherwise whatever GPS fix is left.
+ */
+export function pickUserLocation(
+  gps: TimedLocation | null,
+  network: TimedLocation | null,
+  now: number,
+): UserLocation | null {
+  if (gps && now - gps.at < GPS_STALE_MS) return gps.location
+  return network?.location ?? gps?.location ?? null
+}
+
 /** Messages the map page sends to the app. Always parse with parseFromMapMessage(). */
 export type FromMapMessage =
   | { type: 'ready' }
