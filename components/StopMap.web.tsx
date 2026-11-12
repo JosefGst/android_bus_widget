@@ -3,7 +3,7 @@ import { parseFromMapMessage, ToMapMessage } from '../utils/route_stop_map'
 import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 
 /** Web host: the Leaflet page in an iframe. Android uses StopMap.tsx. */
-export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps): React.JSX.Element | null {
+export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 0 }: StopMapProps): React.JSX.Element | null {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
@@ -51,6 +51,11 @@ export function StopMap({ markers, selectedStop, onMarkerPress }: StopMapProps):
   useEffect(() => {
     send({ type: 'select', stop: selectedStop })
   }, [selectedStop, send])
+
+  // Fit only on a new tap (token > 0), never on mount.
+  useEffect(() => {
+    if (fitRouteToken > 0) send({ type: 'fitRoute' })
+  }, [fitRouteToken, send])
 
   if (!mounted) return null
   return (

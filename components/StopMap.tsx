@@ -13,6 +13,7 @@ export function StopMap({
   onMarkerPress,
   userLocation = null,
   centerOnUserToken = 0,
+  fitRouteToken = 0,
 }: StopMapProps): React.JSX.Element {
   const webViewRef = useRef<WebView>(null)
   const readyRef = useRef(false)
@@ -41,6 +42,11 @@ export function StopMap({
   useEffect(() => {
     send({ type: 'select', stop: selectedStop })
   }, [selectedStop, send])
+
+  // Fit only on a new tap (token > 0), never on mount.
+  useEffect(() => {
+    if (fitRouteToken > 0) send({ type: 'fitRoute' })
+  }, [fitRouteToken, send])
 
   useEffect(() => {
     send({ type: 'setUserLocation', location: userLocation })

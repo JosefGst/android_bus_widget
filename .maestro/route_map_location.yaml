@@ -1,4 +1,4 @@
-# Routes Stop: the "Show my location" button on the Route map (Android only).
+# Routes Stop: the "Show route" and "Show my location" (Android only) map buttons.
 # Only checks the button is there. It does not tap it: the location permission
 # dialog differs between ROMs, and the device position can't be faked here.
 # The button is hidden after a permission denial, so run with location not denied.
@@ -17,3 +17,4 @@ tags:
     visible: ".*Map information from Lands Department"
     timeout: 15000
 - assertVisible: "Show my location"
+- assertVisible: "Show route"

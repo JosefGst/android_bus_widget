@@ -15,6 +15,7 @@ export type ToMapMessage =
   | { type: 'select'; stop: string | null }
   | { type: 'setUserLocation'; location: UserLocation | null }
   | { type: 'centerOnUser' }
+  | { type: 'fitRoute' }
 
 /** The user's position for the map. accuracy is a radius in metres. Never stored or logged. */
 export type UserLocation = {

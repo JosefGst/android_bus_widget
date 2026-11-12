@@ -86,3 +86,16 @@ test('tapping a marker grows a small map to half', async ({ page }) => {
   await pin(page, 2).click();
   await expect(handle(page)).toHaveAccessibleName('Resize map, half');
 });
+
+test('Show route fits all Stops back into view after zooming to one', async ({ page }) => {
+  await pin(page, 1).click();
+  await expect(pin(page, 1)).toHaveClass(/selected/);
+  // Selecting zooms in on Stop 1, which pushes the other Stops out of the map's view.
+  await expect(pin(page, 3)).not.toBeInViewport();
+
+  await page.getByRole('button', { name: 'Show route' }).click();
+
+  for (const seq of [1, 2, 3]) await expect(pin(page, seq)).toBeInViewport();
+  // The selection is kept.
+  await expect(pin(page, 1)).toHaveClass(/selected/);
+});

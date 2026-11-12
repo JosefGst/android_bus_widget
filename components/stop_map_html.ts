@@ -10,6 +10,8 @@ export interface StopMapProps {
   userLocation?: UserLocation | null
   /** Goes up by one on each "locate me" tap; the map then centers on the user once. */
   centerOnUserToken?: number
+  /** Goes up by one on each "Show route" tap; the map then fits all Stops once. */
+  fitRouteToken?: number
 }
 
 /** Zoom level used when the map focuses on one selected Stop. */
@@ -82,7 +84,9 @@ const PAGE_SCRIPT = `
     if (!entry) return;  // cleared, or a Stop without a marker: leave the view alone
     entry.marker.setIcon(icon(entry.data, true));
     entry.marker.setZIndexOffset(1000);
-    map.setView([entry.data.lat, entry.data.lng], ${SELECTED_ZOOM});
+    // Not animated: a marker tap also resizes the map, and a resize during Leaflet's zoom
+    // animation can leave it stuck, so every later setView/fitBounds is ignored.
+    map.setView([entry.data.lat, entry.data.lng], ${SELECTED_ZOOM}, { animate: false });
   }
 
   // The user's own position: a dot plus an accuracy circle, kept apart from the
@@ -119,6 +123,7 @@ const PAGE_SCRIPT = `
     else if (msg.type === 'select') select(typeof msg.stop === 'string' ? msg.stop : null);
     else if (msg.type === 'setUserLocation') setUserLocation(msg.location);
     else if (msg.type === 'centerOnUser') centerOnUser();
+    else if (msg.type === 'fitRoute') fitAll();
   };
 
   // Web host: messages arrive via postMessage from the parent window.

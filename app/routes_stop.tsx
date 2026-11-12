@@ -48,6 +48,7 @@ const RoutesStopScreen = () => {
   const isFocused = useIsFocused();
   const userLocation = useUserLocation(isFocused && mapVisible);
   const [centerOnUserToken, setCenterOnUserToken] = useState(0);
+  const [fitRouteToken, setFitRouteToken] = useState(0);
   // A "locate me" tap made before the first position arrived; centers once it does.
   const [centerPending, setCenterPending] = useState(false);
   const { location, start: startLocation } = userLocation;
@@ -178,14 +179,25 @@ const RoutesStopScreen = () => {
                 onMarkerPress={onMarkerPress}
                 userLocation={location}
                 centerOnUserToken={centerOnUserToken}
+                fitRouteToken={fitRouteToken}
               />
             ) : (
               <Text style={styles.mapUnavailable}>Map unavailable</Text>
             )}
+            {markers.length > 0 && (
+              <Pressable
+                onPress={() => setFitRouteToken(t => t + 1)}
+                style={[styles.mapButton, { bottom: showLocateMe ? 80 : 24 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Show route"
+              >
+                <MaterialIcons name="zoom-out-map" size={24} color="#1a73e8" />
+              </Pressable>
+            )}
             {markers.length > 0 && showLocateMe && (
               <Pressable
                 onPress={onLocateMe}
-                style={styles.locateMe}
+                style={[styles.mapButton, { bottom: 24 }]}
                 accessibilityRole="button"
                 accessibilityLabel="Show my location"
               >
@@ -316,10 +328,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 4,
   },
-  locateMe: {
+  mapButton: {
     position: 'absolute',
     right: 12,
-    bottom: 24,
     width: 44,
     height: 44,
     borderRadius: 22,
