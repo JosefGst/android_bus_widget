@@ -7,7 +7,7 @@ import { normalizeStopName } from './string_formatting'
 import { getMinutesUntilArrival } from './time_formatting'
 
 export type Arrival = { eta: string; minutes: number | null }
-export type RouteArrivals = { route: string; arrivals: Arrival[] }
+export type RouteArrivals = { route: string; stop: string; bound: string; service_type: string; arrivals: Arrival[] }
 // stopIds: every Stop id merged into this group (several ids can share one normalized name).
 export type StopGroup = { stopName: string; stopIds: string[]; routes: RouteArrivals[] }
 export type FavoriteBoard = { groups: StopGroup[]; generatedTimestamp: string }
@@ -57,7 +57,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date): Promi
   }
   const reference = now.toISOString()
 
-  // stopName -> its Stop ids and (route+direction -> arrivals). Maps keep first-seen order.
+  // stopName -> its Stop ids and (stop+route+direction -> arrivals). Maps keep first-seen order.
   const groups = new Map<string, { stopIds: Set<string>; routes: Map<string, RouteArrivals> }>()
   favorites.forEach((favorite, i) => {
     const stopName = stopNames.get(favorite.stop) ?? favorite.stop
@@ -65,8 +65,8 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date): Promi
     groups.set(stopName, group)
     group.stopIds.add(favorite.stop)
     etaResponses[i]?.data.forEach(row => {
-      const key = `${row.route}|${row.dir}`
-      const entry = group.routes.get(key) ?? { route: row.route, arrivals: [] }
+      const key = `${favorite.stop}|${row.route}|${row.dir}`
+      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, arrivals: [] }
       group.routes.set(key, entry)
       entry.arrivals.push({ eta: row.eta, minutes: getMinutesUntilArrival(row.eta, reference) })
     })
