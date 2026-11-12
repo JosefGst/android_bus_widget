@@ -63,7 +63,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
     const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW)
 
     expect(groups).toEqual([
-      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', arrivals: [{ eta: at(5), minutes: 5 }] }] },
+      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] }] },
     ])
   })
 
@@ -168,9 +168,35 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard([fav], NOW)
 
     expect(groups[0].routes).toEqual([
-      { route: '272P', arrivals: [{ eta: at(5), minutes: 5 }] },
-      { route: '272P', arrivals: [{ eta: at(8), minutes: 8 }] },
+      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] },
+      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', arrivals: [{ eta: at(8), minutes: 8 }] },
     ])
+  })
+
+  it('fills stop, bound and service_type on each row', async () => {
+    stubKmb({ etas: { 'S1/272P/2': [{ dir: 'I', eta: at(5) }] }, stopNames: { S1: 'Stop' } })
+
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '2' }], NOW)
+
+    expect(groups[0].routes[0]).toMatchObject({ route: '272P', stop: 'S1', bound: 'I', service_type: '2' })
+  })
+
+  it('keeps two Stop ids sharing a name and Route as separate rows', async () => {
+    stubKmb({
+      etas: { 'S1/272P/1': [{ eta: at(3) }], 'S2/272P/1': [{ eta: at(6) }] },
+      stopNames: { S1: 'Same Name (A)', S2: 'Same Name (B)' },
+    })
+
+    const { groups } = await loadFavoriteBoard(
+      [
+        { stop: 'S1', route: '272P', service_type: '1' },
+        { stop: 'S2', route: '272P', service_type: '1' },
+      ],
+      NOW,
+    )
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].routes.map(r => r.stop)).toEqual(['S1', 'S2'])
   })
 
   it('computes minutes against the given time, not the clock', async () => {
@@ -194,7 +220,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     expect(groups).toEqual([
       { stopName: 'Broken Stop', stopIds: ['S1'], routes: [] },
-      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', arrivals: [{ eta: at(6), minutes: 6 }] }] },
+      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', arrivals: [{ eta: at(6), minutes: 6 }] }] },
     ])
   })
 

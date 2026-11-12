@@ -60,3 +60,50 @@ test('a removed Favorite stays removed after reloading the page', async ({ page 
   await expect(page.getByText('My Routes')).toBeVisible();
   await expect(row).toHaveCount(0);
 });
+
+test('tapping a Favorite row opens Routes Stop with that Stop selected', async ({ page }) => {
+  await page.goto('/routes_stop?route=N29&bound=O&service_type=1');
+  await expect(page.getByText('Route: N29')).toBeVisible();
+  await expect(page.getByText('Jordan Map Stop')).toBeVisible();
+  // Star the third Stop (rows are in order, so the third star is Jordan).
+  await page.getByLabel('Favorite this stop').nth(2).click();
+  await expect(page.getByText('My Routes')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open N29 at Jordan Map Stop' }).click();
+
+  await expect(page.getByText('Route: N29')).toBeVisible();
+  // Only the Favorite's Stop is expanded, and its row is in view.
+  await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);
+  await expect(page.getByText(/arrives in \d+ minutes/)).toBeInViewport();
+  await expect(
+    page.frameLocator('iframe[title="Route map"]').locator('.stop-pin.selected')
+  ).toHaveText('3');
+
+  // Back returns to My Favorites.
+  await page.goBack();
+  await expect(page.getByText('My Routes')).toBeVisible();
+});
+
+test('opening a second Favorite at the same Stop loads that Route, not the previous one', async ({ page }) => {
+  // 272P and 272X are both mocked at Causeway Bay Station.
+  for (const label of ['TUEN MUN → CAUSEWAY BAY', 'TUEN MUN → CENTRAL']) {
+    await page.goto('/');
+    await page.getByText(label).click();
+    await expect(page.getByText('Causeway Bay Station')).toBeVisible();
+    await page.getByLabel('Favorite this stop').click();
+    await expect(page.getByText('My Routes')).toBeVisible();
+  }
+
+  await page.getByRole('button', { name: 'Open 272P at Causeway Bay Station' }).click();
+  await expect(page.getByText('Route: 272P')).toBeVisible();
+  await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);
+  await page.getByRole('tab', { name: /My Favorites/ }).click();
+  await expect(page.getByText('My Routes')).toBeVisible();
+
+  // The ETA for 272X must be requested, not served from 272P's cached Stop ETAs.
+  const etaRequest = page.waitForRequest(/\/eta\/MOCKSTOP001\/272X\/1/);
+  await page.getByRole('button', { name: 'Open 272X at Causeway Bay Station' }).click();
+  await etaRequest;
+  await expect(page.getByText('Route: 272X')).toBeVisible();
+  await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);
+});

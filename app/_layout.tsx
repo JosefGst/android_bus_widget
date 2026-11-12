@@ -16,6 +16,8 @@ export default function TabLayout() {
       <View style={{ flex: 1, paddingBottom: androidNavBarPadding }}>
         <Tabs
           tabBarPosition="bottom"
+          // Back returns to the previous tab (e.g. My Favorites → Routes Stop → back).
+          backBehavior="history"
           screenOptions={{
             // Tabs switch by tapping only: swiping would fight panning the Route map.
             swipeEnabled: false,
