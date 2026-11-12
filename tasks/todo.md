@@ -44,14 +44,14 @@ See [`plan.md`](plan.md) for the design decisions.
 **Description:** Install `expo-location` with `npx expo install`. Add the plugin and the `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` permissions to `app.json`, with no background permission. Create `components/use_user_location.ts`: `useUserLocation(active)` returns `{ permission, location, start }`. `start()` requests the permission. While `active` is true and the permission is granted, it watches the position (balanced accuracy, about 10 m `distanceInterval`) and maps readings through `toUserLocation`. The watch is removed when `active` is false or on unmount. The hook checks the permission again whenever `active` turns true. On Web it does nothing.
 
 **Acceptance criteria:**
-- [ ] The release APK builds with the new module
-- [ ] The watch exists only while active, verified by the subscription being removed on blur
-- [ ] The location is never stored or logged
+- [x] The release APK builds with the new module
+- [x] The watch exists only while active, verified by the subscription being removed on blur
+- [x] The location is never stored or logged
 
 **Verification:**
-- [ ] `npx expo run:android --variant release` succeeds
-- [ ] `npm run web` still starts
-- [ ] `npm test` passes
+- [x] `npx expo run:android --variant release` succeeds
+- [x] `npm run web` still starts
+- [x] `npm test` passes
 
 **Dependencies:** Task 1
 **Files:** `package.json`, `package-lock.json`, `app.json`, `components/use_user_location.ts`

@@ -35,6 +35,13 @@
       "./plugins/withReleaseSigning.js",
       "./plugins/withDebugBundling.js",
       [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -32,7 +32,7 @@ utils/route_stop_map.ts (types + toUserLocation) ─┐
 - [x] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
 
 ### Phase 2: Android wiring (high risk: native module)
-- [ ] Task 3: Add `expo-location`, permissions and the `useUserLocation` hook
+- [x] Task 3: Add `expo-location`, permissions and the `useUserLocation` hook
 - [ ] Task 4: StopMap host props and the locate-me button in Routes Stop
 
 ### Checkpoint: Device
