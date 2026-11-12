@@ -20,6 +20,9 @@ const RoutesStopScreen = () => {
   const { route, bound, service_type } = params;
   const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<ROUTS[]>([]);
+  // The Route (route|bound|service_type) that `data` was loaded for; null while a load is running.
+  const [dataRouteKey, setDataRouteKey] = useState<string | null>(null);
+  const routeKey = `${route}|${bound}|${service_type}`;
   const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
   const [stops, setStops] = useState<Stop[]>([]);
   const markers = useMemo(() => buildRouteMarkers(data, stops), [data, stops]);
@@ -94,12 +97,13 @@ const RoutesStopScreen = () => {
   const handledStopRef = useRef<string | null>(null);
   const { stop: stopParam } = params;
   useEffect(() => {
-    if (typeof stopParam !== 'string' || !data.some(item => item.stop === stopParam)) return;
-    const key = `${route}|${bound}|${service_type}|${stopParam}`;
+    if (typeof stopParam !== 'string' || dataRouteKey !== routeKey) return;
+    if (!data.some(item => item.stop === stopParam)) return;
+    const key = `${routeKey}|${stopParam}`;
     if (handledStopRef.current === key) return;
     handledStopRef.current = key;
     onMarkerPress(stopParam);
-  }, [stopParam, route, bound, service_type, data, onMarkerPress]);
+  }, [stopParam, routeKey, dataRouteKey, data, onMarkerPress]);
 
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
@@ -114,6 +118,12 @@ const RoutesStopScreen = () => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      // This tab stays mounted when it is opened for another Route: drop the previous Route's
+      // Stops, ETAs and selection so none of them is shown for (or reused by) the new Route.
+      setData([]);
+      setDataRouteKey(null);
+      setEtaMap({});
+      setExpandedStop(null);
       try {
         if (typeof route === 'string' && typeof bound === 'string' && typeof service_type === 'string') {
           let apiBound = bound;
@@ -122,6 +132,7 @@ const RoutesStopScreen = () => {
           const res = await fetchRouteSTOP(route, apiBound, service_type);
           if (cancelled) return;
           setData(res.data);
+          setDataRouteKey(`${route}|${bound}|${service_type}`);
         } else {
           if (!cancelled) setError('Invalid route, bound, or service type');
         }
