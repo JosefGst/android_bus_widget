@@ -41,7 +41,7 @@ utils/route_stop_map.ts (types + toUserLocation) ─┐
 - [x] Release APK builds; dot, centering, denial and blur behaviour verified on device
 
 ### Phase 3: Polish
-- [ ] Task 5: Documentation (AGENTS.md, GLOSSARY if needed) and a Maestro check that the button exists
+- [x] Task 5: Documentation (AGENTS.md, GLOSSARY if needed) and a Maestro check that the button exists
 
 ### Checkpoint: Complete
 - [ ] All acceptance criteria met, human review

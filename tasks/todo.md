@@ -76,7 +76,7 @@ See [`plan.md`](plan.md) for the design decisions.
 
 ## Checkpoint: Device
 - [x] Release APK installed; all Task 4 manual checks pass
-- [ ] Existing Maestro flows still pass (`npm run test:maestro`)
+- [x] Existing Maestro flows still pass (`npm run test:maestro`)
 - [ ] Human review before continuing
 
 ## Task 5: Docs and Maestro
@@ -84,16 +84,16 @@ See [`plan.md`](plan.md) for the design decisions.
 **Description:** Update the AGENTS.md map notes (the new messages, the hook, location never stored, Android only). Add a short Maestro flow that the "Show my location" button is visible on Routes Stop. It must not tap the button: the permission dialog differs between ROMs.
 
 **Acceptance criteria:**
-- [ ] AGENTS.md describes the feature and its constraints
-- [ ] The new Maestro flow passes on the device
+- [x] AGENTS.md describes the feature and its constraints
+- [x] The new Maestro flow passes on the device
 
 **Verification:**
-- [ ] `maestro test .maestro/<new_flow>.yaml` passes
+- [x] `maestro test .maestro/<new_flow>.yaml` passes
 
 **Dependencies:** Task 4
 **Files:** `AGENTS.md`, `.maestro/route_map_location.yaml`
 **Scope:** S
 
 ## Checkpoint: Complete
-- [ ] All acceptance criteria met
+- [x] All acceptance criteria met
 - [ ] Ready for review
