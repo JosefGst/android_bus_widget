@@ -13,6 +13,31 @@ export type RouteMarker = {
 export type ToMapMessage =
   | { type: 'setMarkers'; markers: RouteMarker[] }
   | { type: 'select'; stop: string | null }
+  | { type: 'setUserLocation'; location: UserLocation | null }
+  | { type: 'centerOnUser' }
+
+/** The user's position for the map. accuracy is a radius in metres. Never stored or logged. */
+export type UserLocation = {
+  lat: number
+  lng: number
+  accuracy: number
+}
+
+/** A position reading, shaped like expo-location's LocationObjectCoords. */
+export type LocationReading = {
+  latitude: number
+  longitude: number
+  accuracy: number | null
+}
+
+/** Turn a position reading into a UserLocation. Returns null for unusable readings. */
+export function toUserLocation(reading: LocationReading): UserLocation | null {
+  const { latitude, longitude } = reading
+  const accuracy = reading.accuracy ?? 0
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(accuracy)) return null
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || accuracy < 0) return null
+  return { lat: latitude, lng: longitude, accuracy }
+}
 
 /** Messages the map page sends to the app. Always parse with parseFromMapMessage(). */
 export type FromMapMessage =

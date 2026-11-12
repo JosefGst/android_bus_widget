@@ -1,5 +1,5 @@
 import type { ROUTS, Stop } from './fetch'
-import { buildRouteMarkers, parseFromMapMessage } from './route_stop_map'
+import { buildRouteMarkers, parseFromMapMessage, toUserLocation } from './route_stop_map'
 
 const routeStop = (stop: string, seq: string): ROUTS => ({
   route: '272P',
@@ -75,5 +75,45 @@ describe('parseFromMapMessage', () => {
     ['a non-string stop', '{"type":"markerPress","stop":5}'],
   ])('rejects %s', (_label, raw) => {
     expect(parseFromMapMessage(raw)).toBeNull()
+  })
+})
+
+describe('toUserLocation', () => {
+  it('keeps a valid reading', () => {
+    expect(toUserLocation({ latitude: 22.3, longitude: 114.17, accuracy: 15 })).toEqual({
+      lat: 22.3,
+      lng: 114.17,
+      accuracy: 15,
+    })
+  })
+
+  it('treats a missing accuracy as 0', () => {
+    expect(toUserLocation({ latitude: 22.3, longitude: 114.17, accuracy: null })).toEqual({
+      lat: 22.3,
+      lng: 114.17,
+      accuracy: 0,
+    })
+  })
+
+  it('rejects non-finite coordinates', () => {
+    expect(toUserLocation({ latitude: NaN, longitude: 114.17, accuracy: 5 })).toBeNull()
+    expect(toUserLocation({ latitude: 22.3, longitude: Infinity, accuracy: 5 })).toBeNull()
+  })
+
+  it('rejects latitude outside ±90', () => {
+    expect(toUserLocation({ latitude: 91, longitude: 114.17, accuracy: 5 })).toBeNull()
+  })
+
+  it('rejects longitude outside ±180', () => {
+    expect(toUserLocation({ latitude: 22.3, longitude: -181, accuracy: 5 })).toBeNull()
+  })
+
+  it('rejects a negative or non-finite accuracy', () => {
+    expect(toUserLocation({ latitude: 22.3, longitude: 114.17, accuracy: -1 })).toBeNull()
+    expect(toUserLocation({ latitude: 22.3, longitude: 114.17, accuracy: NaN })).toBeNull()
+  })
+
+  it('keeps a location outside Hong Kong (the user may be anywhere)', () => {
+    expect(toUserLocation({ latitude: 51.5, longitude: -0.12, accuracy: 10 })).not.toBeNull()
   })
 })

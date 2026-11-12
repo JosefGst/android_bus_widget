@@ -1,176 +1,99 @@
-# Tasks: Routes Stop map
+# Todo: GPS Blue Dot on Route Map
 
-See `tasks/plan.md` for the decisions and risks, and `SPEC-routes-stop-map.md` for behaviours B1–B9. Logic tasks follow red, green, refactor: write a failing test first.
+See [`plan.md`](plan.md) for the design decisions.
 
-**Standard checks**, run after every task:
-- `npm test`
-- `npm run lint`
-- `npx tsc --noEmit`
+## Task 1: Message contract and `toUserLocation()`
 
----
-
-## Phase 1: Foundation
-
-### T1: `buildRouteMarkers()`, with tests (S)
-**Description:** New `utils/route_stop_map.ts` with the `RouteMarker` type and `buildRouteMarkers(routeStops: ROUTS[], stops: Stop[]): RouteMarker[]`. It joins the Route's Stops with the cached Stop data and turns the coordinates into numbers.
+**Description:** Add the `UserLocation` type (`{ lat, lng, accuracy }`) and two new `ToMapMessage` variants, `setUserLocation` (location or `null`) and `centerOnUser`, to `utils/route_stop_map.ts`. Add a pure `toUserLocation(coords)` that returns `null` for non-finite or out-of-range values.
 
 **Acceptance criteria:**
-- [x] Markers are sorted by `seq` (a number) and carry `stop`, `seq`, `name`, `lat`, `lng`.
-- [x] A Stop gets no marker if it isn't in the cache, if its `lat`/`long` is missing, empty or not a number, or if it lies outside HK (lat 22.1–22.6, lng 113.8–114.5).
-- [x] The name falls back to the Stop id when `name_en` is missing.
-
-**Verification:** `npm test -- route_stop_map`, plus the standard checks.
-**Dependencies:** None
-**Files:** `utils/route_stop_map.ts`, `utils/route_stop_map.test.ts`
-
-### T2: Map message types and `parseFromMapMessage()`, with tests (S)
-**Description:** Add the `ToMapMessage` and `FromMapMessage` types (spec protocol) and `parseFromMapMessage(raw: unknown): FromMapMessage | null` to `utils/route_stop_map.ts`. Messages from the map are untrusted, so this function validates them.
-
-**Acceptance criteria:**
-- [x] It accepts a JSON string of `{type:'ready'}` or `{type:'markerPress', stop:'<string>'}`.
-- [x] It returns `null` for anything else: input that isn't a string, bad JSON, unknown `type`, or a `stop` that is missing, empty or not a string.
-
-**Verification:** `npm test -- route_stop_map`, plus the standard checks.
-**Dependencies:** None (same file as T1; do them one after the other)
-**Files:** `utils/route_stop_map.ts`, `utils/route_stop_map.test.ts`
-
-### T3: Bundle Leaflet with a generator script (S)
-**Description:**
-- Add `leaflet@1.9.4` as an exact devDependency.
-- Write `scripts/gen_leaflet_assets.js`. It reads `node_modules/leaflet/dist/leaflet.js` and `leaflet.css` and writes `components/generated/leaflet_assets.ts`, which exports `LEAFLET_JS` and `LEAFLET_CSS` with a "GENERATED — do not edit" header.
-- Run it and commit the output.
-- Make ESLint ignore `components/generated/`.
-
-**Acceptance criteria:**
-- [x] `node scripts/gen_leaflet_assets.js` regenerates the same file every time.
-- [x] `npx tsc --noEmit` and `npm run lint` pass with the generated file present.
-
-**Verification:** run the script twice and check `git diff --stat` shows no change; standard checks.
-**Dependencies:** None
-**Files:** `package.json`, `package-lock.json`, `scripts/gen_leaflet_assets.js`, `components/generated/leaflet_assets.ts`, `eslint.config.js`
-
-### Checkpoint A: Foundation
-- [x] Standard checks pass
-- [x] `utils/route_stop_map.ts` has no React or `components/` imports
-
----
-
-## Phase 2: Map on screen (highest risk)
-
-### T4: Static map with fitted markers on Web and Android (M)
-**Description:**
-- `components/stop_map_html.ts` builds the page once at module level. The page contains:
-  - the inlined Leaflet code
-  - the basemap and label tile layers
-  - the Lands Department attribution
-  - numbered circle markers (`L.divIcon` styled like the list's `seqCircle`)
-  - a `setMarkers` handler that fits the view to all markers
-  - a `ready` message sent to the app
-- `StopMap.tsx` (Android) shows the page in `react-native-webview` (`npx expo install react-native-webview`).
-- `StopMap.web.tsx` (Web) shows it in an `<iframe srcDoc>`, rendered only after mount.
-- Both hosts queue the latest markers and send them on `ready`.
-- `routes_stop.tsx` keeps the full `Stop` data from `getCachedStops()` (not just names) and builds the markers with `buildRouteMarkers`. It renders `StopMap` between the header and the list at about ⅓ of the window height, or a "Map unavailable" placeholder when there are no markers (B8).
-- This task only shows the map: no selection yet.
-
-**Acceptance criteria:**
-- [x] B1: opening a Route shows numbered markers fitted to the view, with tiles and attribution visible, on Web.
-- [x] B8: if the Stop cache fails or there are no coordinates, "Map unavailable" shows and the list still works.
-- [x] Incoming messages go through `parseFromMapMessage`.
+- [x] The types and messages are exported, with explicit return types
+- [x] `toUserLocation` rejects NaN, Infinity, latitude outside ±90, longitude outside ±180 and a negative accuracy, and keeps valid input
+- [x] Existing messages behave the same
 
 **Verification:**
-- Standard checks.
-- `npm run web`: open Route 272P outbound and confirm markers and tiles appear.
-- `npx expo run:android` on a device: the same, plus pinch and pan work.
+- [x] `npx jest utils/route_stop_map` passes, including new tests
+- [x] `npx tsc --noEmit` passes
 
-**Dependencies:** T1, T2, T3
-**Files:** `components/stop_map_html.ts`, `components/StopMap.tsx`, `components/StopMap.web.tsx`, `app/routes_stop.tsx`, `package.json`
+**Dependencies:** None
+**Files:** `utils/route_stop_map.ts`, `utils/route_stop_map.test.ts`
+**Scope:** S
 
-### Checkpoint B: Map renders on both platforms
-- [x] Web shows the fitted markers and the tiles
-- [ ] Android shows the same (NOT YET CHECKED: device not authorized for adb)
-- [ ] (pending device) Pinch and pan work in the Android WebView
-- [x] No new console errors on Web, apart from the existing #418
-- [ ] (skipped at user request: run without approval) **Human review before continuing**
+## Task 2: The page draws the dot
 
----
-
-## Phase 3: Interaction
-
-### T5: Shared selection between markers and rows (M)
-**Description:**
-- Pull the row's tap logic out into `selectStop(stopId: string | null)` in `routes_stop.tsx`. It sets `expandedStop`, fetches ETAs if they're not loaded yet, and scrolls the list to the row with `scrollToIndex`. If that fails (`onScrollToIndexFailed`), it jumps to an estimated offset and retries after one frame.
-- A row tap calls `selectStop`, or `selectStop(null)` when the row is already expanded.
-- `StopMap` gets `selectedStop` and `onMarkerPress` props. A marker tap calls `selectStop`.
-- The page handles `select`:
-  - for a Stop: `setView(latlng, 17)`, highlight the marker (contrasting colour, larger, drawn on top)
-  - for `null`: remove the highlight without moving the map
-- Both hosts send the latest `selectedStop` on `ready` and whenever it changes.
+**Description:** In `components/stop_map_html.ts`, handle `setUserLocation` by drawing or updating a blue `L.circleMarker` and an accuracy `L.circle`, or removing both when the location is `null`. Handle `centerOnUser` by panning to the dot without changing the zoom, unless the map is zoomed far out. The dot must not change the marker fit or selection.
 
 **Acceptance criteria:**
-- [x] B2: a marker tap zooms and highlights the Stop, and the list scrolls to its row and expands it with ETAs.
-- [x] B3 and B4: a row tap highlights and zooms to its marker. Tapping the expanded row again clears the highlight.
-- [x] B7: selecting a Stop that has no marker expands the row and leaves the map where it is.
+- [ ] The dot and circle appear, move and disappear as messages arrive
+- [ ] `setMarkers` and `fitAll` ignore the dot
+- [ ] `centerOnUser` with no location does nothing
 
-**Verification:** standard checks. Manual on Web and Android: tap the marker of a Stop far down the list and confirm the list scrolls to it and expands it. Tap rows and confirm the map follows.
-**Dependencies:** T4
-**Files:** `app/routes_stop.tsx`, `components/stop_map_html.ts`, `components/StopMap.tsx`, `components/StopMap.web.tsx`
+**Verification:**
+- [ ] Manual: send the messages through `window.receive` in the Web build's iframe (devtools)
+- [ ] `npm run lint` passes
 
-### T6: Collapse and show the map (S)
-**Description:**
-- Add a `mapVisible` state (starts `true`, not saved between visits) and a toggle button at the map's edge (MaterialIcons, with an `accessibilityLabel` of "Hide map" or "Show map").
-- Collapsing unmounts `StopMap`. Showing it again mounts a fresh page, which receives the current markers and selection on `ready`.
+**Dependencies:** Task 1
+**Files:** `components/stop_map_html.ts`
+**Scope:** S
 
-**Acceptance criteria:**
-- [x] B5: collapsing hides the map and the list fills the space.
-- [x] B6: showing the map again restores it, zoomed on the selected Stop, or fitted to the Route if nothing is selected.
+## Checkpoint: Foundation
+- [ ] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
 
-**Verification:** standard checks. Manual on Web and Android: select a Stop, collapse, show again, and confirm the selected Stop is still highlighted.
-**Dependencies:** T5
-**Files:** `app/routes_stop.tsx`
+## Task 3: `expo-location`, permissions and the hook
 
-### Checkpoint C: Feature complete
-- [x] B1–B6, B8 checked on Web with Playwright (B7 covered by code path only)
-- [ ] B1–B9 checked on Android, incl. B9 airplane mode (pending device)
-- [ ] (skipped at user request) **Human review before continuing**
-
----
-
-## Phase 4: Hardening
-
-### T7: E2E test for the map flow (M)
-**Description:**
-- Add `lat`/`long` (inside HK) to the mocked Stops in `e2e/mocks.ts`. Mock a Route with at least 3 Stops if needed.
-- Route `mapapi.geodata.gov.hk` tile requests to a 1×1 PNG.
-- `e2e/route-stop-map.spec.ts` uses `page.frameLocator` to test four things:
-  - the markers render
-  - clicking a marker expands its row
-  - clicking a row adds the highlight class to its marker
-  - Hide/Show map works
+**Description:** Install `expo-location` with `npx expo install`. Add the plugin and the `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` permissions to `app.json`, with no background permission. Create `components/use_user_location.ts`: `useUserLocation(active)` returns `{ permission, location, start }`. `start()` requests the permission. While `active` is true and the permission is granted, it watches the position (balanced accuracy, about 10 m `distanceInterval`) and maps readings through `toUserLocation`. The watch is removed when `active` is false or on unmount. The hook checks the permission again whenever `active` turns true. On Web it does nothing.
 
 **Acceptance criteria:**
-- [x] `npm run test:e2e` passes, including the existing specs, without real network access to KMB or the tile servers.
+- [ ] The release APK builds with the new module
+- [ ] The watch exists only while active, verified by the subscription being removed on blur
+- [ ] The location is never stored or logged
 
-**Verification:** `npm run test:e2e`; standard checks.
-**Dependencies:** T6
-**Files:** `e2e/mocks.ts`, `e2e/route-stop-map.spec.ts`
+**Verification:**
+- [ ] `npx expo run:android --variant release` succeeds
+- [ ] `npm run web` still starts
+- [ ] `npm test` passes
 
-### T8: Docs: AGENTS.md and the spec status (XS)
-**Description:**
-- AGENTS.md:
-  - add `components/` (and the generated Leaflet file and its script) to the Structure section and the dependency graph
-  - add a "Change the map" row to WHERE TO LOOK
-  - add `react-native-webview` to Key Integration Points
-  - add an anti-pattern: never hand-edit `components/generated/`
-- Mark the spec as Implemented.
+**Dependencies:** Task 1
+**Files:** `package.json`, `package-lock.json`, `app.json`, `components/use_user_location.ts`
+**Scope:** M
+
+## Task 4: Host props and the locate-me button
+
+**Description:** Add optional `userLocation` and `centerOnUserToken` to `StopMapProps`. `StopMap.tsx` sends `setUserLocation` on change and on `ready`, and `centerOnUser` when the token goes up. `StopMap.web.tsx` ignores both. In `app/routes_stop.tsx`, call `useUserLocation(isFocused && mapShown)` and show a "locate me" button over the map corner, with the accessibility label `"Show my location"`, unless the permission is denied. Tapping it calls `start()` and increments the token.
 
 **Acceptance criteria:**
-- [x] AGENTS.md matches the code, and the dependency rule `app/ → components/ → utils/` is written down.
+- [ ] The first tap asks for permission. After a grant the dot appears and the map centers on it
+- [ ] After a denial the button is hidden, and the map, markers and selection work as before
+- [ ] Switching tabs stops location updates; coming back resumes them, and the dot survives hiding and showing the map
 
-**Verification:** read-through.
-**Dependencies:** T7
-**Files:** `AGENTS.md`, `SPEC-routes-stop-map.md`
+**Verification:**
+- [ ] `npx tsc --noEmit`, `npm run lint` and `npm test` pass
+- [ ] Manual on device: grant, deny, re-grant in settings then refocus, tab switch, hide and show the map
 
-### Checkpoint D: Done
-- [x] Spec success criteria 1–7 met
-- [x] Standard checks and `npm run test:e2e` pass
-- [x] Ready for PR
+**Dependencies:** Tasks 2 and 3
+**Files:** `components/stop_map_html.ts` (props type), `components/StopMap.tsx`, `components/StopMap.web.tsx`, `app/routes_stop.tsx`
+**Scope:** M
+
+## Checkpoint: Device
+- [ ] Release APK installed; all Task 4 manual checks pass
+- [ ] Existing Maestro flows still pass (`npm run test:maestro`)
+- [ ] Human review before continuing
+
+## Task 5: Docs and Maestro
+
+**Description:** Update the AGENTS.md map notes (the new messages, the hook, location never stored, Android only). Add a short Maestro flow that the "Show my location" button is visible on Routes Stop. It must not tap the button: the permission dialog differs between ROMs.
+
+**Acceptance criteria:**
+- [ ] AGENTS.md describes the feature and its constraints
+- [ ] The new Maestro flow passes on the device
+
+**Verification:**
+- [ ] `maestro test .maestro/<new_flow>.yaml` passes
+
+**Dependencies:** Task 4
+**Files:** `AGENTS.md`, `.maestro/route_map_location.yaml`
+**Scope:** S
+
+## Checkpoint: Complete
+- [ ] All acceptance criteria met
+- [ ] Ready for review
