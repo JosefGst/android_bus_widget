@@ -1,4 +1,4 @@
-import type { RouteMarker } from '../utils/route_stop_map'
+import type { RouteMarker, UserLocation } from '../utils/route_stop_map'
 import { LEAFLET_CSS, LEAFLET_JS } from './generated/leaflet_assets'
 
 /** Props shared by both StopMap hosts (StopMap.tsx on Android, StopMap.web.tsx on Web). */
@@ -6,6 +6,10 @@ export interface StopMapProps {
   markers: RouteMarker[]
   selectedStop: string | null
   onMarkerPress: (stop: string) => void
+  /** The user's position (Android only; the Web host ignores it). */
+  userLocation?: UserLocation | null
+  /** Goes up by one on each "locate me" tap; the map then centers on the user once. */
+  centerOnUserToken?: number
 }
 
 /** Zoom level used when the map focuses on one selected Stop. */

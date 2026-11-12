@@ -24,7 +24,11 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.bus"
+      "package": "com.anonymous.bus",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -34,13 +38,6 @@
       "expo-router",
       "./plugins/withReleaseSigning.js",
       "./plugins/withDebugBundling.js",
-      [
-        "expo-location",
-        {
-          "isAndroidBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false
-        }
-      ],
       [
         "expo-splash-screen",
         {

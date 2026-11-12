@@ -1,9 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MapResizeHandle } from '../components/MapResizeHandle';
 import { StopMap } from '../components/StopMap';
+import { useUserLocation } from '../components/use_user_location';
 import { add as addFavorite } from '../utils/favorites';
 import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
 import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, saveMapSize, snapFraction } from '../utils/map_size';
@@ -42,6 +44,22 @@ const RoutesStopScreen = () => {
     loadMapSize().then(f => { if (!cancelled) setMapFraction(f); });
     return () => { cancelled = true; };
   }, []);
+  // The user's position: watched only while this screen has focus and the map is shown.
+  const isFocused = useIsFocused();
+  const userLocation = useUserLocation(isFocused && mapVisible);
+  const [centerOnUserToken, setCenterOnUserToken] = useState(0);
+  // A "locate me" tap made before the first position arrived; centers once it does.
+  const [centerPending, setCenterPending] = useState(false);
+  const { location, start: startLocation } = userLocation;
+  useEffect(() => {
+    if (!centerPending || !location) return;
+    setCenterPending(false);
+    setCenterOnUserToken(t => t + 1);
+  }, [centerPending, location]);
+  const onLocateMe = useCallback(async () => {
+    if (await startLocation()) setCenterPending(true);
+  }, [startLocation]);
+  const showLocateMe = Platform.OS === 'android' && userLocation.permission !== 'denied';
   const onMapResizeRelease = useCallback((fraction: number) => {
     const snapped = snapFraction(fraction);
     setMapFraction(snapped);
@@ -154,9 +172,25 @@ const RoutesStopScreen = () => {
         {mapVisible && contentHeight > 0 && (
           <View style={[styles.mapContainer, { height: Math.round(contentHeight * mapFraction) }]} testID="route-map">
             {markers.length > 0 ? (
-              <StopMap markers={markers} selectedStop={expandedStop} onMarkerPress={onMarkerPress} />
+              <StopMap
+                markers={markers}
+                selectedStop={expandedStop}
+                onMarkerPress={onMarkerPress}
+                userLocation={location}
+                centerOnUserToken={centerOnUserToken}
+              />
             ) : (
               <Text style={styles.mapUnavailable}>Map unavailable</Text>
+            )}
+            {markers.length > 0 && showLocateMe && (
+              <Pressable
+                onPress={onLocateMe}
+                style={styles.locateMe}
+                accessibilityRole="button"
+                accessibilityLabel="Show my location"
+              >
+                <MaterialIcons name="my-location" size={24} color="#1a73e8" />
+              </Pressable>
             )}
           </View>
         )}
@@ -281,6 +315,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 6,
     marginBottom: 4,
+  },
+  locateMe: {
+    position: 'absolute',
+    right: 12,
+    bottom: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
   },
   mapUnavailable: {
     textAlign: 'center',

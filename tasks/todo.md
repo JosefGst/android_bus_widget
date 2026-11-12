@@ -41,7 +41,7 @@ See [`plan.md`](plan.md) for the design decisions.
 
 ## Task 3: `expo-location`, permissions and the hook
 
-**Description:** Install `expo-location` with `npx expo install`. Add the plugin and the `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` permissions to `app.json`, with no background permission. Create `components/use_user_location.ts`: `useUserLocation(active)` returns `{ permission, location, start }`. `start()` requests the permission. While `active` is true and the permission is granted, it watches the position (balanced accuracy, about 10 m `distanceInterval`) and maps readings through `toUserLocation`. The watch is removed when `active` is false or on unmount. The hook checks the permission again whenever `active` turns true. On Web it does nothing.
+**Description:** Install `@react-native-community/geolocation` (provider `android`, so it works without Google Play Services; `expo-location` was tried first and never got a position on the GMS-less tablet). Add the `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` permissions to `app.json` `android.permissions`, with no background permission. Permissions use `PermissionsAndroid`. Create `components/use_user_location.ts`: `useUserLocation(active)` returns `{ permission, location, start }`. `start()` requests the permission. While `active` is true and the permission is granted, it watches the position (balanced accuracy, about 10 m `distanceInterval`) and maps readings through `toUserLocation`. The watch is removed when `active` is false or on unmount. The hook checks the permission again whenever `active` turns true. On Web it does nothing.
 
 **Acceptance criteria:**
 - [x] The release APK builds with the new module
@@ -62,20 +62,20 @@ See [`plan.md`](plan.md) for the design decisions.
 **Description:** Add optional `userLocation` and `centerOnUserToken` to `StopMapProps`. `StopMap.tsx` sends `setUserLocation` on change and on `ready`, and `centerOnUser` when the token goes up. `StopMap.web.tsx` ignores both. In `app/routes_stop.tsx`, call `useUserLocation(isFocused && mapShown)` and show a "locate me" button over the map corner, with the accessibility label `"Show my location"`, unless the permission is denied. Tapping it calls `start()` and increments the token.
 
 **Acceptance criteria:**
-- [ ] The first tap asks for permission. After a grant the dot appears and the map centers on it
-- [ ] After a denial the button is hidden, and the map, markers and selection work as before
-- [ ] Switching tabs stops location updates; coming back resumes them, and the dot survives hiding and showing the map
+- [x] The first tap asks for permission. After a grant the dot appears and the map centers on it
+- [x] After a denial the button is hidden, and the map, markers and selection work as before
+- [x] Switching tabs stops location updates; coming back resumes them, and the dot survives hiding and showing the map
 
 **Verification:**
-- [ ] `npx tsc --noEmit`, `npm run lint` and `npm test` pass
-- [ ] Manual on device: grant, deny, re-grant in settings then refocus, tab switch, hide and show the map
+- [x] `npx tsc --noEmit`, `npm run lint` and `npm test` pass
+- [x] Manual on device: grant, deny, re-grant in settings then refocus, tab switch, hide and show the map
 
 **Dependencies:** Tasks 2 and 3
 **Files:** `components/stop_map_html.ts` (props type), `components/StopMap.tsx`, `components/StopMap.web.tsx`, `app/routes_stop.tsx`
 **Scope:** M
 
 ## Checkpoint: Device
-- [ ] Release APK installed; all Task 4 manual checks pass
+- [x] Release APK installed; all Task 4 manual checks pass
 - [ ] Existing Maestro flows still pass (`npm run test:maestro`)
 - [ ] Human review before continuing
 
