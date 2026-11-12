@@ -60,3 +60,22 @@ test('a removed Favorite stays removed after reloading the page', async ({ page 
   await expect(page.getByText('My Routes')).toBeVisible();
   await expect(row).toHaveCount(0);
 });
+
+test('tapping a Favorite row opens Routes Stop with that Stop selected', async ({ page }) => {
+  await page.goto('/routes_stop?route=N29&bound=O&service_type=1');
+  await expect(page.getByText('Route: N29')).toBeVisible();
+  await expect(page.getByText('Jordan Map Stop')).toBeVisible();
+  // Star the third Stop (rows are in order, so the third star is Jordan).
+  await page.getByLabel('Favorite this stop').nth(2).click();
+  await expect(page.getByText('My Routes')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open N29 at Jordan Map Stop' }).click();
+
+  await expect(page.getByText('Route: N29')).toBeVisible();
+  // Only the Favorite's Stop is expanded, and its row is in view.
+  await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);
+  await expect(page.getByText(/arrives in \d+ minutes/)).toBeInViewport();
+  await expect(
+    page.frameLocator('iframe[title="Route map"]').locator('.stop-pin.selected')
+  ).toHaveText('3');
+});

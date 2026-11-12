@@ -1,6 +1,6 @@
 # Favorite Stop → Routes Stop map
 
-> **Status: planned.**
+> **Status: implemented.** (Device back stack and ETA `dir` vs `bound` assumptions remain unverified.)
 
 ## Problem Statement
 How might we let a user tap a Favorite on My Favorites and land on its Route map with that exact Stop selected, so they can see where it is and its ETAs in detail?
