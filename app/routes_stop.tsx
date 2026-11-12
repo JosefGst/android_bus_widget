@@ -90,6 +90,17 @@ const RoutesStopScreen = () => {
     if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
   }, [data, selectStop]);
 
+  // Preselect the Stop named by the `stop` param (e.g. from My Favorites), once per route/bound/service/stop.
+  const handledStopRef = useRef<string | null>(null);
+  const { stop: stopParam } = params;
+  useEffect(() => {
+    if (typeof stopParam !== 'string' || !data.some(item => item.stop === stopParam)) return;
+    const key = `${route}|${bound}|${service_type}|${stopParam}`;
+    if (handledStopRef.current === key) return;
+    handledStopRef.current = key;
+    onMarkerPress(stopParam);
+  }, [stopParam, route, bound, service_type, data, onMarkerPress]);
+
   // Update local clock every second for smooth countdown and current time
     useEffect(() => {
       const timer = setInterval(() => {
