@@ -78,4 +78,8 @@ test('tapping a Favorite row opens Routes Stop with that Stop selected', async (
   await expect(
     page.frameLocator('iframe[title="Route map"]').locator('.stop-pin.selected')
   ).toHaveText('3');
+
+  // Back returns to My Favorites.
+  await page.goBack();
+  await expect(page.getByText('My Routes')).toBeVisible();
 });
