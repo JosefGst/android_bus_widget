@@ -24,20 +24,20 @@ See [`plan.md`](plan.md) for the design decisions.
 **Description:** In `components/stop_map_html.ts`, handle `setUserLocation` by drawing or updating a blue `L.circleMarker` and an accuracy `L.circle`, or removing both when the location is `null`. Handle `centerOnUser` by panning to the dot without changing the zoom, unless the map is zoomed far out. The dot must not change the marker fit or selection.
 
 **Acceptance criteria:**
-- [ ] The dot and circle appear, move and disappear as messages arrive
-- [ ] `setMarkers` and `fitAll` ignore the dot
-- [ ] `centerOnUser` with no location does nothing
+- [x] The dot and circle appear, move and disappear as messages arrive
+- [x] `setMarkers` and `fitAll` ignore the dot
+- [x] `centerOnUser` with no location does nothing
 
 **Verification:**
-- [ ] Manual: send the messages through `window.receive` in the Web build's iframe (devtools)
-- [ ] `npm run lint` passes
+- [x] Manual: send the messages through `window.receive` in the Web build's iframe (devtools)
+- [x] `npm run lint` passes
 
 **Dependencies:** Task 1
 **Files:** `components/stop_map_html.ts`
 **Scope:** S
 
 ## Checkpoint: Foundation
-- [ ] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
+- [x] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
 
 ## Task 3: `expo-location`, permissions and the hook
 

@@ -26,10 +26,10 @@ utils/route_stop_map.ts (types + toUserLocation) ─┐
 
 ### Phase 1: Foundation
 - [x] Task 1: Message contract and `toUserLocation()` with unit tests
-- [ ] Task 2: The page draws the dot and accuracy circle and handles `centerOnUser`
+- [x] Task 2: The page draws the dot and accuracy circle and handles `centerOnUser`
 
 ### Checkpoint: Foundation
-- [ ] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
+- [x] `npm test`, `npm run lint` and `npx tsc --noEmit` pass
 
 ### Phase 2: Android wiring (high risk: native module)
 - [ ] Task 3: Add `expo-location`, permissions and the `useUserLocation` hook
