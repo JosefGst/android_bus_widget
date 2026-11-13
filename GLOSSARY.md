@@ -14,3 +14,5 @@ _Avoid_: "favorite stop" (a Favorite is a Route at a Stop, not a Stop), "routes 
 **Starter Favorites**: the Favorites a user gets before they have ever saved any. A user who removes every Favorite keeps an empty list; the starter set does not come back.
 
 **Favorite board**: the user's Favorites with their live ETAs, grouped by Stop display name, Routes and arrivals sorted soonest first. Built by `loadFavoriteBoard()`; rendered by both the My Favorites screen (every arrival) and the widget (next arrival per Route).
+
+**Language**: the one setting that picks English, Traditional Chinese (繁, `tc`) or Simplified Chinese (简, `sc`) for everything the user reads: screens, Route map labels and the widget. Follows the phone until the user picks one with the header button. Owned by `utils/language.ts`; the codes match the KMB API's field suffixes.

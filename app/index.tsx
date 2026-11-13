@@ -1,9 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LANGUAGE_BUTTON_HEIGHT, LANGUAGE_BUTTON_TOP } from '../components/LanguageButton';
 import LetterKeypad from '../components/LetterKeypad';
 import NumericKeypad from '../components/NumericKeypad';
+import { useLanguage } from '../components/language_context';
 import { ROUTS, getCachedRoutes } from '../utils/fetch';
+import { localized } from '../utils/language';
 import { filterRoutesByQuery, getAvailableLetters } from '../utils/route_search';
 import { formatEtaToHKTime } from '../utils/time_formatting';
 
@@ -11,6 +15,8 @@ import { formatEtaToHKTime } from '../utils/time_formatting';
 
 const App = () => {
   const router = useRouter();
+  const { language, strings } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [isLoading, setLoading] = useState(true);
   const [routes, setRoutes] = useState<ROUTS[]>([]);
   const [generatedTimestamp, setGeneratedTimestamp] = useState<string>('');
@@ -44,17 +50,20 @@ const App = () => {
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + LANGUAGE_BUTTON_TOP }]}>
       {isLoading ? (
         <ActivityIndicator />
       ) : (
         <>
-          <Text style={styles.headerText}>
-            Generated Timestamp: {formatEtaToHKTime(generatedTimestamp) || 'N/A'}
-          </Text>
+          {/* As tall as the language button and level with it, so the search box starts below it. */}
+          <View style={styles.headerRow}>
+            <Text style={styles.headerText}>
+              {strings.generatedTimestamp(formatEtaToHKTime(generatedTimestamp) || strings.notAvailable)}
+            </Text>
+          </View>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by route number..."
+            placeholder={strings.searchPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
@@ -73,11 +82,11 @@ const App = () => {
                 <Text style={styles.routeText}>
                     <Text style={{ fontWeight: 'bold' }}>
                     {item.route}
-                    </Text> {item.orig_en} → {item.dest_en}
+                    </Text> {localized(item, 'orig', language)} → {localized(item, 'dest', language)}
                 </Text>
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text>No routes found.</Text>}
+            ListEmptyComponent={<Text>{strings.noRoutes}</Text>}
           />
           <View style={styles.keypadRow}>
             <View style={styles.numericKeypad}>
@@ -118,10 +127,15 @@ const styles = StyleSheet.create({
     flex: 2,
     marginLeft: 10,
   },
+  headerRow: {
+    height: LANGUAGE_BUTTON_HEIGHT,
+    justifyContent: 'center',
+    paddingRight: 64,
+    marginBottom: 8,
+  },
   headerText: {
     fontWeight: 'bold',
     fontSize: 18,
-    marginBottom: 8,
   },
   searchInput: {
     height: 56,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLanguage } from './language_context';
 
 type NumericKeypadProps = {
   onPressDigit: (digit: string) => void;
@@ -10,13 +11,14 @@ type NumericKeypadProps = {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'backspace'];
 
 const NumericKeypad = ({ onPressDigit, onBackspace, onClear }: NumericKeypadProps) => {
+  const { strings } = useLanguage();
   return (
     <View style={styles.container}>
       {KEYS.map((key) => {
         if (key === 'clear') {
           return (
             <TouchableOpacity key={key} style={styles.key} onPress={onClear}>
-              <Text style={styles.keyTextSmall}>Clear</Text>
+              <Text style={styles.keyTextSmall}>{strings.keypadClear}</Text>
             </TouchableOpacity>
           );
         }
