@@ -1,4 +1,5 @@
 import type { Language } from './language'
+import { formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting'
 
 // The app's own text. KMB names (Routes, Stops) come from the API in each language instead.
 
@@ -29,8 +30,9 @@ export type Strings = {
   loadingEta: string
   noEta: string
   noStops: string
-  arrivesIn: (minutes: string, time: string) => string
-  routeArrivesIn: (route: string, minutes: string, time: string) => string
+  arrivesIn: (minutes: number, time: string) => string
+  routeArrivesIn: (route: string, minutes: number, time: string) => string
+  routeNoEta: (route: string) => string
   localTime: (time: string) => string
   generatedTimestamp: (time: string) => string
   notAvailable: string
@@ -74,6 +76,7 @@ const EN: Strings = {
   noStops: 'No stops found for this route.',
   arrivesIn: (minutes, time) => `arrives in ${minutes} minutes (ETA: ${time})`,
   routeArrivesIn: (route, minutes, time) => `${route} will arrive in ${minutes} minutes (ETA: ${time})`,
+  routeNoEta: route => `${route}: No ETA available`,
   localTime: time => `Local Time: ${time}`,
   generatedTimestamp: time => `Generated Timestamp: ${time}`,
   notAvailable: 'N/A',
@@ -117,6 +120,7 @@ const TC: Strings = {
   noStops: '此路線沒有車站。',
   arrivesIn: (minutes, time) => `${minutes} 分鐘後到達（${time}）`,
   routeArrivesIn: (route, minutes, time) => `${route} ${minutes} 分鐘後到達（${time}）`,
+  routeNoEta: route => `${route}：沒有到站時間`,
   localTime: time => `現在時間：${time}`,
   generatedTimestamp: time => `資料時間：${time}`,
   notAvailable: '不適用',
@@ -160,6 +164,7 @@ const SC: Strings = {
   noStops: '此路线没有车站。',
   arrivesIn: (minutes, time) => `${minutes} 分钟后到达（${time}）`,
   routeArrivesIn: (route, minutes, time) => `${route} ${minutes} 分钟后到达（${time}）`,
+  routeNoEta: route => `${route}：没有到站时间`,
   localTime: time => `现在时间：${time}`,
   generatedTimestamp: time => `资料时间：${time}`,
   notAvailable: '不适用',
@@ -175,3 +180,12 @@ const SC: Strings = {
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }
+
+/** One arrival line: minutes and Hong Kong time, or "no ETA" when the API gave no time. Pass `route` to name it. */
+export function arrivalText(strings: Strings, eta: string, now: string, route?: string): string {
+  const minutes = getMinutesUntilArrival(eta, now)
+  if (route === undefined) {
+    return minutes === null ? strings.noEta : strings.arrivesIn(minutes, formatEtaToHKTime(eta))
+  }
+  return minutes === null ? strings.routeNoEta(route) : strings.routeArrivesIn(route, minutes, formatEtaToHKTime(eta))
+}

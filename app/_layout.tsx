@@ -4,7 +4,7 @@ import { withLayoutContext } from 'expo-router'
 import React from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LanguageButton } from '../components/LanguageButton'
+import { LANGUAGE_BUTTON_TOP, LanguageButton } from '../components/LanguageButton'
 import { LanguageProvider, useLanguage } from '../components/language_context'
 
 const MaterialTopTabs = createMaterialTopTabNavigator()
@@ -73,7 +73,7 @@ function LocalizedTabs() {
           />
         </Tabs>
         {/* Over every tab, top right, so the language is one tap away anywhere. */}
-        <View style={[styles.languageButton, { top: insets.top + 4 }]}>
+        <View style={[styles.languageButton, { top: insets.top + LANGUAGE_BUTTON_TOP }]}>
           <LanguageButton />
         </View>
       </View>

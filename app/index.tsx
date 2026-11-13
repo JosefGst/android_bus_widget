@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LANGUAGE_BUTTON_HEIGHT, LANGUAGE_BUTTON_TOP } from '../components/LanguageButton';
 import LetterKeypad from '../components/LetterKeypad';
 import NumericKeypad from '../components/NumericKeypad';
 import { useLanguage } from '../components/language_context';
@@ -14,6 +16,7 @@ import { formatEtaToHKTime } from '../utils/time_formatting';
 const App = () => {
   const router = useRouter();
   const { language, strings } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [isLoading, setLoading] = useState(true);
   const [routes, setRoutes] = useState<ROUTS[]>([]);
   const [generatedTimestamp, setGeneratedTimestamp] = useState<string>('');
@@ -47,14 +50,17 @@ const App = () => {
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + LANGUAGE_BUTTON_TOP }]}>
       {isLoading ? (
         <ActivityIndicator />
       ) : (
         <>
-          <Text style={styles.headerText}>
-            {strings.generatedTimestamp(formatEtaToHKTime(generatedTimestamp) || strings.notAvailable)}
-          </Text>
+          {/* As tall as the language button and level with it, so the search box starts below it. */}
+          <View style={styles.headerRow}>
+            <Text style={styles.headerText}>
+              {strings.generatedTimestamp(formatEtaToHKTime(generatedTimestamp) || strings.notAvailable)}
+            </Text>
+          </View>
           <TextInput
             style={styles.searchInput}
             placeholder={strings.searchPlaceholder}
@@ -121,10 +127,15 @@ const styles = StyleSheet.create({
     flex: 2,
     marginLeft: 10,
   },
+  headerRow: {
+    height: LANGUAGE_BUTTON_HEIGHT,
+    justifyContent: 'center',
+    paddingRight: 64,
+    marginBottom: 8,
+  },
   headerText: {
     fontWeight: 'bold',
     fontSize: 18,
-    marginBottom: 8,
   },
   searchInput: {
     height: 56,

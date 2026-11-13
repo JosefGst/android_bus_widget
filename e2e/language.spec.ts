@@ -98,6 +98,14 @@ test.describe('on an English phone', () => {
     await expect(page.getByText('我的路線')).toBeVisible();
     await expect(page.getByText(/272P \d+ 分鐘後到達/).first()).toBeVisible();
   });
+
+  test('the My Favorites clock is a 24-hour Hong Kong time in every language', async ({ page }) => {
+    await page.goto('/my_favorites');
+    await expect(page.getByText(/^Local Time: \d\d:\d\d:\d\d$/)).toBeVisible();
+
+    await languageButton(page).click();
+    await expect(page.getByText(/^現在時間：\d\d:\d\d:\d\d$/)).toBeVisible();
+  });
 });
 
 test.describe('on a Hong Kong Chinese phone', () => {

@@ -3,6 +3,10 @@ import { Pressable, StyleSheet, Text } from 'react-native'
 import { nextLanguage } from '../utils/language'
 import { useLanguage } from './language_context'
 
+/** Where the button floats: this far below the status bar, this tall. Screens whose top row reaches the right edge reserve this space. */
+export const LANGUAGE_BUTTON_TOP = 4
+export const LANGUAGE_BUTTON_HEIGHT = 32
+
 /** Shows the current language ("EN", "繁", "简"); each tap moves to the next and saves it. */
 export function LanguageButton(): React.JSX.Element {
   const { language, strings, setLanguage } = useLanguage()
@@ -23,7 +27,7 @@ export function LanguageButton(): React.JSX.Element {
 const styles = StyleSheet.create({
   button: {
     minWidth: 40,
-    height: 32,
+    height: LANGUAGE_BUTTON_HEIGHT,
     paddingHorizontal: 10,
     borderRadius: 16,
     borderWidth: 1,

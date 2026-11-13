@@ -13,7 +13,7 @@ import { localized } from '../utils/language';
 import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, saveMapSize, snapFraction } from '../utils/map_size';
 import { buildRouteMarkers } from '../utils/route_stop_map';
 import { getStopsFor } from '../utils/stops';
-import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
+import { arrivalText } from '../utils/strings';
 
 const RoutesStopScreen = () => {
   const [now, setNow] = useState(Date.now());
@@ -311,7 +311,7 @@ const RoutesStopScreen = () => {
                   ) : etaMap[item.stop] && etaMap[item.stop].length > 0 ? (
                     etaMap[item.stop].map((eta, idx) => (
                       <Text key={idx} style={{ fontSize: 15, color: 'black' }}>
-                        {strings.arrivesIn(String(getMinutesUntilArrival(eta.eta, new Date(now).toISOString()) || '-'), formatEtaToHKTime(eta.eta))}
+                        {arrivalText(strings, eta.eta, new Date(now).toISOString())}
                       </Text>
                     ))
                   ) : (

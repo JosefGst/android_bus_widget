@@ -7,7 +7,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TouchableOpacity, View 
 import { useLanguage } from '../components/language_context';
 import { FavoriteBoard, loadFavoriteBoard } from '../utils/favorite_board';
 import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites';
-import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
+import { arrivalText } from '../utils/strings';
+import { formatEtaToHKTime } from '../utils/time_formatting';
 
 const EMPTY_BOARD: FavoriteBoard = { groups: [], generatedTimestamp: '' };
 
@@ -75,7 +76,7 @@ const MyRoutes = () => {
   return (
     <ScrollView style={{flex: 1, padding: 24}}>
       <Text style={{fontWeight: 'bold', fontSize: 18, marginBottom: 8}}>
-        {strings.localTime(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))}
+        {strings.localTime(formatEtaToHKTime(nowIso))}
       </Text>
       <Text>{strings.generatedTimestamp(formatEtaToHKTime(board.generatedTimestamp) || strings.notAvailable)}</Text>
       {isLoading ? (
@@ -103,7 +104,7 @@ const MyRoutes = () => {
                       {route.arrivals.map((arrival, idx) => (
                         <Text key={idx}>
                           {/* Recomputed from the ETA every tick so the countdown stays live between board refreshes. */}
-                          {strings.routeArrivesIn(route.route, String(getMinutesUntilArrival(arrival.eta, nowIso) || '-'), formatEtaToHKTime(arrival.eta))}
+                          {arrivalText(strings, arrival.eta, nowIso, route.route)}
                         </Text>
                       ))}
                     </View>
