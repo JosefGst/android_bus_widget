@@ -3,7 +3,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import LetterKeypad from '../components/LetterKeypad';
 import NumericKeypad from '../components/NumericKeypad';
+import { useLanguage } from '../components/language_context';
 import { ROUTS, getCachedRoutes } from '../utils/fetch';
+import { localized } from '../utils/language';
 import { filterRoutesByQuery, getAvailableLetters } from '../utils/route_search';
 import { formatEtaToHKTime } from '../utils/time_formatting';
 
@@ -11,6 +13,7 @@ import { formatEtaToHKTime } from '../utils/time_formatting';
 
 const App = () => {
   const router = useRouter();
+  const { language, strings } = useLanguage();
   const [isLoading, setLoading] = useState(true);
   const [routes, setRoutes] = useState<ROUTS[]>([]);
   const [generatedTimestamp, setGeneratedTimestamp] = useState<string>('');
@@ -50,11 +53,11 @@ const App = () => {
       ) : (
         <>
           <Text style={styles.headerText}>
-            Generated Timestamp: {formatEtaToHKTime(generatedTimestamp) || 'N/A'}
+            {strings.generatedTimestamp(formatEtaToHKTime(generatedTimestamp) || strings.notAvailable)}
           </Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by route number..."
+            placeholder={strings.searchPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
@@ -73,11 +76,11 @@ const App = () => {
                 <Text style={styles.routeText}>
                     <Text style={{ fontWeight: 'bold' }}>
                     {item.route}
-                    </Text> {item.orig_en} → {item.dest_en}
+                    </Text> {localized(item, 'orig', language)} → {localized(item, 'dest', language)}
                 </Text>
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text>No routes found.</Text>}
+            ListEmptyComponent={<Text>{strings.noRoutes}</Text>}
           />
           <View style={styles.keypadRow}>
             <View style={styles.numericKeypad}>

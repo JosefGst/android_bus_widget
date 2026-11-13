@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
+import { useLanguage } from '../components/language_context';
 import { FavoriteBoard, loadFavoriteBoard } from '../utils/favorite_board';
 import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites';
 import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatting';
@@ -12,6 +13,7 @@ const EMPTY_BOARD: FavoriteBoard = { groups: [], generatedTimestamp: '' };
 
 const MyRoutes = () => {
   const router = useRouter();
+  const { language, strings } = useLanguage();
   const [isLoading, setLoading] = useState(true);
   const [board, setBoard] = useState<FavoriteBoard>(EMPTY_BOARD);
 
@@ -41,7 +43,7 @@ const MyRoutes = () => {
     if (favorites === null) return;
     const refresh = async () => {
       try {
-        setBoard(await loadFavoriteBoard(favorites, new Date()));
+        setBoard(await loadFavoriteBoard(favorites, new Date(), language));
       } catch (e) {
         console.error('Failed to load Favorite board', e);
       } finally {
@@ -51,7 +53,7 @@ const MyRoutes = () => {
     refresh();
     const fetchIntervalId = setInterval(refresh, 30000);
     return () => clearInterval(fetchIntervalId);
-  }, [favorites]);
+  }, [favorites, language]);
 
   // Update local clock every second for smooth countdown and current time
   useEffect(() => {
@@ -73,9 +75,9 @@ const MyRoutes = () => {
   return (
     <ScrollView style={{flex: 1, padding: 24}}>
       <Text style={{fontWeight: 'bold', fontSize: 18, marginBottom: 8}}>
-        Local Time: {new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        {strings.localTime(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))}
       </Text>
-      <Text>Generated Timestamp: {formatEtaToHKTime(board.generatedTimestamp) || 'N/A'}</Text>
+      <Text>{strings.generatedTimestamp(formatEtaToHKTime(board.generatedTimestamp) || strings.notAvailable)}</Text>
       {isLoading ? (
         <ActivityIndicator />
       ) : (
@@ -84,13 +86,13 @@ const MyRoutes = () => {
             <View key={group.stopName} style={{marginBottom: 24}}>
               <Text style={{fontWeight: 'bold', fontSize: 16, marginBottom: 4}}>{group.stopName}</Text>
               {group.routes.length === 0 ? (
-                <Text>No buses found for this stop.</Text>
+                <Text>{strings.noBusesForStop}</Text>
               ) : (
                 group.routes.map(route => (
                   <Pressable
                     key={`${route.stop}|${route.route}|${route.bound}`}
                     accessibilityRole="button"
-                    accessibilityLabel={`Open ${route.route} at ${group.stopName}`}
+                    accessibilityLabel={strings.openRouteAtStop(route.route, group.stopName)}
                     onPress={() => router.push({
                       pathname: '/routes_stop',
                       params: { route: route.route, bound: route.bound, service_type: route.service_type, stop: route.stop },
@@ -101,7 +103,7 @@ const MyRoutes = () => {
                       {route.arrivals.map((arrival, idx) => (
                         <Text key={idx}>
                           {/* Recomputed from the ETA every tick so the countdown stays live between board refreshes. */}
-                          {route.route} will arrive in {getMinutesUntilArrival(arrival.eta, nowIso) || '-'} minutes (ETA: {formatEtaToHKTime(arrival.eta)})
+                          {strings.routeArrivesIn(route.route, String(getMinutesUntilArrival(arrival.eta, nowIso) || '-'), formatEtaToHKTime(arrival.eta))}
                         </Text>
                       ))}
                     </View>
@@ -113,9 +115,9 @@ const MyRoutes = () => {
           ))}
           {/* List of routes with delete button at the bottom */}
           <View style={{marginTop: 32}}>
-            <Text style={{fontWeight: 'bold', fontSize: 16, marginBottom: 4}}>My Routes</Text>
+            <Text style={{fontWeight: 'bold', fontSize: 16, marginBottom: 4}}>{strings.myRoutes}</Text>
             {!favorites || favorites.length === 0 ? (
-              <Text>No routes added.</Text>
+              <Text>{strings.noRoutesAdded}</Text>
             ) : (
               favorites.map((route, idx) => (
                 <View key={idx} style={{flexDirection: 'row', alignItems: 'center', marginBottom: 2}}>
@@ -127,7 +129,7 @@ const MyRoutes = () => {
                       await removeFavorite(route);
                       await reloadFavorites();
                     }}
-                    accessibilityLabel={`Remove route ${route.route}`}
+                    accessibilityLabel={strings.removeRoute(route.route)}
                     style={{marginLeft: 8}}
                   >
                     <MaterialIcons name="delete" size={22} color="#c00" />

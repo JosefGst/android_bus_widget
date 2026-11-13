@@ -5,9 +5,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MapResizeHandle } from '../components/MapResizeHandle';
 import { StopMap } from '../components/StopMap';
+import { useLanguage } from '../components/language_context';
 import { useUserLocation } from '../components/use_user_location';
 import { add as addFavorite } from '../utils/favorites';
 import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
+import { localized } from '../utils/language';
 import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, saveMapSize, snapFraction } from '../utils/map_size';
 import { buildRouteMarkers } from '../utils/route_stop_map';
 import { getStopsFor } from '../utils/stops';
@@ -16,6 +18,7 @@ import { formatEtaToHKTime, getMinutesUntilArrival } from '../utils/time_formatt
 const RoutesStopScreen = () => {
   const [now, setNow] = useState(Date.now());
   const router = useRouter();
+  const { language, strings } = useLanguage();
   const params = useLocalSearchParams();
   const { route, bound, service_type } = params;
   const [isLoading, setLoading] = useState(true);
@@ -23,9 +26,14 @@ const RoutesStopScreen = () => {
   // The Route (route|bound|service_type) that `data` was loaded for; null while a load is running.
   const [dataRouteKey, setDataRouteKey] = useState<string | null>(null);
   const routeKey = `${route}|${bound}|${service_type}`;
-  const [stopNames, setStopNames] = useState<{ [stopId: string]: string }>({});
   const [stops, setStops] = useState<Stop[]>([]);
-  const markers = useMemo(() => buildRouteMarkers(data, stops), [data, stops]);
+  // Derived per language from the Stop records, so switching language needs no new request.
+  const stopNames = useMemo(() => {
+    const names: { [stopId: string]: string } = {};
+    stops.forEach(stop => { names[stop.stop] = localized(stop, 'name', language); });
+    return names;
+  }, [stops, language]);
+  const markers = useMemo(() => buildRouteMarkers(data, stops, language), [data, stops, language]);
   // The Stop list whose names finished loading; null while a load is running.
   const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null);
   // Bumped by the Retry row to load the Stop names again.
@@ -35,7 +43,7 @@ const RoutesStopScreen = () => {
   // screen. The map waits for this measurement so it never flashes at the wrong size.
   const [contentHeight, setContentHeight] = useState(0);
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'invalidRoute' | 'fetchFailed' | null>(null);
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
   const [loadingEta, setLoadingEta] = useState<string | null>(null);
   const listRef = useRef<FlatList<ROUTS>>(null);
@@ -134,10 +142,11 @@ const RoutesStopScreen = () => {
           setData(res.data);
           setDataRouteKey(`${route}|${bound}|${service_type}`);
         } else {
-          if (!cancelled) setError('Invalid route, bound, or service type');
+          if (!cancelled) setError('invalidRoute');
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Failed to fetch data');
+      } catch (e) {
+        console.error('Failed to fetch the Route\'s Stops', e);
+        if (!cancelled) setError('fetchFailed');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -157,11 +166,6 @@ const RoutesStopScreen = () => {
       try {
         const found = await getStopsFor(data.map(item => item.stop));
         if (cancelled) return;
-        const stopNameMap: { [stopId: string]: string } = {};
-        found.forEach(stop => {
-          stopNameMap[stop.stop] = stop.name_en;
-        });
-        setStopNames(stopNameMap);
         setStops(found);
       } catch (e) {
         console.error('Failed to load stop names', e);
@@ -181,15 +185,15 @@ const RoutesStopScreen = () => {
         <MaterialIcons name="navigate-before" size={42} color="#007aff" />
       </Pressable>
       <Text style={{ fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 }}>
-        {typeof route === 'string' ? `Route: ${route}` : 'Route'}
+        {typeof route === 'string' ? strings.routeHeader(route) : strings.routeHeaderEmpty}
       </Text>
       <Text style={{ fontSize: 18, textAlign: 'center', marginBottom: 12 }}>
-        {typeof bound === 'string' ? `Direction: ${bound}` : ''} {typeof service_type === 'string' ? `Service Type: ${service_type}` : ''}
+        {typeof bound === 'string' && typeof service_type === 'string' ? strings.directionAndServiceType(bound, service_type) : ''}
       </Text>
       {isLoading ? (
         <ActivityIndicator style={{ marginTop: 32 }} />
       ) : error ? (
-        <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        <Text style={{ color: 'red', textAlign: 'center' }}>{strings[error]}</Text>
       ) : (
         <View style={{ flex: 1 }} onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
         {mapVisible && contentHeight > 0 && (
@@ -202,16 +206,17 @@ const RoutesStopScreen = () => {
                 userLocation={location}
                 centerOnUserToken={centerOnUserToken}
                 fitRouteToken={fitRouteToken}
+                language={language}
               />
             ) : (
-              <Text style={styles.mapUnavailable}>Map unavailable</Text>
+              <Text style={styles.mapUnavailable}>{strings.mapUnavailable}</Text>
             )}
             {markers.length > 0 && (
               <Pressable
                 onPress={() => setFitRouteToken(t => t + 1)}
                 style={[styles.mapButton, { bottom: showLocateMe ? 80 : 24 }]}
                 accessibilityRole="button"
-                accessibilityLabel="Show route"
+                accessibilityLabel={strings.showRoute}
               >
                 <MaterialIcons name="zoom-out-map" size={24} color="#1a73e8" />
               </Pressable>
@@ -221,7 +226,7 @@ const RoutesStopScreen = () => {
                 onPress={onLocateMe}
                 style={[styles.mapButton, { bottom: 24 }]}
                 accessibilityRole="button"
-                accessibilityLabel="Show my location"
+                accessibilityLabel={strings.showMyLocation}
               >
                 <MaterialIcons name="my-location" size={24} color="#1a73e8" />
               </Pressable>
@@ -240,20 +245,20 @@ const RoutesStopScreen = () => {
           onPress={() => setMapVisible(v => !v)}
           style={styles.mapToggle}
           accessibilityRole="button"
-          accessibilityLabel={mapVisible ? 'Hide map' : 'Show map'}
+          accessibilityLabel={mapVisible ? strings.hideMap : strings.showMap}
         >
           <MaterialIcons name={mapVisible ? 'expand-less' : 'map'} size={22} color="#007aff" />
-          <Text style={styles.mapToggleText}>{mapVisible ? 'Hide map' : 'Show map'}</Text>
+          <Text style={styles.mapToggleText}>{mapVisible ? strings.hideMap : strings.showMap}</Text>
         </Pressable>
         {namesMissing && (
           <Pressable
             onPress={() => setNamesAttempt(n => n + 1)}
             style={styles.namesRetry}
             accessibilityRole="button"
-            accessibilityLabel="Retry loading stop names"
+            accessibilityLabel={strings.retryStopNamesLabel}
           >
             <MaterialIcons name="refresh" size={20} color="#007aff" />
-            <Text style={styles.mapToggleText}>Couldn&apos;t load stop names — Retry</Text>
+            <Text style={styles.mapToggleText}>{strings.retryStopNames}</Text>
           </Pressable>
         )}
         <FlatList
@@ -294,7 +299,7 @@ const RoutesStopScreen = () => {
                     }
                   }}
                   hitSlop={8}
-                  accessibilityLabel="Favorite this stop"
+                  accessibilityLabel={strings.favoriteStop}
                 >
                   <MaterialIcons name="star" size={42} color="#FFD700" />
                 </Pressable>
@@ -302,21 +307,21 @@ const RoutesStopScreen = () => {
               {expandedStop === item.stop && (
                 <View style={{ paddingLeft: 16, paddingBottom: 8 }}>
                   {loadingEta === item.stop ? (
-                    <Text style={{ fontSize: 15, color: 'black' }}>Loading ETA...</Text>
+                    <Text style={{ fontSize: 15, color: 'black' }}>{strings.loadingEta}</Text>
                   ) : etaMap[item.stop] && etaMap[item.stop].length > 0 ? (
                     etaMap[item.stop].map((eta, idx) => (
                       <Text key={idx} style={{ fontSize: 15, color: 'black' }}>
-                        arrives in {getMinutesUntilArrival(eta.eta, new Date(now).toISOString()) || '-'} minutes (ETA: {formatEtaToHKTime(eta.eta)})
+                        {strings.arrivesIn(String(getMinutesUntilArrival(eta.eta, new Date(now).toISOString()) || '-'), formatEtaToHKTime(eta.eta))}
                       </Text>
                     ))
                   ) : (
-                    <Text style={{ fontSize: 15, color: 'black' }}>No ETA available</Text>
+                    <Text style={{ fontSize: 15, color: 'black' }}>{strings.noEta}</Text>
                   )}
                 </View>
               )}
             </View>
           )}
-          ListEmptyComponent={<Text>No stops found for this route.</Text>}
+          ListEmptyComponent={<Text>{strings.noStops}</Text>}
         />
         </View>
       )}

@@ -3,6 +3,7 @@ import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 
 import { loadFavoriteBoard } from "../utils/favorite_board";
 import { listForWidget } from "../utils/favorites";
+import { getLanguage } from "../utils/language";
 import { BusETAWidget } from "./BusETAWidget";
 
 // Must match the widget name in app.json.
@@ -36,7 +37,9 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
   try {
     const board = await withTimeout(
       WIDGET_FETCH_TIMEOUT_MS,
-      listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date()))
+      Promise.all([listForWidget(), getLanguage()]).then(([favorites, language]) =>
+        loadFavoriteBoard(favorites, new Date(), language)
+      )
     );
     return <BusETAWidget groups={board.groups} />;
   } catch (e) {

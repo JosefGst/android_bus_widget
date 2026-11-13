@@ -2,13 +2,25 @@ import { Ionicons } from '@expo/vector-icons'
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
 import { withLayoutContext } from 'expo-router'
 import React from 'react'
-import { Platform, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { Platform, StyleSheet, View } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LanguageButton } from '../components/LanguageButton'
+import { LanguageProvider, useLanguage } from '../components/language_context'
 
 const MaterialTopTabs = createMaterialTopTabNavigator()
 const Tabs = withLayoutContext(MaterialTopTabs.Navigator)
 
 export default function TabLayout() {
+  return (
+    <LanguageProvider>
+      <LocalizedTabs />
+    </LanguageProvider>
+  )
+}
+
+function LocalizedTabs() {
+  const { strings } = useLanguage()
+  const insets = useSafeAreaInsets()
   // On Android, add bottom padding to avoid overlap with OS navigation bar
   const androidNavBarPadding = Platform.OS === 'android' ? 0 : 0
   return (
@@ -35,7 +47,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="index"
             options={{
-              title: 'Home',
+              title: strings.tabHome,
               tabBarIcon: ({ color }: { color: string }) => (
                 <Ionicons name="home" color={color} size={22} />
               ),
@@ -44,7 +56,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="routes_stop"
             options={{
-              title: 'Routes Stop',
+              title: strings.tabRoutesStop,
               tabBarIcon: ({ color }: { color: string }) => (
                 <Ionicons name="bus" color={color} size={22} />
               ),
@@ -53,14 +65,22 @@ export default function TabLayout() {
           <Tabs.Screen
             name="my_favorites"
             options={{
-              title: 'My Favorites',
+              title: strings.tabFavorites,
               tabBarIcon: ({ color }: { color: string }) => (
                 <Ionicons name="heart" color={color} size={22} />
               ),
             }}
           />
         </Tabs>
+        {/* Over every tab, top right, so the language is one tap away anywhere. */}
+        <View style={[styles.languageButton, { top: insets.top + 4 }]}>
+          <LanguageButton />
+        </View>
       </View>
     </SafeAreaView>
   )
 }
+
+const styles = StyleSheet.create({
+  languageButton: { position: 'absolute', right: 12 },
+})
