@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react'
 import { StyleSheet } from 'react-native'
 import { WebView, WebViewMessageEvent } from 'react-native-webview'
 import { parseFromMapMessage, ToMapMessage } from '../utils/route_stop_map'
+import { STRINGS } from '../utils/strings'
 import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 
 const SOURCE = { html: STOP_MAP_HTML }
@@ -14,13 +15,14 @@ export function StopMap({
   userLocation = null,
   centerOnUserToken = 0,
   fitRouteToken = 0,
+  language,
 }: StopMapProps): React.JSX.Element {
   const webViewRef = useRef<WebView>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
-  const latest = useRef({ markers, selectedStop, onMarkerPress, userLocation })
+  const latest = useRef({ markers, selectedStop, onMarkerPress, userLocation, language })
   useEffect(() => {
-    latest.current = { markers, selectedStop, onMarkerPress, userLocation }
+    latest.current = { markers, selectedStop, onMarkerPress, userLocation, language }
   })
 
   const send = useCallback((msg: ToMapMessage) => {
@@ -33,6 +35,7 @@ export function StopMap({
     send({ type: 'setMarkers', markers: latest.current.markers })
     send({ type: 'select', stop: latest.current.selectedStop })
     send({ type: 'setUserLocation', location: latest.current.userLocation })
+    send({ type: 'setLanguage', language: latest.current.language, attribution: STRINGS[latest.current.language].mapAttribution })
   }, [send])
 
   useEffect(() => {
@@ -42,6 +45,10 @@ export function StopMap({
   useEffect(() => {
     send({ type: 'select', stop: selectedStop })
   }, [selectedStop, send])
+
+  useEffect(() => {
+    send({ type: 'setLanguage', language, attribution: STRINGS[language].mapAttribution })
+  }, [language, send])
 
   // Fit only on a new tap (token > 0), never on mount.
   useEffect(() => {

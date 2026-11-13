@@ -11,4 +11,10 @@ if (Platform.OS === 'android' && !Platform.isTV) {
 	onFavoritesChanged(() => {
 		refreshBusWidget();
 	});
+
+	// Redraw it in the new language as soon as the user switches.
+	const { onLanguageChanged } = require('./utils/language');
+	onLanguageChanged(() => {
+		refreshBusWidget();
+	});
 }

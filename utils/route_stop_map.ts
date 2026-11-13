@@ -1,4 +1,5 @@
 import type { ROUTS, Stop } from './fetch'
+import { Language, localized } from './language'
 
 /** One Stop of a Route, placed on the map. */
 export type RouteMarker = {
@@ -16,6 +17,7 @@ export type ToMapMessage =
   | { type: 'setUserLocation'; location: UserLocation | null }
   | { type: 'centerOnUser' }
   | { type: 'fitRoute' }
+  | { type: 'setLanguage'; language: Language; attribution: string }
 
 /** The user's position for the map. accuracy is a radius in metres. Never stored or logged. */
 export type UserLocation = {
@@ -73,7 +75,7 @@ const parseCoord = (value: string | undefined): number | null => {
   return Number.isFinite(n) ? n : null
 }
 
-const toMarker = (routeStop: ROUTS, stop: Stop | undefined): RouteMarker | null => {
+const toMarker = (routeStop: ROUTS, stop: Stop | undefined, language: Language): RouteMarker | null => {
   if (!stop) return null
   const lat = parseCoord(stop.lat)
   const lng = parseCoord(stop.long)
@@ -81,14 +83,14 @@ const toMarker = (routeStop: ROUTS, stop: Stop | undefined): RouteMarker | null 
   if (lat < HK_BOUNDS.minLat || lat > HK_BOUNDS.maxLat || lng < HK_BOUNDS.minLng || lng > HK_BOUNDS.maxLng) {
     return null
   }
-  return { stop: routeStop.stop, seq: Number(routeStop.seq), name: stop.name_en || routeStop.stop, lat, lng }
+  return { stop: routeStop.stop, seq: Number(routeStop.seq), name: localized(stop, 'name', language) || routeStop.stop, lat, lng }
 }
 
 /** Markers for a Route's Stops, ordered by seq. Stops without usable coordinates are left out. */
-export function buildRouteMarkers(routeStops: ROUTS[], stops: Stop[]): RouteMarker[] {
+export function buildRouteMarkers(routeStops: ROUTS[], stops: Stop[], language: Language): RouteMarker[] {
   const byId = new Map(stops.map(s => [s.stop, s]))
   return routeStops
-    .map(rs => toMarker(rs, byId.get(rs.stop)))
+    .map(rs => toMarker(rs, byId.get(rs.stop), language))
     .filter((m): m is RouteMarker => m !== null)
     .sort((a, b) => a.seq - b.seq)
 }

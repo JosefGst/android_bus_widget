@@ -1,4 +1,6 @@
+import type { Language } from '../utils/language'
 import type { RouteMarker, UserLocation } from '../utils/route_stop_map'
+import { STRINGS } from '../utils/strings'
 import { LEAFLET_CSS, LEAFLET_JS } from './generated/leaflet_assets'
 
 /** Props shared by both StopMap hosts (StopMap.tsx on Android, StopMap.web.tsx on Web). */
@@ -12,14 +14,16 @@ export interface StopMapProps {
   centerOnUserToken?: number
   /** Goes up by one on each "Show route" tap; the map then fits all Stops once. */
   fitRouteToken?: number
+  /** Language of the map's place labels and attribution. */
+  language: Language
 }
 
 /** Zoom level used when the map focuses on one selected Stop. */
 const SELECTED_ZOOM = 17
 
 const BASEMAP_URL = 'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/WGS84/{z}/{x}/{y}.png'
-const LABEL_URL = 'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/en/WGS84/{z}/{x}/{y}.png'
-const ATTRIBUTION = '&copy; Map information from Lands Department'
+// LABEL_LANGUAGE is replaced by en, tc or sc: the Lands Department serves labels in all three.
+const LABEL_URL = 'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/LABEL_LANGUAGE/WGS84/{z}/{x}/{y}.png'
 
 // Runs inside the map page. Plain ES5 so it works in older Android WebViews.
 // The app talks to the page by calling window.receive(msg); the page answers
@@ -27,8 +31,12 @@ const ATTRIBUTION = '&copy; Map information from Lands Department'
 const PAGE_SCRIPT = `
 (function () {
   var map = L.map('map', { zoomControl: true }).setView([22.35, 114.1], 11);
-  L.tileLayer(${JSON.stringify(BASEMAP_URL)}, { maxZoom: 19, attribution: ${JSON.stringify(ATTRIBUTION)} }).addTo(map);
-  L.tileLayer(${JSON.stringify(LABEL_URL)}, { maxZoom: 19 }).addTo(map);
+  L.tileLayer(${JSON.stringify(BASEMAP_URL)}, { maxZoom: 19 }).addTo(map);
+  function labelUrl(language) { return ${JSON.stringify(LABEL_URL)}.replace('LABEL_LANGUAGE', language); }
+  var labels = L.tileLayer(labelUrl('en'), { maxZoom: 19 }).addTo(map);
+  var labelLanguage = 'en';
+  var attribution = ${JSON.stringify(STRINGS.en.mapAttribution)};
+  map.attributionControl.addAttribution(attribution);
   var layer = L.layerGroup().addTo(map);
   var byStop = {};
   var selected = null;
@@ -117,6 +125,18 @@ const PAGE_SCRIPT = `
     map.setView(userDot.getLatLng(), Math.max(map.getZoom(), 16));
   }
 
+  function setLanguage(language, text) {
+    if (['en', 'tc', 'sc'].indexOf(language) < 0 || typeof text !== 'string' || text === '') return;
+    if (language !== labelLanguage) {
+      labelLanguage = language;
+      labels.setUrl(labelUrl(language));
+    }
+    if (text !== attribution) {
+      map.attributionControl.removeAttribution(attribution).addAttribution(text);
+      attribution = text;
+    }
+  }
+
   window.receive = function (msg) {
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'setMarkers' && Array.isArray(msg.markers)) setMarkers(msg.markers);
@@ -124,6 +144,7 @@ const PAGE_SCRIPT = `
     else if (msg.type === 'setUserLocation') setUserLocation(msg.location);
     else if (msg.type === 'centerOnUser') centerOnUser();
     else if (msg.type === 'fitRoute') fitAll();
+    else if (msg.type === 'setLanguage') setLanguage(msg.language, msg.attribution);
   };
 
   // Web host: messages arrive via postMessage from the parent window.

@@ -23,6 +23,7 @@ describe('buildRouteMarkers', () => {
     const markers = buildRouteMarkers(
       [routeStop('B', '10'), routeStop('A', '2')],
       [stop('A', '22.3', '114.1'), stop('B', '22.4', '114.2')],
+      'en',
     )
     expect(markers).toEqual([
       { stop: 'A', seq: 2, name: 'Name A', lat: 22.3, lng: 114.1 },
@@ -31,13 +32,14 @@ describe('buildRouteMarkers', () => {
   })
 
   it('skips Stops that are not in the Stop list', () => {
-    expect(buildRouteMarkers([routeStop('X', '1')], [])).toEqual([])
+    expect(buildRouteMarkers([routeStop('X', '1')], [], 'en')).toEqual([])
   })
 
   it('skips Stops with missing, empty or non-numeric coordinates', () => {
     const markers = buildRouteMarkers(
       [routeStop('A', '1'), routeStop('B', '2'), routeStop('C', '3')],
       [stop('A'), stop('B', '', ''), stop('C', 'abc', '114.1')],
+      'en',
     )
     expect(markers).toEqual([])
   })
@@ -46,12 +48,22 @@ describe('buildRouteMarkers', () => {
     const markers = buildRouteMarkers(
       [routeStop('A', '1'), routeStop('B', '2')],
       [stop('A', '0', '0'), stop('B', '22.3', '120')],
+      'en',
     )
     expect(markers).toEqual([])
   })
 
+  it('names markers in the chosen language, falling back to English', () => {
+    const markers = buildRouteMarkers(
+      [routeStop('A', '1'), routeStop('B', '2')],
+      [{ ...stop('A', '22.3', '114.1', 'UNIVERSITY STATION'), name_tc: '大學站', name_sc: '大学站' }, stop('B', '22.4', '114.2', 'CENTRAL')],
+      'tc',
+    )
+    expect(markers.map(m => m.name)).toEqual(['大學站', 'CENTRAL'])
+  })
+
   it('falls back to the Stop id when there is no name', () => {
-    const markers = buildRouteMarkers([routeStop('A', '1')], [stop('A', '22.3', '114.1', '')])
+    const markers = buildRouteMarkers([routeStop('A', '1')], [stop('A', '22.3', '114.1', '')], 'en')
     expect(markers[0].name).toBe('A')
   })
 })

@@ -3,9 +3,11 @@ import {
   FlexWidget,
   TextWidget,
 } from "react-native-android-widget";
-import type { StopGroup } from "../utils/favorite_board";
+import { nextArrivalsText, StopGroup } from "../utils/favorite_board";
+import type { Strings } from "../utils/strings";
 
 interface BusETAWidgetProps {
+  strings: Strings;
   groups?: StopGroup[];
   isLoading?: boolean;
   error?: string;
@@ -13,25 +15,16 @@ interface BusETAWidgetProps {
 
 const TEXT_STYLE = { fontSize: 16, color: "#ffffff", fontWeight: "bold" } as const;
 
-// The widget is a small tile: only the next arrival per Route.
-const nextArrivalText = (group: StopGroup): string =>
-  group.routes
-    .map(({ route, arrivals }) => {
-      const minutes = arrivals[0]?.minutes ?? null;
-      return minutes === null ? `${route}: --` : `${route}: ${minutes} min`;
-    })
-    .join("\n");
-
-export function BusETAWidget({ groups, isLoading, error }: BusETAWidgetProps) {
+export function BusETAWidget({ strings, groups, isLoading, error }: BusETAWidgetProps) {
   const renderContent = () => {
     if (isLoading) {
-      return [<TextWidget key="loading" text="Loading..." style={TEXT_STYLE} />];
+      return [<TextWidget key="loading" text={strings.widgetLoading} style={TEXT_STYLE} />];
     }
     if (error) {
       return [<TextWidget key="error" text={error} style={TEXT_STYLE} />];
     }
     if (!groups || groups.length === 0) {
-      return [<TextWidget key="empty" text="No buses available" style={TEXT_STYLE} />];
+      return [<TextWidget key="empty" text={strings.widgetEmpty} style={TEXT_STYLE} />];
     }
     return groups.flatMap(group => [
       <TextWidget
@@ -41,7 +34,7 @@ export function BusETAWidget({ groups, isLoading, error }: BusETAWidgetProps) {
       />,
       <TextWidget
         key={`etas-${group.stopName}`}
-        text={nextArrivalText(group)}
+        text={nextArrivalsText(group, strings)}
         style={{ ...TEXT_STYLE, marginLeft: 8, textAlign: "left" }}
       />,
     ]);

@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { parseFromMapMessage, ToMapMessage } from '../utils/route_stop_map'
+import { STRINGS } from '../utils/strings'
 import { STOP_MAP_HTML, StopMapProps } from './stop_map_html'
 
 /** Web host: the Leaflet page in an iframe. Android uses StopMap.tsx. */
-export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 0 }: StopMapProps): React.JSX.Element | null {
+export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 0, language }: StopMapProps): React.JSX.Element | null {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
   // Latest props, read when the page reports ready.
-  const latest = useRef({ markers, selectedStop, onMarkerPress })
+  const latest = useRef({ markers, selectedStop, onMarkerPress, language })
   useEffect(() => {
-    latest.current = { markers, selectedStop, onMarkerPress }
+    latest.current = { markers, selectedStop, onMarkerPress, language }
   })
   // Render the iframe only in the browser, never in the static pre-render.
   const [mounted, setMounted] = useState(false)
@@ -23,6 +24,7 @@ export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 
   const syncAll = useCallback(() => {
     send({ type: 'setMarkers', markers: latest.current.markers })
     send({ type: 'select', stop: latest.current.selectedStop })
+    send({ type: 'setLanguage', language: latest.current.language, attribution: STRINGS[latest.current.language].mapAttribution })
   }, [send])
 
   useEffect(() => {
@@ -52,6 +54,10 @@ export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 
     send({ type: 'select', stop: selectedStop })
   }, [selectedStop, send])
 
+  useEffect(() => {
+    send({ type: 'setLanguage', language, attribution: STRINGS[language].mapAttribution })
+  }, [language, send])
+
   // Fit only on a new tap (token > 0), never on mount.
   useEffect(() => {
     if (fitRouteToken > 0) send({ type: 'fitRoute' })
@@ -62,7 +68,7 @@ export function StopMap({ markers, selectedStop, onMarkerPress, fitRouteToken = 
     <iframe
       ref={iframeRef}
       srcDoc={STOP_MAP_HTML}
-      title="Route map"
+      title={STRINGS[language].routeMap}
       style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
     />
   )

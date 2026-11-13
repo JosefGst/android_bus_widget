@@ -7,6 +7,8 @@ export type ETA = {
   dir: string;
   service_type: string;
   dest_en: string;
+  dest_tc?: string;
+  dest_sc?: string;
   eta: string;
   data_timestamp: string;
 };
@@ -16,7 +18,11 @@ export type ROUTS = {
   bound: string;
   service_type: string;
   orig_en: string;
+  orig_tc?: string;
+  orig_sc?: string;
   dest_en: string;
+  dest_tc?: string;
+  dest_sc?: string;
   seq: string;
   stop: string;
 

@@ -1,0 +1,43 @@
+# Language button: cycles English → 繁 → 简 → English across Home and Routes Stop.
+# Ends on English, because every other flow taps English labels.
+appId: com.anonymous.bus
+tags:
+  - language
+---
+- runFlow:
+    file: subflows/open_app.yaml
+    env:
+      CLEAR_STATE: "false"
+- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+
+- tapOn:
+    id: "language-button"
+- assertVisible: "繁"
+- assertVisible: "1 竹園邨 → 尖沙咀碼頭"
+- assertVisible: "主頁"
+- assertVisible: "我的最愛"
+
+# Routes Stop: Stop names, buttons and map attribution in Traditional Chinese.
+- tapOn: "1 竹園邨 → 尖沙咀碼頭"
+- assertVisible: "路線：1"
+- assertVisible: "隱藏地圖"
+- extendedWaitUntil:
+    visible: ".*地圖資料由地政總署提供.*"
+    timeout: 20000
+
+- tapOn:
+    id: "language-button"
+- assertVisible: "简"
+- assertVisible: "隐藏地图"
+- assertVisible: "路线车站"
+- extendedWaitUntil:
+    visible: ".*地图资料由地政总署提供.*"
+    timeout: 20000
+
+- tapOn:
+    id: "language-button"
+- assertVisible: "EN"
+- assertVisible: "Hide map"
+- assertVisible: "Route: 1"
+- back
+- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"

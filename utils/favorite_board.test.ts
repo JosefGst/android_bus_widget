@@ -1,4 +1,5 @@
-import { loadFavoriteBoard } from './favorite_board'
+import { loadFavoriteBoard, nextArrivalsText, StopGroup } from './favorite_board'
+import { STRINGS } from './strings'
 
 // A fake KMB API keyed by URL. Anything not listed fails like a network error.
 type FakeKmb = {
@@ -6,13 +7,15 @@ type FakeKmb = {
   etas?: Record<string, { route?: string; dir?: string; eta: string }[] | 'fail'>
   // key: stop id -> English name, or 'fail'
   stopNames?: Record<string, string | 'fail'>
+  // key: stop id -> Traditional Chinese name (also sent as the Simplified name)
+  chineseStopNames?: Record<string, string>
   generatedTimestamp?: string
 }
 
 const respond = (body: unknown): Response =>
   ({ status: 200, text: async () => JSON.stringify(body) }) as Response
 
-function stubKmb({ etas = {}, stopNames = {}, generatedTimestamp = '2026-01-01T12:00:00Z' }: FakeKmb) {
+function stubKmb({ etas = {}, stopNames = {}, chineseStopNames = {}, generatedTimestamp = '2026-01-01T12:00:00Z' }: FakeKmb) {
   jest.spyOn(global, 'fetch').mockImplementation(async input => {
     const path = new URL(String(input)).pathname
     const etaMatch = path.match(/\/eta\/([^/]+)\/([^/]+)\/([^/]+)$/)
@@ -36,7 +39,8 @@ function stubKmb({ etas = {}, stopNames = {}, generatedTimestamp = '2026-01-01T1
     if (stopMatch) {
       const name = stopNames[stopMatch[1]]
       if (!name || name === 'fail') throw new Error('network down')
-      return respond({ data: { stop: stopMatch[1], name_en: name } })
+      const chinese = chineseStopNames[stopMatch[1]]
+      return respond({ data: { stop: stopMatch[1], name_en: name, ...(chinese ? { name_tc: chinese, name_sc: chinese } : {}) } })
     }
     throw new Error(`unexpected URL ${path}`)
   })
@@ -60,7 +64,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
       stopNames: { S1: 'Tuen Mun Station (TM123)' },
     })
 
-    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW)
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([
       { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] }] },
@@ -79,6 +83,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
         { stop: 'S2', route: '272X', service_type: '1' },
       ],
       NOW,
+      'en',
     )
 
     expect(groups).toHaveLength(1)
@@ -90,7 +95,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
   it('keeps a group for a Favorite whose Stop has no upcoming ETAs', async () => {
     stubKmb({ etas: { 'S1/272P/1': [] }, stopNames: { S1: 'Quiet Stop' } })
 
-    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW)
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([{ stopName: 'Quiet Stop', stopIds: ['S1'], routes: [] }])
   })
@@ -98,7 +103,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
   it('labels a group with the Stop id when the Stop name cannot be loaded', async () => {
     stubKmb({ etas: { 'S1/272P/1': [{ eta: at(5) }] }, stopNames: { S1: 'fail' } })
 
-    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW)
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups[0].stopName).toBe('S1')
     expect(groups[0].routes).toHaveLength(1)
@@ -116,6 +121,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
         { stop: 'S1', route: '2', service_type: '1' },
       ],
       NOW,
+      'en',
     )
 
     expect(groups.map(g => g.stopName)).toEqual(['Bravo', 'Alpha'])
@@ -123,7 +129,36 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
 
   it('returns no groups for no Favorites', async () => {
     stubKmb({})
-    expect(await loadFavoriteBoard([], NOW)).toEqual({ groups: [], generatedTimestamp: '' })
+    expect(await loadFavoriteBoard([], NOW, 'en')).toEqual({ groups: [], generatedTimestamp: '' })
+  })
+})
+
+describe('loadFavoriteBoard: language', () => {
+  it('names groups in the chosen language and merges full-width suffixes', async () => {
+    stubKmb({
+      etas: { 'S1/272P/1': [{ eta: at(3) }], 'S2/272X/1': [{ eta: at(7) }] },
+      stopNames: { S1: 'TSIM SHA TSUI EAST (MODY ROAD)', S2: 'TSIM SHA TSUI EAST' },
+      chineseStopNames: { S1: '尖沙咀東（麼地道）', S2: '尖沙咀東' },
+    })
+
+    const { groups } = await loadFavoriteBoard(
+      [
+        { stop: 'S1', route: '272P', service_type: '1' },
+        { stop: 'S2', route: '272X', service_type: '1' },
+      ],
+      NOW,
+      'tc',
+    )
+
+    expect(groups.map(g => [g.stopName, g.stopIds])).toEqual([['尖沙咀東', ['S1', 'S2']]])
+  })
+
+  it('falls back to the English name when the Stop has no Chinese name', async () => {
+    stubKmb({ etas: { 'S1/272P/1': [{ eta: at(3) }] }, stopNames: { S1: 'Central' } })
+
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'sc')
+
+    expect(groups[0].stopName).toBe('Central')
   })
 })
 
@@ -136,7 +171,7 @@ describe('loadFavoriteBoard: arrivals', () => {
       stopNames: { S1: 'Stop' },
     })
 
-    const { groups } = await loadFavoriteBoard([fav], NOW)
+    const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
     expect(groups[0].routes[0].arrivals.map(a => a.minutes)).toEqual([4, 20, null])
   })
@@ -154,6 +189,7 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard(
       ['A', 'B', 'C'].map(route => ({ stop: 'S1', route, service_type: '1' })),
       NOW,
+      'en',
     )
 
     expect(groups[0].routes.map(r => r.route)).toEqual(['C', 'B', 'A'])
@@ -165,7 +201,7 @@ describe('loadFavoriteBoard: arrivals', () => {
       stopNames: { S1: 'Stop' },
     })
 
-    const { groups } = await loadFavoriteBoard([fav], NOW)
+    const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
       { route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] },
@@ -176,7 +212,7 @@ describe('loadFavoriteBoard: arrivals', () => {
   it('fills stop, bound and service_type on each row', async () => {
     stubKmb({ etas: { 'S1/272P/2': [{ dir: 'I', eta: at(5) }] }, stopNames: { S1: 'Stop' } })
 
-    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '2' }], NOW)
+    const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '2' }], NOW, 'en')
 
     expect(groups[0].routes[0]).toMatchObject({ route: '272P', stop: 'S1', bound: 'I', service_type: '2' })
   })
@@ -193,6 +229,7 @@ describe('loadFavoriteBoard: arrivals', () => {
         { stop: 'S2', route: '272P', service_type: '1' },
       ],
       NOW,
+      'en',
     )
 
     expect(groups).toHaveLength(1)
@@ -202,7 +239,7 @@ describe('loadFavoriteBoard: arrivals', () => {
   it('computes minutes against the given time, not the clock', async () => {
     stubKmb({ etas: { 'S1/272P/1': [{ eta: '2030-06-01T08:30:00Z' }] }, stopNames: { S1: 'Stop' } })
 
-    const { groups } = await loadFavoriteBoard([fav], new Date('2030-06-01T08:00:00Z'))
+    const { groups } = await loadFavoriteBoard([fav], new Date('2030-06-01T08:00:00Z'), 'en')
 
     expect(groups[0].routes[0].arrivals[0].minutes).toBe(30)
   })
@@ -216,6 +253,7 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard(
       [fav, { stop: 'S2', route: '272X', service_type: '1' }],
       NOW,
+      'en',
     )
 
     expect(groups).toEqual([
@@ -234,6 +272,7 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { generatedTimestamp } = await loadFavoriteBoard(
       [fav, { stop: 'S2', route: '272X', service_type: '1' }],
       NOW,
+      'en',
     )
 
     expect(generatedTimestamp).toBe('2026-01-01T11:59:30Z')
@@ -251,7 +290,24 @@ describe('loadFavoriteBoard: offline', () => {
           { stop: 'S2', route: '272X', service_type: '1' },
         ],
         NOW,
+        'en',
       ),
     ).rejects.toThrow('No ETAs could be loaded')
+  })
+})
+
+describe('nextArrivalsText', () => {
+  const group: StopGroup = {
+    stopName: '大學站',
+    stopIds: ['S1'],
+    routes: [
+      { route: '272A', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: 'x', minutes: 4 }, { eta: 'y', minutes: 19 }] },
+      { route: '272K', stop: 'S1', bound: 'O', service_type: '1', arrivals: [] },
+    ],
+  }
+
+  it('shows the next arrival per Route, in the chosen language', () => {
+    expect(nextArrivalsText(group, STRINGS.en)).toBe('272A: 4 min\n272K: --')
+    expect(nextArrivalsText(group, STRINGS.tc)).toBe('272A: 4 分\n272K: --')
   })
 })

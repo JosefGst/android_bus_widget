@@ -7,10 +7,10 @@ const API_HOST = 'https://data.etabus.gov.hk';
 const NOW = new Date().toISOString();
 
 export const MOCK_ROUTES = [
-  { route: '272P', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', dest_en: 'CAUSEWAY BAY' },
-  { route: '272X', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', dest_en: 'CENTRAL' },
-  { route: '967', bound: 'O', service_type: '1', orig_en: 'TIN SHUI WAI', dest_en: 'ADMIRALTY' },
-  { route: 'N29', bound: 'O', service_type: '1', orig_en: 'MONG KOK', dest_en: 'TSUEN WAN' },
+  { route: '272P', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', orig_tc: '屯門', orig_sc: '屯门', dest_en: 'CAUSEWAY BAY', dest_tc: '銅鑼灣', dest_sc: '铜锣湾' },
+  { route: '272X', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', orig_tc: '屯門', orig_sc: '屯门', dest_en: 'CENTRAL', dest_tc: '中環', dest_sc: '中环' },
+  { route: '967', bound: 'O', service_type: '1', orig_en: 'TIN SHUI WAI', orig_tc: '天水圍', orig_sc: '天水围', dest_en: 'ADMIRALTY', dest_tc: '金鐘', dest_sc: '金钟' },
+  { route: 'N29', bound: 'O', service_type: '1', orig_en: 'MONG KOK', orig_tc: '旺角', orig_sc: '旺角', dest_en: 'TSUEN WAN', dest_tc: '荃灣', dest_sc: '荃湾' },
 ];
 
 export const MOCK_STOP_NAMES: Record<string, string> = {
@@ -21,6 +21,22 @@ export const MOCK_STOP_NAMES: Record<string, string> = {
   MAPSTOP002: 'Yau Ma Tei Map Stop',
   MAPSTOP003: 'Jordan Map Stop',
 };
+
+// Traditional and Simplified names for each mock Stop: [name_tc, name_sc].
+export const MOCK_STOP_NAMES_ZH: Record<string, [string, string]> = {
+  B464BD6334A93FA1: ['預設車站一', '预设车站一'],
+  B644204AEDE7A031: ['預設車站二', '预设车站二'],
+  MOCKSTOP001: ['銅鑼灣站', '铜锣湾站'],
+  MAPSTOP001: ['旺角地圖站', '旺角地图站'],
+  MAPSTOP002: ['油麻地地圖站', '油麻地地图站'],
+  MAPSTOP003: ['佐敦地圖站', '佐敦地图站'],
+};
+
+const stopNames = (stop: string) => ({
+  name_en: MOCK_STOP_NAMES[stop] ?? 'Unknown Stop',
+  name_tc: MOCK_STOP_NAMES_ZH[stop]?.[0] ?? '未知車站',
+  name_sc: MOCK_STOP_NAMES_ZH[stop]?.[1] ?? '未知车站',
+});
 
 // Coordinates (inside Hong Kong) so the Routes Stop map can place markers.
 export const MOCK_STOP_COORDS: Record<string, { lat: string; long: string }> = {
@@ -73,7 +89,7 @@ export async function mockKmbApi(page: Page) {
         type: 'STOP',
         version: '1',
         generated_timestamp: NOW,
-        data: Object.entries(MOCK_STOP_NAMES).map(([stop, name_en]) => ({ stop, name_en, ...MOCK_STOP_COORDS[stop] })),
+        data: Object.keys(MOCK_STOP_NAMES).map(stop => ({ stop, ...stopNames(stop), ...MOCK_STOP_COORDS[stop] })),
       })
     )
   );
@@ -86,7 +102,7 @@ export async function mockKmbApi(page: Page) {
         type: 'STOP',
         version: '1',
         generated_timestamp: NOW,
-        data: { stop: stopId, name_en: MOCK_STOP_NAMES[stopId] ?? 'Unknown Stop' },
+        data: { stop: stopId, ...stopNames(stopId) },
       })
     );
   });
@@ -128,6 +144,8 @@ export async function mockKmbApi(page: Page) {
             dir: 'O',
             service_type: svcType,
             dest_en: 'CAUSEWAY BAY',
+            dest_tc: '銅鑼灣',
+            dest_sc: '铜锣湾',
             eta: futureEta,
             data_timestamp: NOW,
           },

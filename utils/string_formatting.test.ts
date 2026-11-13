@@ -17,6 +17,10 @@ describe('normalizeStopName', () => {
     expect(normalizeStopName('Foo (PA215) (Outbound)')).toBe('Foo');
   });
 
+  it('strips full-width parentheses used in Chinese names', () => {
+    expect(normalizeStopName('尖沙咀東（麼地道）')).toBe('尖沙咀東');
+  });
+
   it('returns an empty string for non-string input', () => {
     expect(normalizeStopName(undefined as unknown as string)).toBe('');
   });
