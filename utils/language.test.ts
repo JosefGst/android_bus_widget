@@ -114,6 +114,19 @@ describe('getLanguage / setLanguage', () => {
     expect(await getLanguage()).toBe('en')
   })
 
+  it('follows the phone when storage does not answer in time', async () => {
+    jest.useFakeTimers()
+    try {
+      phoneLocales('zh-HK')
+      jest.mocked(AsyncStorage.getItem).mockReturnValueOnce(new Promise(() => {}))
+      const language = getLanguage()
+      jest.advanceTimersByTime(1500)
+      expect(await language).toBe('tc')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('tells listeners about a change, and stops after unsubscribe', async () => {
     const listener = jest.fn()
     const unsubscribe = onLanguageChanged(listener)

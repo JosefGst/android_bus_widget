@@ -37,13 +37,22 @@ function phoneLanguage(): Language {
   }
 }
 
+// The widget task reads this too; a slow storage read must not hold up its render.
+const READ_TIMEOUT_MS = 1500
+
 async function savedLanguage(): Promise<Language | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>(resolve => {
+    timer = setTimeout(() => resolve(null), READ_TIMEOUT_MS)
+  })
   try {
-    const saved = await AsyncStorage.getItem(STORAGE_KEY)
+    const saved = await Promise.race([AsyncStorage.getItem(STORAGE_KEY), timeout])
     return isLanguage(saved) ? saved : null
   } catch (e) {
     console.error('Failed to read the saved language', e)
     return null
+  } finally {
+    clearTimeout(timer)
   }
 }
 

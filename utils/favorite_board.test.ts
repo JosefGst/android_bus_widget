@@ -1,4 +1,5 @@
-import { loadFavoriteBoard } from './favorite_board'
+import { loadFavoriteBoard, nextArrivalsText, StopGroup } from './favorite_board'
+import { STRINGS } from './strings'
 
 // A fake KMB API keyed by URL. Anything not listed fails like a network error.
 type FakeKmb = {
@@ -292,5 +293,21 @@ describe('loadFavoriteBoard: offline', () => {
         'en',
       ),
     ).rejects.toThrow('No ETAs could be loaded')
+  })
+})
+
+describe('nextArrivalsText', () => {
+  const group: StopGroup = {
+    stopName: '大學站',
+    stopIds: ['S1'],
+    routes: [
+      { route: '272A', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: 'x', minutes: 4 }, { eta: 'y', minutes: 19 }] },
+      { route: '272K', stop: 'S1', bound: 'O', service_type: '1', arrivals: [] },
+    ],
+  }
+
+  it('shows the next arrival per Route, in the chosen language', () => {
+    expect(nextArrivalsText(group, STRINGS.en)).toBe('272A: 4 min\n272K: --')
+    expect(nextArrivalsText(group, STRINGS.tc)).toBe('272A: 4 分\n272K: --')
   })
 })

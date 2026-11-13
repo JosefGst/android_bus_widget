@@ -4,13 +4,13 @@ import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 import { loadFavoriteBoard } from "../utils/favorite_board";
 import { listForWidget } from "../utils/favorites";
 import { getLanguage } from "../utils/language";
+import { STRINGS } from "../utils/strings";
 import { BusETAWidget } from "./BusETAWidget";
 
 // Must match the widget name in app.json.
 export const BUS_WIDGET_NAME = "BusETAWidget";
 
 const WIDGET_FETCH_TIMEOUT_MS = 12000;
-const TAP_TO_REFRESH = "Tap to refresh";
 
 /** Reject after ms so we never leave the widget stuck on Loading (e.g. when app is closed). */
 function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
@@ -34,17 +34,17 @@ function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
  * any failure or timeout renders the "Tap to refresh" state instead.
  */
 export async function renderBusWidget(): Promise<React.JSX.Element> {
+  const language = await getLanguage();
+  const text = STRINGS[language];
   try {
     const board = await withTimeout(
       WIDGET_FETCH_TIMEOUT_MS,
-      Promise.all([listForWidget(), getLanguage()]).then(([favorites, language]) =>
-        loadFavoriteBoard(favorites, new Date(), language)
-      )
+      listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language))
     );
-    return <BusETAWidget groups={board.groups} />;
+    return <BusETAWidget strings={text} groups={board.groups} />;
   } catch (e) {
     console.error("[Widget] ETA fetch failed:", e);
-    return <BusETAWidget error={TAP_TO_REFRESH} />;
+    return <BusETAWidget strings={text} error={text.widgetTapToRefresh} />;
   }
 }
 
@@ -53,6 +53,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === "WIDGET_DELETED") return;
 
   // Every other action (added, update, resized, click) shows Loading, then refreshes the data.
-  props.renderWidget(<BusETAWidget isLoading={true} />);
+  props.renderWidget(<BusETAWidget strings={STRINGS[await getLanguage()]} isLoading={true} />);
   props.renderWidget(await renderBusWidget());
 }
