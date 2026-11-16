@@ -61,5 +61,7 @@ A text-size setting. Revisit after the larger defaults ship.
 - Phase 1: done (commit on `josefgst/ui_design`). Unit + e2e green.
 - Phase 2: done. Below a 720 px window height the keypad and title shrink so at least one result stays visible.
 - Phase 3: done. `/` is My Buses (`app/index.tsx`), Find a Route moved to `/find_route`. Custom `BottomTabBar` with two tabs; Routes Stop stays a hidden route so tab history and Back keep working.
+- Phase 4: done. Save keeps the user on Routes Stop. Reopening the same Route keeps the Stop that was open. Find a Route shows "Try again" when the Route list can't load.
+- Honor tablet, Phase 4 build: 6 of 7 Maestro flows pass. `favorites` fails at start-up only: it clears app data, and the KMB CDN was refusing (403) the uncached Route list download after a day of test cold starts.
 - Device run (Honor tablet, landscape) found stop names still in capitals on My Buses; fixed, with an uppercase mock Stop name in e2e.
 - Known gap until Phase 4: the empty My Buses text says "tap Save", but Routes Stop still uses the star button.

@@ -1,208 +1,283 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MapResizeHandle } from '../components/MapResizeHandle';
-import { StopMap } from '../components/StopMap';
-import { useLanguage } from '../components/language_context';
-import { useUserLocation } from '../components/use_user_location';
-import { add as addFavorite } from '../utils/favorites';
-import { ETA, fetchRouteSTOP, fetchStopETA, ROUTS, Stop } from '../utils/fetch';
-import { localized } from '../utils/language';
-import { DEFAULT_MAP_FRACTION, growForMarker, loadMapSize, saveMapSize, snapFraction } from '../utils/map_size';
-import { buildRouteMarkers } from '../utils/route_stop_map';
-import { getStopsFor } from '../utils/stops';
-import { arrivalText } from '../utils/strings';
+import { MaterialIcons } from '@expo/vector-icons'
+import { useFocusEffect, useIsFocused } from '@react-navigation/native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useLanguage } from '../components/language_context'
+import { RouteBadge } from '../components/RouteBadge'
+import { SelectedStopCard } from '../components/SelectedStopCard'
+import { StopMap } from '../components/StopMap'
+import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
+import { useUserLocation } from '../components/use_user_location'
+import { upcomingArrivals } from '../utils/arrival_display'
+import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
+import { ETA, fetchRouteSTOP, fetchStopETA, getCachedRoutes, ROUTS, Stop } from '../utils/fetch'
+import { localized } from '../utils/language'
+import { buildRouteMarkers } from '../utils/route_stop_map'
+import { getStopsFor } from '../utils/stops'
+import { displayPlaceName } from '../utils/string_formatting'
 
-const RoutesStopScreen = () => {
-  const [now, setNow] = useState(Date.now());
-  const router = useRouter();
-  const { language, strings } = useLanguage();
-  const params = useLocalSearchParams();
-  const { route, bound, service_type } = params;
-  const [isLoading, setLoading] = useState(true);
-  const [data, setData] = useState<ROUTS[]>([]);
+type RouteView = 'list' | 'map'
+
+// Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
+const CLOCK_TICK_MS = 10_000
+
+export default function RoutesStopScreen(): React.JSX.Element {
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const { language, strings } = useLanguage()
+  const params = useLocalSearchParams()
+  const { route, bound, service_type } = params
+  const [now, setNow] = useState(Date.now())
+  const [isLoading, setLoading] = useState(true)
+  const [data, setData] = useState<ROUTS[]>([])
   // The Route (route|bound|service_type) that `data` was loaded for; null while a load is running.
-  const [dataRouteKey, setDataRouteKey] = useState<string | null>(null);
-  const routeKey = `${route}|${bound}|${service_type}`;
-  const [stops, setStops] = useState<Stop[]>([]);
+  const [dataRouteKey, setDataRouteKey] = useState<string | null>(null)
+  const routeKey = `${route}|${bound}|${service_type}`
+  const [routeInfo, setRouteInfo] = useState<ROUTS | null>(null)
+  const [stops, setStops] = useState<Stop[]>([])
   // Derived per language from the Stop records, so switching language needs no new request.
   const stopNames = useMemo(() => {
-    const names: { [stopId: string]: string } = {};
-    stops.forEach(stop => { names[stop.stop] = localized(stop, 'name', language); });
-    return names;
-  }, [stops, language]);
-  const markers = useMemo(() => buildRouteMarkers(data, stops, language), [data, stops, language]);
+    const names: { [stopId: string]: string } = {}
+    stops.forEach(stop => { names[stop.stop] = displayPlaceName(localized(stop, 'name', language), language) })
+    return names
+  }, [stops, language])
+  const markers = useMemo(() => buildRouteMarkers(data, stops, language), [data, stops, language])
   // The Stop list whose names finished loading; null while a load is running.
-  const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null);
+  const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null)
   // Bumped by the Retry row to load the Stop names again.
-  const [namesAttempt, setNamesAttempt] = useState(0);
-  const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop]);
-  // Height of the area below the header; map sizes are fractions of it so the handle and list stay on
-  // screen. The map waits for this measurement so it never flashes at the wrong size.
-  const [contentHeight, setContentHeight] = useState(0);
-  const [expandedStop, setExpandedStop] = useState<string | null>(null);
-  const [error, setError] = useState<'invalidRoute' | 'fetchFailed' | null>(null);
-  const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({});
-  const [loadingEta, setLoadingEta] = useState<string | null>(null);
-  const listRef = useRef<FlatList<ROUTS>>(null);
-  const [mapVisible, setMapVisible] = useState(true);
-  // Map height as a fraction of the window: the saved snap size, or the live value while dragging.
-  const [mapFraction, setMapFraction] = useState(DEFAULT_MAP_FRACTION);
-  useEffect(() => {
-    let cancelled = false;
-    loadMapSize().then(f => { if (!cancelled) setMapFraction(f); });
-    return () => { cancelled = true; };
-  }, []);
+  const [namesAttempt, setNamesAttempt] = useState(0)
+  const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop])
+  const [view, setView] = useState<RouteView>('list')
+  const [selectedStop, setSelectedStop] = useState<string | null>(null)
+  const [error, setError] = useState<'invalidRoute' | 'fetchFailed' | null>(null)
+  const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({})
+  const [favorites, setFavorites] = useState<Favorite[]>([])
+  const listRef = useRef<FlatList<ROUTS>>(null)
+
   // The user's position: watched only while this screen has focus and the map is shown.
-  const isFocused = useIsFocused();
-  const userLocation = useUserLocation(isFocused && mapVisible);
-  const [centerOnUserToken, setCenterOnUserToken] = useState(0);
-  const [fitRouteToken, setFitRouteToken] = useState(0);
-  // A "locate me" tap made before the first position arrived; centers once it does.
-  const [centerPending, setCenterPending] = useState(false);
-  const { location, start: startLocation } = userLocation;
+  const isFocused = useIsFocused()
+  const userLocation = useUserLocation(isFocused && view === 'map')
+  const [centerOnUserToken, setCenterOnUserToken] = useState(0)
+  const [fitRouteToken, setFitRouteToken] = useState(0)
+  // A "Where am I?" tap made before the first position arrived; centers once it does.
+  const [centerPending, setCenterPending] = useState(false)
+  const { location, start: startLocation } = userLocation
   useEffect(() => {
-    if (!centerPending || !location) return;
-    setCenterPending(false);
-    setCenterOnUserToken(t => t + 1);
-  }, [centerPending, location]);
+    if (!centerPending || !location) return
+    setCenterPending(false)
+    setCenterOnUserToken(t => t + 1)
+  }, [centerPending, location])
   const onLocateMe = useCallback(async () => {
-    if (await startLocation()) setCenterPending(true);
-  }, [startLocation]);
-  const showLocateMe = Platform.OS === 'android' && userLocation.permission !== 'denied';
-  const onMapResizeRelease = useCallback((fraction: number) => {
-    const snapped = snapFraction(fraction);
-    setMapFraction(snapped);
-    saveMapSize(snapped);
-  }, []);
+    if (await startLocation()) setCenterPending(true)
+  }, [startLocation])
+  const showLocateMe = Platform.OS === 'android' && userLocation.permission !== 'denied'
 
-  // The one selected Stop: drives the expanded row and the highlighted marker.
-  const selectStop = useCallback(async (stopId: string | null) => {
-    setExpandedStop(stopId);
-    if (!stopId || etaMap[stopId]) return;
-    setLoadingEta(stopId);
+  const reloadFavorites = useCallback(async () => {
     try {
-      const etaRes = await fetchStopETA(stopId, route as string, service_type as string);
-      setEtaMap(prev => ({ ...prev, [stopId]: etaRes.data }));
-    } catch {
-      setEtaMap(prev => ({ ...prev, [stopId]: [] }));
-    } finally {
-      setLoadingEta(null);
+      setFavorites(await listFavorites())
+    } catch (e) {
+      console.error('Failed to load Favorites', e)
     }
-  }, [etaMap, route, service_type]);
+  }, [])
+  useFocusEffect(useCallback(() => { reloadFavorites() }, [reloadFavorites]))
 
-  // A marker tap selects the Stop, grows a small map (not saved) and brings its row into view.
-  const onMarkerPress = useCallback((stopId: string) => {
-    selectStop(stopId);
-    setMapFraction(growForMarker);
-    const index = data.findIndex(item => item.stop === stopId);
-    if (index >= 0) listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
-  }, [data, selectStop]);
+  const selectStop = useCallback(async (stopId: string | null) => {
+    setSelectedStop(stopId)
+    if (!stopId || etaMap[stopId]) return
+    try {
+      const etaRes = await fetchStopETA(stopId, route as string, service_type as string)
+      setEtaMap(prev => ({ ...prev, [stopId]: etaRes.data }))
+    } catch (e) {
+      console.error('Failed to load ETAs', e)
+      setEtaMap(prev => ({ ...prev, [stopId]: [] }))
+    }
+  }, [etaMap, route, service_type])
 
-  // Preselect the Stop named by the `stop` param (e.g. from My Favorites), once per route/bound/service/stop.
-  const handledStopRef = useRef<string | null>(null);
-  const { stop: stopParam } = params;
+  // Selects a Stop and scrolls its row to the top, so its card (with Save) is in view.
+  // The scroll waits in scrollTarget until the list is on screen: a preselect can come before it is.
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null)
+  const focusStop = useCallback((stopId: string) => {
+    selectStop(stopId)
+    setScrollTarget(stopId)
+  }, [selectStop])
+  const listShown = !isLoading && error === null && view === 'list'
   useEffect(() => {
-    if (typeof stopParam !== 'string' || dataRouteKey !== routeKey) return;
-    if (!data.some(item => item.stop === stopParam)) return;
-    const key = `${routeKey}|${stopParam}`;
-    if (handledStopRef.current === key) return;
-    handledStopRef.current = key;
-    onMarkerPress(stopParam);
-  }, [stopParam, routeKey, dataRouteKey, data, onMarkerPress]);
+    if (!scrollTarget || !listShown || !listRef.current) return
+    const index = data.findIndex(item => item.stop === scrollTarget)
+    if (index >= 0) listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 })
+    setScrollTarget(null)
+  }, [scrollTarget, listShown, data])
 
-  // Update local clock every second for smooth countdown and current time
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setNow(Date.now());
-      }, 1000);
-      return () => clearInterval(timer);
-    }, []);
+  // Preselect the Stop named by the `stop` param (e.g. from My Buses), once per route/bound/service/stop.
+  const handledStopRef = useRef<string | null>(null)
+  const { stop: stopParam } = params
+  useEffect(() => {
+    if (typeof stopParam !== 'string' || dataRouteKey !== routeKey) return
+    if (!data.some(item => item.stop === stopParam)) return
+    const key = `${routeKey}|${stopParam}`
+    if (handledStopRef.current === key) return
+    handledStopRef.current = key
+    focusStop(stopParam)
+  }, [stopParam, routeKey, dataRouteKey, data, focusStop])
 
   useEffect(() => {
-    let cancelled = false;
+    const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      // This tab stays mounted when it is opened for another Route: drop the previous Route's
+      setLoading(true)
+      setError(null)
+      // This screen stays mounted when it is opened for another Route: drop the previous Route's
       // Stops, ETAs and selection so none of them is shown for (or reused by) the new Route.
-      setData([]);
-      setDataRouteKey(null);
-      setEtaMap({});
-      setExpandedStop(null);
+      setData([])
+      setDataRouteKey(null)
+      setEtaMap({})
+      setSelectedStop(null)
       try {
         if (typeof route === 'string' && typeof bound === 'string' && typeof service_type === 'string') {
-          let apiBound = bound;
-          if (bound === 'I') apiBound = 'inbound';
-          else if (bound === 'O') apiBound = 'outbound';
-          const res = await fetchRouteSTOP(route, apiBound, service_type);
-          if (cancelled) return;
-          setData(res.data);
-          setDataRouteKey(`${route}|${bound}|${service_type}`);
+          const apiBound = bound === 'I' ? 'inbound' : bound === 'O' ? 'outbound' : bound
+          const res = await fetchRouteSTOP(route, apiBound, service_type)
+          if (cancelled) return
+          setData(res.data)
+          setDataRouteKey(`${route}|${bound}|${service_type}`)
         } else {
-          if (!cancelled) setError('invalidRoute');
+          if (!cancelled) setError('invalidRoute')
         }
       } catch (e) {
-        console.error('Failed to fetch the Route\'s Stops', e);
-        if (!cancelled) setError('fetchFailed');
+        console.error('Failed to fetch the Route\'s Stops', e)
+        if (!cancelled) setError('fetchFailed')
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false)
       }
-    };
-    fetchData();
+    }
+    fetchData()
     return () => {
-      cancelled = true;
-    };
-  }, [route, bound, service_type]);
+      cancelled = true
+    }
+  }, [route, bound, service_type])
+
+  // Start and end for the header, from the Route list (cached for a day). Kept apart from the Stop
+  // list load: reading the large cached list is slow on some devices and must not hold up the Stops.
+  useEffect(() => {
+    let cancelled = false
+    setRouteInfo(null)
+    // This screen is mounted at start-up with no Route; a second Route list download then would
+    // double the start-up burst that gets the app 403'd by the KMB CDN.
+    if (typeof route !== 'string') return
+    const loadRouteInfo = async () => {
+      try {
+        const { routes } = await getCachedRoutes()
+        if (cancelled) return
+        setRouteInfo(routes.find(r => r.route === route && r.bound === bound && r.service_type === service_type) ?? null)
+      } catch (e) {
+        console.error('Failed to load the Route list for the header', e)
+      }
+    }
+    loadRouteInfo()
+    return () => {
+      cancelled = true
+    }
+  }, [route, bound, service_type])
 
   // Stop names and coordinates for the Route's Stops. A failure here must not
   // hide the Stop list fetched above; rows fall back to Stop ids and a Retry row.
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     const loadStopNames = async () => {
-      setNamesLoadedFor(null);
+      setNamesLoadedFor(null)
       try {
-        const found = await getStopsFor(data.map(item => item.stop));
-        if (cancelled) return;
-        setStops(found);
+        const found = await getStopsFor(data.map(item => item.stop))
+        if (cancelled) return
+        setStops(found)
       } catch (e) {
-        console.error('Failed to load stop names', e);
+        console.error('Failed to load stop names', e)
       } finally {
-        if (!cancelled) setNamesLoadedFor(data);
+        if (!cancelled) setNamesLoadedFor(data)
       }
-    };
-    loadStopNames();
+    }
+    loadStopNames()
     return () => {
-      cancelled = true;
-    };
-  }, [data, namesAttempt]);
+      cancelled = true
+    }
+  }, [data, namesAttempt])
+
+  const onSave = useCallback(async (item: ROUTS) => {
+    // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
+    const saved = await addFavorite({ route: item.route, service_type: item.service_type, stop: item.stop })
+    if (!saved) console.error('Failed to save Favorite')
+    await reloadFavorites()
+  }, [reloadFavorites])
+
+  const nowIso = new Date(now).toISOString()
+  const selectedItem = data.find(item => item.stop === selectedStop) ?? null
+  const renderCard = (item: ROUTS, showTitle: boolean): React.JSX.Element => (
+    <SelectedStopCard
+      seq={item.seq}
+      stopName={stopNames[item.stop] || item.stop}
+      showTitle={showTitle}
+      arrivals={etaMap[item.stop] ? upcomingArrivals(etaMap[item.stop], nowIso, 2) : null}
+      saved={includesFavorite(favorites, { route: item.route, service_type: item.service_type, stop: item.stop })}
+      onSave={() => onSave(item)}
+      language={language}
+      strings={strings}
+    />
+  )
+
+  const from = routeInfo ? displayPlaceName(localized(routeInfo, 'orig', language), language) : null
+  const to = routeInfo ? displayPlaceName(localized(routeInfo, 'dest', language), language) : null
 
   return (
-    <View style={{ flex: 1, paddingTop: 40 }}>
-      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={strings.back} style={{ position: 'absolute', left: 16, top: 40, padding: 8, zIndex: 10 }}>
-        <MaterialIcons name="navigate-before" size={42} color="#007aff" />
-      </Pressable>
-      <Text style={{ fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 }}>
-        {typeof route === 'string' ? strings.routeHeader(route) : strings.routeHeaderEmpty}
-      </Text>
-      <Text style={{ fontSize: 18, textAlign: 'center', marginBottom: 12 }}>
-        {typeof bound === 'string' && typeof service_type === 'string' ? strings.directionAndServiceType(bound, service_type) : ''}
-      </Text>
+    <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={strings.back}
+          style={({ pressed }) => [styles.back, pressed && styles.pressed]}
+        >
+          <MaterialIcons name="chevron-left" size={32} color={COLORS.accent} />
+          <Text style={styles.backText}>{strings.back}</Text>
+        </Pressable>
+        <View style={styles.titleRow}>
+          {typeof route === 'string' && <RouteBadge route={route} />}
+          <View
+            // accessible: Android exposes the label (and Maestro sees "Route: 1A") only on accessible views.
+            accessible
+            accessibilityRole="header"
+            accessibilityLabel={typeof route === 'string' ? strings.routeHeader(route) : strings.routeHeaderEmpty}
+            style={styles.places}
+          >
+            {from !== null && to !== null && (
+              <>
+                <Text style={styles.place}><Text style={styles.placeLabel}>{strings.fromOrigin} </Text>{from}</Text>
+                <Text style={[styles.place, styles.destination]}><Text style={styles.placeLabel}>{strings.toDestination} </Text>{to}</Text>
+              </>
+            )}
+          </View>
+        </View>
+        <View style={styles.switch}>
+          <ViewButton view="list" label={strings.stopListView} icon="format-list-numbered" active={view === 'list'} onPress={setView} />
+          <ViewButton view="map" label={strings.mapView} icon="map" active={view === 'map'} onPress={setView} />
+        </View>
+      </View>
+
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 32 }} />
+        <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
       ) : error ? (
-        <Text style={{ color: 'red', textAlign: 'center' }}>{strings[error]}</Text>
-      ) : (
-        <View style={{ flex: 1 }} onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
-        {mapVisible && contentHeight > 0 && (
-          <View style={[styles.mapContainer, { height: Math.round(contentHeight * mapFraction) }]} testID="route-map">
+        <Text style={styles.error}>{strings[error]}</Text>
+      ) : view === 'map' ? (
+        <View style={styles.body}>
+          <View style={styles.map} testID="route-map">
             {markers.length > 0 ? (
               <StopMap
                 markers={markers}
-                selectedStop={expandedStop}
-                onMarkerPress={onMarkerPress}
+                selectedStop={selectedStop}
+                onMarkerPress={focusStop}
                 userLocation={location}
                 centerOnUserToken={centerOnUserToken}
                 fitRouteToken={fitRouteToken}
@@ -212,176 +287,184 @@ const RoutesStopScreen = () => {
               <Text style={styles.mapUnavailable}>{strings.mapUnavailable}</Text>
             )}
             {markers.length > 0 && (
-              <Pressable
-                onPress={() => setFitRouteToken(t => t + 1)}
-                style={[styles.mapButton, { bottom: showLocateMe ? 80 : 24 }]}
-                accessibilityRole="button"
-                accessibilityLabel={strings.showRoute}
-              >
-                <MaterialIcons name="zoom-out-map" size={24} color="#1a73e8" />
-              </Pressable>
-            )}
-            {markers.length > 0 && showLocateMe && (
-              <Pressable
-                onPress={onLocateMe}
-                style={[styles.mapButton, { bottom: 24 }]}
-                accessibilityRole="button"
-                accessibilityLabel={strings.showMyLocation}
-              >
-                <MaterialIcons name="my-location" size={24} color="#1a73e8" />
-              </Pressable>
+              <View style={styles.mapButtons}>
+                {showLocateMe && (
+                  <MapButton label={strings.whereAmI} icon="my-location" onPress={onLocateMe} />
+                )}
+                <MapButton label={strings.wholeRoute} icon="zoom-out-map" onPress={() => setFitRouteToken(t => t + 1)} />
+              </View>
             )}
           </View>
-        )}
-        {mapVisible && contentHeight > 0 && (
-          <MapResizeHandle
-            fraction={mapFraction}
-            areaHeight={contentHeight}
-            onDrag={setMapFraction}
-            onRelease={onMapResizeRelease}
-          />
-        )}
-        <Pressable
-          onPress={() => setMapVisible(v => !v)}
-          style={styles.mapToggle}
-          accessibilityRole="button"
-          accessibilityLabel={mapVisible ? strings.hideMap : strings.showMap}
-        >
-          <MaterialIcons name={mapVisible ? 'expand-less' : 'map'} size={22} color="#007aff" />
-          <Text style={styles.mapToggleText}>{mapVisible ? strings.hideMap : strings.showMap}</Text>
-        </Pressable>
-        {namesMissing && (
-          <Pressable
-            onPress={() => setNamesAttempt(n => n + 1)}
-            style={styles.namesRetry}
-            accessibilityRole="button"
-            accessibilityLabel={strings.retryStopNamesLabel}
-          >
-            <MaterialIcons name="refresh" size={20} color="#007aff" />
-            <Text style={styles.mapToggleText}>{strings.retryStopNames}</Text>
-          </Pressable>
-        )}
-        <FlatList
-          ref={listRef}
-          data={data}
-          onScrollToIndexFailed={info => {
-            // Row not measured yet: jump near it, then retry once it has rendered.
-            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
-            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 100);
-          }}
-          keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
-          renderItem={({ item }) => (
-            <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Pressable
-                  onPress={() => selectStop(expandedStop === item.stop ? null : item.stop)}
-                  style={{ flex: 1, paddingVertical: 8 }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={styles.seqCircle}>
-                      <Text style={styles.seqText}>
-                        {item.seq}
-                      </Text>
-                    </View>
-                    <Text style={{ fontSize: 16, marginBottom: expandedStop === item.stop ? 0 : 8 }}>
-                      {stopNames[item.stop] || item.stop}
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable
-                  onPress={async () => {
-                    // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
-                    const saved = await addFavorite({ route: item.route, service_type: item.service_type, stop: item.stop });
-                    if (saved) {
-                      router.push('/');
-                    } else {
-                      console.error('Failed to save Favorite');
-                    }
-                  }}
-                  hitSlop={8}
-                  accessibilityLabel={strings.favoriteStop}
-                >
-                  <MaterialIcons name="star" size={42} color="#FFD700" />
-                </Pressable>
-              </View>
-              {expandedStop === item.stop && (
-                <View style={{ paddingLeft: 16, paddingBottom: 8 }}>
-                  {loadingEta === item.stop ? (
-                    <Text style={{ fontSize: 15, color: 'black' }}>{strings.loadingEta}</Text>
-                  ) : etaMap[item.stop] && etaMap[item.stop].length > 0 ? (
-                    etaMap[item.stop].map((eta, idx) => (
-                      <Text key={idx} style={{ fontSize: 15, color: 'black' }}>
-                        {arrivalText(strings, eta.eta, new Date(now).toISOString())}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text style={{ fontSize: 15, color: 'black' }}>{strings.noEta}</Text>
-                  )}
-                </View>
-              )}
-            </View>
+          {selectedItem && <View style={styles.mapCard}>{renderCard(selectedItem, true)}</View>}
+        </View>
+      ) : (
+        <View style={styles.body}>
+          {namesMissing && (
+            <Pressable
+              onPress={() => setNamesAttempt(n => n + 1)}
+              style={styles.retry}
+              accessibilityRole="button"
+              accessibilityLabel={strings.retryStopNamesLabel}
+            >
+              <MaterialIcons name="refresh" size={24} color={COLORS.accent} />
+              <Text style={styles.retryText}>{strings.retryStopNames}</Text>
+            </Pressable>
           )}
-          ListEmptyComponent={<Text>{strings.noStops}</Text>}
-        />
+          <FlatList
+            ref={listRef}
+            data={data}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={<Text style={styles.hint}>{strings.tapYourStop}</Text>}
+            onScrollToIndexFailed={info => {
+              // Row not measured yet: jump near it, then retry once it has rendered.
+              listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false })
+              setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 100)
+            }}
+            keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
+            renderItem={({ item }) => {
+              const name = stopNames[item.stop] || item.stop
+              const isSelected = item.stop === selectedStop
+              return (
+                <View>
+                  <Pressable
+                    onPress={() => (isSelected ? selectStop(null) : focusStop(item.stop))}
+                    accessibilityRole="button"
+                    accessibilityLabel={strings.stopRowLabel(item.seq, name)}
+                    style={({ pressed }) => [styles.stopRow, pressed && styles.pressed]}
+                  >
+                    <View style={[styles.seq, isSelected && styles.seqSelected]}>
+                      <Text style={[styles.seqText, isSelected && styles.seqTextSelected]}>{item.seq}</Text>
+                    </View>
+                    <Text style={styles.stopName}>{name}</Text>
+                  </Pressable>
+                  {isSelected && <View style={styles.listCard}>{renderCard(item, false)}</View>}
+                </View>
+              )
+            }}
+            ListEmptyComponent={<Text style={styles.hint}>{strings.noStops}</Text>}
+          />
         </View>
       )}
     </View>
-  );
-};
+  )
+}
 
-export default RoutesStopScreen;
+interface ViewButtonProps {
+  view: RouteView
+  label: string
+  icon: React.ComponentProps<typeof MaterialIcons>['name']
+  active: boolean
+  onPress: (view: RouteView) => void
+}
+
+function ViewButton({ view, label, icon, active, onPress }: ViewButtonProps): React.JSX.Element {
+  return (
+    <Pressable
+      onPress={() => onPress(view)}
+      testID={`view-${view}`}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      aria-pressed={active}
+      style={({ pressed }) => [styles.switchButton, active && styles.switchButtonActive, pressed && styles.pressed]}
+    >
+      <MaterialIcons name={icon} size={24} color={active ? COLORS.ink : COLORS.inkMuted} />
+      <Text style={[styles.switchText, active && styles.switchTextActive]}>{label}</Text>
+    </Pressable>
+  )
+}
+
+interface MapButtonProps {
+  label: string
+  icon: React.ComponentProps<typeof MaterialIcons>['name']
+  onPress: () => void
+}
+
+function MapButton({ label, icon, onPress }: MapButtonProps): React.JSX.Element {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}>
+      <MaterialIcons name={icon} size={24} color={COLORS.accent} />
+      <Text style={styles.mapButtonText}>{label}</Text>
+    </Pressable>
+  )
+}
 
 const styles = StyleSheet.create({
-  mapContainer: {
-    backgroundColor: '#e5e5e5',
-    justifyContent: 'center',
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.line,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingBottom: 12,
+    gap: 10,
   },
-  mapToggle: {
+  back: {
+    alignSelf: 'flex-start',
+    minHeight: TOUCH_TARGET,
+    paddingRight: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backText: { fontSize: 20, fontWeight: '700', color: COLORS.accent },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 56 },
+  places: { flex: 1, minWidth: 0, gap: 2 },
+  place: { fontSize: 18, lineHeight: 24, color: COLORS.ink },
+  placeLabel: { fontWeight: '400', color: COLORS.inkMuted },
+  destination: { fontSize: 20, fontWeight: '700' },
+  switch: { flexDirection: 'row', gap: 6, padding: 4, borderRadius: 16, backgroundColor: COLORS.keypadBackground },
+  switchButton: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    marginBottom: 4,
+    gap: 8,
   },
-  mapToggleText: {
-    color: '#007aff',
-    fontSize: 15,
-    marginLeft: 4,
-  },
-  namesRetry: {
-    flexDirection: 'row',
+  switchButtonActive: { backgroundColor: COLORS.surface },
+  switchText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.inkMuted },
+  switchTextActive: { color: COLORS.ink },
+  loading: { marginTop: 48 },
+  error: { fontSize: FONT_SIZES.body, color: COLORS.danger, textAlign: 'center', margin: 24 },
+  body: { flex: 1 },
+  list: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 24 },
+  hint: { fontSize: 18, color: COLORS.inkMuted, marginVertical: 12, marginHorizontal: 4 },
+  stopRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
+  seq: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: COLORS.ink,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    marginBottom: 4,
   },
+  seqSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  seqText: { fontSize: 17, fontWeight: '700', color: COLORS.ink },
+  seqTextSelected: { color: COLORS.onAccent },
+  stopName: { flex: 1, fontSize: 20, color: COLORS.ink },
+  listCard: { marginVertical: 6 },
+  retry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: TOUCH_TARGET },
+  retryText: { fontSize: 18, color: COLORS.accent },
+  map: { flex: 1, backgroundColor: COLORS.keypadBackground, justifyContent: 'center' },
+  mapUnavailable: { textAlign: 'center', fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
+  mapButtons: { position: 'absolute', top: 12, right: 12, gap: 10, alignItems: 'flex-end' },
   mapButton: {
-    position: 'absolute',
-    right: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'white',
+    minHeight: TOUCH_TARGET,
+    paddingHorizontal: 16,
+    borderRadius: TOUCH_TARGET / 2,
+    backgroundColor: COLORS.surface,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
     elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  mapUnavailable: {
-    textAlign: 'center',
-    color: '#666',
-  },
-  seqCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  seqText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-});
+  mapButtonText: { fontSize: 18, fontWeight: '700', color: COLORS.ink },
+  mapCard: { padding: 12, backgroundColor: COLORS.background },
+  pressed: { opacity: 0.6 },
+})

@@ -9,6 +9,8 @@ tags:
     env:
       CLEAR_STATE: "false"
 - runFlow: subflows/open_route_1a.yaml
+- tapOn:
+    id: "view-map"
 - extendedWaitUntil:
     visible: ".*Map information from Lands Department"
     timeout: 15000
@@ -26,6 +28,8 @@ tags:
 - assertVisible: "Route: 1A"
 
 # A horizontal swipe on the Stop list does not switch tabs either.
+- tapOn:
+    id: "view-list"
 - swipe:
     start: 80%, 85%
     end: 15%, 85%

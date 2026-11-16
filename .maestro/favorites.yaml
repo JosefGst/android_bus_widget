@@ -16,13 +16,15 @@ tags:
 - assertVisible: "Open 272X at .*"
 - assertNotVisible: "Open 1A at .*"
 
-# Starring the first Stop of 1A saves it and jumps to My Buses.
+# Saving the first Stop of 1A keeps Routes Stop open; My Buses then lists it.
 - tapOn:
     id: "tab-find_route"
 - runFlow: subflows/open_route_1a.yaml
+- tapOn: "1, .*"
+- tapOn: "Save to My Buses"
+- assertVisible: "Saved to My Buses"
 - tapOn:
-    text: "Favorite this stop"
-    index: 0
+    id: "tab-index"
 - extendedWaitUntil:
     visible: "Open 1A at .*"
     timeout: 20000

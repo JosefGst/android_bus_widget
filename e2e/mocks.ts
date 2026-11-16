@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 
 // All app network calls go to this host; intercept them so tests are
 // deterministic and don't depend on the live KMB API being up.
@@ -159,3 +159,16 @@ export async function mockKmbApi(page: Page) {
 /** A Route's result card on Find a Route, by its English accessible name ("272P, from Tuen Mun to Causeway Bay"). */
 export const routeButton = (page: Page, route: string) =>
   page.getByRole('button', { name: new RegExp(`^${route}, from `) });
+
+/**
+ * On Routes Stop: open the Stop's card (unless it is still open from an earlier visit), then Save to My Buses.
+ * The screen stays; the button turns into "Saved to My Buses".
+ */
+export async function saveStop(page: Page, stopName: string) {
+  const card = page.getByRole('button', { name: /^Saved? to My Buses$/ });
+  const row = page.getByRole('button', { name: new RegExp(`^\\d+, ${stopName}$`) });
+  await expect(row).toBeVisible();
+  if (!(await card.isVisible())) await row.click();
+  await page.getByRole('button', { name: 'Save to My Buses' }).click();
+  await expect(page.getByRole('button', { name: 'Saved to My Buses' })).toBeVisible();
+}

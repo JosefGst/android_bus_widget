@@ -1,4 +1,4 @@
-import { arrivalTime, routeRow } from './arrival_display'
+import { arrivalTime, routeRow, upcomingArrivals } from './arrival_display'
 
 const NOW = '2026-11-13T06:41:00Z'
 const inMinutes = (minutes: number): string => new Date(Date.parse(NOW) + minutes * 60_000).toISOString()
@@ -52,5 +52,21 @@ describe('routeRow', () => {
       next: { kind: 'minutes', minutes: 10 },
       then: null,
     })
+  })
+})
+
+describe('upcomingArrivals', () => {
+  it('gives the next buses with their ETA, soonest first, at most the number asked for', () => {
+    const etas = [{ eta: inMinutes(15) }, { eta: inMinutes(3) }, { eta: inMinutes(27) }]
+    expect(upcomingArrivals(etas, NOW, 2)).toEqual([
+      { eta: inMinutes(3), time: { kind: 'minutes', minutes: 3 } },
+      { eta: inMinutes(15), time: { kind: 'minutes', minutes: 15 } },
+    ])
+  })
+
+  it('leaves out buses that left over a minute ago and arrivals with no time', () => {
+    expect(upcomingArrivals([{ eta: inMinutes(-3) }, { eta: '' }, { eta: inMinutes(0) }], NOW, 2)).toEqual([
+      { eta: inMinutes(0), time: { kind: 'now' } },
+    ])
   })
 })

@@ -6,9 +6,8 @@
 # Prefer it unless the flow needs a fresh install: every cleared start downloads
 # ~2 MB of Routes and Stops, and bursts of these get the device 403'd by the KMB CDN.
 #
-# The KMB API sometimes answers 403 and Find a Route does not retry
-# ("No routes found."), so the launch is retried here; flows that use this
-# subflow are not testing startup. Routes have loaded once a result card
+# The KMB API sometimes answers 403; Find a Route then shows "Try again", and the launch
+# is retried here; flows that use this subflow are not testing startup. Routes have loaded once a result card
 # ("<route>, from <start> to <end>") is on screen.
 appId: com.anonymous.bus
 ---
@@ -25,6 +24,16 @@ appId: com.anonymous.bus
       # The app opens on My Buses; flows start from Find a Route.
       - tapOn:
           id: "tab-find_route"
+      # A refused download shows "Try again"; tap it rather than rely on killApp, which on
+      # Honor ROMs can leave the app running with the failed state.
+      - extendedWaitUntil:
+          visible: ".+, from .+ to .+|Try again"
+          timeout: 30000
+      - runFlow:
+          when:
+            visible: "Try again"
+          commands:
+            - tapOn: "Try again"
       - extendedWaitUntil:
           visible: ".+, from .+ to .+"
           timeout: 30000

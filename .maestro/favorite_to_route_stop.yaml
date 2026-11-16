@@ -17,12 +17,12 @@ tags:
     timeout: 30000
 - tapOn: "Open 272.*"
 
-# Routes Stop shows the Stop expanded (its ETA line is visible).
+# Routes Stop opens with that Stop's card: next buses (or no time yet) and Saved.
 - extendedWaitUntil:
     visible: "Route: 272.*"
     timeout: 20000
 - extendedWaitUntil:
-    visible: ".*arrives in.*|No ETA available"
+    visible: "Next bus|No time yet"
     timeout: 30000
 
 # Back returns to My Buses.

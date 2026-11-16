@@ -61,15 +61,17 @@ test.describe('on an English phone', () => {
     await languageButton(page).click();
     await result(page, 'N29，由旺角往荃灣').click();
 
-    await expect(page.getByText(`路線：${MAP_ROUTE}`)).toBeVisible();
+    await expect(page.getByRole('heading', { name: `路線：${MAP_ROUTE}` })).toBeVisible();
     await expect(page.getByText('油麻地地圖站')).toBeVisible();
+    await page.getByText('油麻地地圖站').click();
+    await expect(page.getByText('下一班', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '收藏到我的巴士' })).toBeVisible();
+
+    await page.getByRole('button', { name: '地圖', exact: true }).click();
     await expect(map(page).getByText('地圖資料由地政總署提供')).toBeVisible();
     await expect(map(page).locator('.leaflet-marker-icon[title="油麻地地圖站"]')).toHaveCount(1);
     await expect.poll(() => labelTiles.some(url => url.includes('/label/hk/tc/'))).toBe(true);
-    await expect(page.getByRole('button', { name: '隱藏地圖' })).toBeVisible();
-
-    await page.getByText('油麻地地圖站').click();
-    await expect(page.getByText(/\d+ 分鐘後到達/)).toBeVisible();
+    await expect(page.getByRole('button', { name: '整條路線' })).toBeVisible();
   });
 
   test('switching language with the map open swaps the map labels', async ({ page }) => {
@@ -80,11 +82,12 @@ test.describe('on an English phone', () => {
 
     await page.goto('/find_route');
     await routeButton(page, 'N29').click();
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
     await expect(page.frameLocator('iframe[title="Route map"]').getByText('Map information from Lands Department')).toBeVisible();
 
     await languageButton(page).click();
     await languageButton(page).click();
-    await expect(page.getByText('油麻地地图站')).toBeVisible();
+    await expect(page.frameLocator('iframe[title="路线地图"]').locator('.leaflet-marker-icon[title="油麻地地图站"]')).toHaveCount(1);
     await expect(page.frameLocator('iframe[title="路线地图"]').getByText('地图资料由地政总署提供')).toBeVisible();
     await expect.poll(() => labelTiles.some(url => url.includes('/label/hk/sc/'))).toBe(true);
   });

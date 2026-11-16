@@ -1,6 +1,5 @@
 import type { RouteRow } from './arrival_display'
 import type { Language } from './language'
-import { formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting'
 
 // The app's own text. KMB names (Routes, Stops) come from the API in each language instead.
 
@@ -12,23 +11,15 @@ export type Strings = {
   keypadClear: string
   routeHeader: (route: string) => string
   routeHeaderEmpty: string
-  directionAndServiceType: (bound: string, serviceType: string) => string
   invalidRoute: string
   fetchFailed: string
   routeMap: string
   mapUnavailable: string
   mapAttribution: string
-  showRoute: string
-  showMyLocation: string
-  showMap: string
-  hideMap: string
   retryStopNamesLabel: string
   retryStopNames: string
-  favoriteStop: string
   loadingEta: string
-  noEta: string
   noStops: string
-  arrivesIn: (minutes: number, time: string) => string
   noBusesForStop: string
   widgetLoading: string
   widgetEmpty: string
@@ -57,6 +48,19 @@ export type Strings = {
   fromOrigin: string
   keypadDelete: string
   keypadLetters: string
+  stopListView: string
+  mapView: string
+  tapYourStop: string
+  nextBus: string
+  afterThat: string
+  atTime: (time: string) => string
+  saveToMyBuses: string
+  savedToMyBuses: string
+  wholeRoute: string
+  whereAmI: string
+  stopRowLabel: (seq: string, name: string) => string
+  routesLoadFailed: string
+  tryAgain: string
 }
 
 const EN: Strings = {
@@ -67,23 +71,15 @@ const EN: Strings = {
   keypadClear: 'Clear',
   routeHeader: route => `Route: ${route}`,
   routeHeaderEmpty: 'Route',
-  directionAndServiceType: (bound, serviceType) => `Direction: ${bound} Service Type: ${serviceType}`,
   invalidRoute: 'Invalid route, bound, or service type',
   fetchFailed: 'Failed to fetch data',
   routeMap: 'Route map',
   mapUnavailable: 'Map unavailable',
   mapAttribution: '&copy; Map information from Lands Department',
-  showRoute: 'Show route',
-  showMyLocation: 'Show my location',
-  showMap: 'Show map',
-  hideMap: 'Hide map',
   retryStopNamesLabel: 'Retry loading stop names',
   retryStopNames: 'Couldn\'t load stop names — Retry',
-  favoriteStop: 'Favorite this stop',
   loadingEta: 'Loading ETA...',
-  noEta: 'No ETA available',
   noStops: 'No stops found for this route.',
-  arrivesIn: (minutes, time) => `arrives in ${minutes} minutes (ETA: ${time})`,
   noBusesForStop: 'No buses found for this stop.',
   widgetLoading: 'Loading...',
   widgetEmpty: 'No buses available',
@@ -112,6 +108,19 @@ const EN: Strings = {
   fromOrigin: 'From',
   keypadDelete: 'Delete',
   keypadLetters: 'Letters',
+  stopListView: 'Stop list',
+  mapView: 'Map',
+  tapYourStop: 'Tap your stop to see the next buses',
+  nextBus: 'Next bus',
+  afterThat: 'After that',
+  atTime: time => `at ${time}`,
+  saveToMyBuses: 'Save to My Buses',
+  savedToMyBuses: 'Saved to My Buses',
+  wholeRoute: 'Whole route',
+  whereAmI: 'Where am I?',
+  stopRowLabel: (seq, name) => `${seq}, ${name}`,
+  routesLoadFailed: "Couldn't load the bus routes. Check the internet connection and try again.",
+  tryAgain: 'Try again',
 }
 
 const TC: Strings = {
@@ -122,23 +131,15 @@ const TC: Strings = {
   keypadClear: '清除',
   routeHeader: route => `路線：${route}`,
   routeHeaderEmpty: '路線',
-  directionAndServiceType: (bound, serviceType) => `方向：${bound} 服務類別：${serviceType}`,
   invalidRoute: '路線、方向或服務類別無效',
   fetchFailed: '未能載入資料',
   routeMap: '路線地圖',
   mapUnavailable: '地圖無法使用',
   mapAttribution: '&copy; 地圖資料由地政總署提供',
-  showRoute: '顯示路線',
-  showMyLocation: '顯示我的位置',
-  showMap: '顯示地圖',
-  hideMap: '隱藏地圖',
   retryStopNamesLabel: '重新載入車站名稱',
   retryStopNames: '未能載入車站名稱，重試',
-  favoriteStop: '收藏此車站',
   loadingEta: '正在載入到站時間…',
-  noEta: '沒有到站時間',
   noStops: '此路線沒有車站。',
-  arrivesIn: (minutes, time) => `${minutes} 分鐘後到達（${time}）`,
   noBusesForStop: '此車站沒有巴士。',
   widgetLoading: '載入中…',
   widgetEmpty: '沒有巴士',
@@ -167,6 +168,19 @@ const TC: Strings = {
   fromOrigin: '由',
   keypadDelete: '刪除',
   keypadLetters: '字母',
+  stopListView: '車站列表',
+  mapView: '地圖',
+  tapYourStop: '按你的車站，查看下一班巴士',
+  nextBus: '下一班',
+  afterThat: '再下一班',
+  atTime: time => `${time} 到達`,
+  saveToMyBuses: '收藏到我的巴士',
+  savedToMyBuses: '已收藏到我的巴士',
+  wholeRoute: '整條路線',
+  whereAmI: '我在哪裡？',
+  stopRowLabel: (seq, name) => `${seq}，${name}`,
+  routesLoadFailed: '未能載入巴士路線。請檢查網絡連線，然後再試一次。',
+  tryAgain: '再試一次',
 }
 
 const SC: Strings = {
@@ -177,23 +191,15 @@ const SC: Strings = {
   keypadClear: '清除',
   routeHeader: route => `路线：${route}`,
   routeHeaderEmpty: '路线',
-  directionAndServiceType: (bound, serviceType) => `方向：${bound} 服务类别：${serviceType}`,
   invalidRoute: '路线、方向或服务类别无效',
   fetchFailed: '未能载入资料',
   routeMap: '路线地图',
   mapUnavailable: '地图无法使用',
   mapAttribution: '&copy; 地图资料由地政总署提供',
-  showRoute: '显示路线',
-  showMyLocation: '显示我的位置',
-  showMap: '显示地图',
-  hideMap: '隐藏地图',
   retryStopNamesLabel: '重新载入车站名称',
   retryStopNames: '未能载入车站名称，重试',
-  favoriteStop: '收藏此车站',
   loadingEta: '正在载入到站时间…',
-  noEta: '没有到站时间',
   noStops: '此路线没有车站。',
-  arrivesIn: (minutes, time) => `${minutes} 分钟后到达（${time}）`,
   noBusesForStop: '此车站没有巴士。',
   widgetLoading: '载入中…',
   widgetEmpty: '没有巴士',
@@ -222,15 +228,22 @@ const SC: Strings = {
   fromOrigin: '由',
   keypadDelete: '删除',
   keypadLetters: '字母',
+  stopListView: '车站列表',
+  mapView: '地图',
+  tapYourStop: '按你的车站，查看下一班巴士',
+  nextBus: '下一班',
+  afterThat: '再下一班',
+  atTime: time => `${time} 到达`,
+  saveToMyBuses: '收藏到我的巴士',
+  savedToMyBuses: '已收藏到我的巴士',
+  wholeRoute: '整条路线',
+  whereAmI: '我在哪里？',
+  stopRowLabel: (seq, name) => `${seq}，${name}`,
+  routesLoadFailed: '未能载入巴士路线。请检查网络连接，然后再试一次。',
+  tryAgain: '再试一次',
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }
-
-/** One arrival line: minutes and Hong Kong time, or "no ETA" when the API gave no time. */
-export function arrivalText(strings: Strings, eta: string, now: string): string {
-  const minutes = getMinutesUntilArrival(eta, now)
-  return minutes === null ? strings.noEta : strings.arrivesIn(minutes, formatEtaToHKTime(eta))
-}
 
 /** A Route row read aloud: "3 min, then 15 min", "Now", or "No time yet". */
 export function spokenArrival(strings: Strings, { next, then }: RouteRow): string {

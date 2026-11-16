@@ -23,7 +23,10 @@ tags:
 # Routes Stop: Stop names, buttons and map attribution in Traditional Chinese.
 - tapOn: "1，由竹園邨往尖沙咀碼頭"
 - assertVisible: "路線：1"
-- assertVisible: "隱藏地圖"
+- assertVisible: "由 竹園邨"
+- tapOn:
+    id: "view-map"
+- assertVisible: "整條路線"
 - extendedWaitUntil:
     visible: ".*地圖資料由地政總署提供.*"
     timeout: 20000
@@ -31,7 +34,7 @@ tags:
 - tapOn:
     id: "language-button"
 - assertVisible: "简"
-- assertVisible: "隐藏地图"
+- assertVisible: "整条路线"
 - assertVisible: "搜索路线"
 - extendedWaitUntil:
     visible: ".*地图资料由地政总署提供.*"
@@ -40,7 +43,7 @@ tags:
 - tapOn:
     id: "language-button"
 - assertVisible: "EN"
-- assertVisible: "Hide map"
+- assertVisible: "Whole route"
 - assertVisible: "Route: 1"
 - back
 - assertVisible: "1, from Chuk Yuen Estate to Star Ferry"

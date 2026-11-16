@@ -81,5 +81,20 @@ test('a letter-led route can be typed with the letter key then digits', async ({
 test('tapping a result opens that route', async ({ page }) => {
   await page.goto('/find_route');
   await routeButton(page, '967').click();
-  await expect(page.getByText('Route: 967')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Route: 967' })).toBeVisible();
+});
+
+test('when the routes fail to load, Try again loads them', async ({ page }) => {
+  let refusals = 1;
+  await page.route('https://data.etabus.gov.hk/v1/transport/kmb/route', async route => {
+    if (refusals-- > 0) return route.fulfill({ status: 403, body: 'Forbidden' });
+    return route.fallback();
+  });
+  await page.goto('/find_route');
+
+  await expect(page.getByText("Couldn't load the bus routes.", { exact: false })).toBeVisible();
+  await expect(page.getByText('No routes found.')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(routeButton(page, '272P')).toBeVisible();
 });

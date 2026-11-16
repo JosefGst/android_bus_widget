@@ -21,20 +21,31 @@ export default function FindARoute(): React.JSX.Element {
   const compact = useWindowDimensions().height < COMPACT_SCREEN_HEIGHT
   const [isLoading, setLoading] = useState(true)
   const [routes, setRoutes] = useState<ROUTS[]>([])
+  const [loadFailed, setLoadFailed] = useState(false)
+  // Bumped by Try again. The KMB API sometimes refuses the app for a while, so a failed load must be retryable.
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     const loadRoutes = async () => {
+      setLoading(true)
+      setLoadFailed(false)
       try {
-        setRoutes((await getCachedRoutes()).routes)
+        const { routes } = await getCachedRoutes()
+        if (!cancelled) setRoutes(routes)
       } catch (e) {
         console.error('Failed to load Routes', e)
+        if (!cancelled) setLoadFailed(true)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     loadRoutes()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [loadAttempt])
 
   const results = useMemo(() => filterRoutesByQuery(routes, query), [routes, query])
   const letters = useMemo(() => getAvailableLetters(routes, query), [routes, query])
@@ -70,6 +81,19 @@ export default function FindARoute(): React.JSX.Element {
       <View style={styles.results}>
         {isLoading ? (
           <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
+        ) : loadFailed ? (
+          <View style={styles.failed}>
+            <Text style={styles.failedText}>{strings.routesLoadFailed}</Text>
+            <Pressable
+              onPress={() => setLoadAttempt(n => n + 1)}
+              accessibilityRole="button"
+              accessibilityLabel={strings.tryAgain}
+              style={({ pressed }) => [styles.tryAgain, pressed && styles.pressed]}
+            >
+              <MaterialIcons name="refresh" size={26} color={COLORS.onAccent} />
+              <Text style={styles.tryAgainText}>{strings.tryAgain}</Text>
+            </Pressable>
+          </View>
         ) : (
           <FlatList
             data={results}
@@ -171,6 +195,19 @@ const styles = StyleSheet.create({
   loading: { marginTop: 48 },
   count: { fontSize: 18, color: COLORS.inkMuted, marginHorizontal: 4, marginBottom: 2 },
   empty: { fontSize: FONT_SIZES.body, color: COLORS.ink, margin: 4 },
+  failed: { margin: SCREEN_GUTTER, gap: 16 },
+  failedText: { fontSize: FONT_SIZES.body, lineHeight: 28, color: COLORS.ink },
+  tryAgain: {
+    alignSelf: 'flex-start',
+    minHeight: 56,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: COLORS.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  tryAgainText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.onAccent },
   result: {
     minHeight: 76,
     flexDirection: 'row',

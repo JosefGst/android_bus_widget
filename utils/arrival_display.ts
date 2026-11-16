@@ -19,6 +19,18 @@ export function arrivalTime(eta: string, now: string): ArrivalTime {
   return rounded <= 0 ? { kind: 'now' } : { kind: 'minutes', minutes: rounded }
 }
 
+export type UpcomingArrival = { eta: string; time: ArrivalTime }
+
+/** The next `count` buses that have a time and have not left, soonest first. */
+export function upcomingArrivals(arrivals: readonly { eta: string }[], now: string, count: number): UpcomingArrival[] {
+  return arrivals
+    .map(({ eta }) => ({ eta, minutes: minutesUntil(eta, now) }))
+    .filter((a): a is { eta: string; minutes: number } => a.minutes !== null && a.minutes > -GONE_AFTER_MINUTES)
+    .sort((a, b) => a.minutes - b.minutes)
+    .slice(0, count)
+    .map(({ eta }) => ({ eta, time: arrivalTime(eta, now) }))
+}
+
 export function routeRow(arrivals: readonly { eta: string }[], now: string): RouteRow {
   const coming = arrivals.filter(({ eta }) => {
     const minutes = minutesUntil(eta, now)
