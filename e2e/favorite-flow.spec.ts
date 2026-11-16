@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockKmbApi } from './mocks';
+import { mockKmbApi, routeButton } from './mocks';
 
 test.beforeEach(async ({ page }) => {
   await mockKmbApi(page);
@@ -9,7 +9,7 @@ test('saving a stop adds it to My Buses with a live ETA', async ({ page }) => {
   await page.goto('/');
 
   // Home -> pick a route -> Routes Stop screen.
-  await page.getByText('TUEN MUN → CAUSEWAY BAY').click();
+  await routeButton(page, '272P').click();
   await expect(page.getByText('Route: 272P')).toBeVisible();
 
   // Only one stop is mocked for this route, so its star button is unambiguous.
@@ -27,7 +27,7 @@ test('saving a stop adds it to My Buses with a live ETA', async ({ page }) => {
 
 // Route 967 is not a starter Favorite, so its row and delete button are unambiguous.
 async function star967(page: import('@playwright/test').Page) {
-  await page.getByText('TIN SHUI WAI → ADMIRALTY').click();
+  await routeButton(page, '967').click();
   await expect(page.getByText('Route: 967')).toBeVisible();
   await expect(page.getByText('Causeway Bay Station')).toBeVisible();
   await page.getByLabel('Favorite this stop').click();
@@ -94,9 +94,9 @@ test('tapping a Favorite row opens Routes Stop with that Stop selected', async (
 
 test('opening a second Favorite at the same Stop loads that Route, not the previous one', async ({ page }) => {
   // 272P and 272X are both mocked at Causeway Bay Station.
-  for (const label of ['TUEN MUN → CAUSEWAY BAY', 'TUEN MUN → CENTRAL']) {
+  for (const route of ['272P', '272X']) {
     await page.goto('/');
-    await page.getByText(label).click();
+    await routeButton(page, route).click();
     await expect(page.getByText('Causeway Bay Station')).toBeVisible();
     await page.getByLabel('Favorite this stop').click();
     await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();

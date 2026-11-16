@@ -10,10 +10,13 @@ tags:
     env:
       CLEAR_STATE: "false"
 # Opened inline: a saved large map leaves the list too short for open_route_1a's "1, …" row check.
-- tapOn: "Clear"
-- tapOn: "1"
-- tapOn: "A"
-- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- tapOn:
+    id: "clear-search"
+- tapOn:
+    id: "key-1"
+- tapOn:
+    id: "letter-A"
+- tapOn: "1A, from Sau Mau Ping \\(Central\\) to Star Ferry"
 - extendedWaitUntil:
     visible: "Route: 1A"
     timeout: 10000
@@ -47,10 +50,13 @@ tags:
 
 # The size is remembered after leaving and reopening the Route.
 - tapOn: "Home"
-- tapOn: "Clear"
-- tapOn: "1"
-- tapOn: "A"
-- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- tapOn:
+    id: "clear-search"
+- tapOn:
+    id: "key-1"
+- tapOn:
+    id: "letter-A"
+- tapOn: "1A, from Sau Mau Ping \\(Central\\) to Star Ferry"
 - extendedWaitUntil:
     visible: "Route: 1A"
     timeout: 10000

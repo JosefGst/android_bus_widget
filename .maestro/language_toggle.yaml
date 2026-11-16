@@ -8,17 +8,18 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+- assertVisible: "1, from Chuk Yuen Estate to Star Ferry"
 
 - tapOn:
     id: "language-button"
 - assertVisible: "繁"
-- assertVisible: "1 竹園邨 → 尖沙咀碼頭"
+- assertVisible: "1，由竹園邨往尖沙咀碼頭"
+- assertVisible: "搜尋路線"
 - assertVisible: "主頁"
-- assertVisible: "我的最愛"
+- assertVisible: "我的巴士"
 
 # Routes Stop: Stop names, buttons and map attribution in Traditional Chinese.
-- tapOn: "1 竹園邨 → 尖沙咀碼頭"
+- tapOn: "1，由竹園邨往尖沙咀碼頭"
 - assertVisible: "路線：1"
 - assertVisible: "隱藏地圖"
 - extendedWaitUntil:
@@ -40,4 +41,4 @@ tags:
 - assertVisible: "Hide map"
 - assertVisible: "Route: 1"
 - back
-- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+- assertVisible: "1, from Chuk Yuen Estate to Star Ferry"

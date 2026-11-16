@@ -154,3 +154,7 @@ export async function mockKmbApi(page: Page) {
     );
   });
 }
+
+/** A Route's result card on Find a Route, by its English accessible name ("272P, from Tuen Mun to Causeway Bay"). */
+export const routeButton = (page: Page, route: string) =>
+  page.getByRole('button', { name: new RegExp(`^${route}, from `) });

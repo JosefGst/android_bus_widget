@@ -1,101 +1,85 @@
-import { expect, test } from '@playwright/test';
-import { mockKmbApi, MOCK_ROUTES } from './mocks';
+import { expect, Page, test } from '@playwright/test';
+import { mockKmbApi, routeButton } from './mocks';
 
 test.beforeEach(async ({ page }) => {
   await mockKmbApi(page);
 });
 
-test('home screen lists routes fetched from the API', async ({ page }) => {
-  await page.goto('/');
+const key = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
+const busNumber = (page: Page) => page.getByLabel('Bus number');
 
-  for (const r of MOCK_ROUTES) {
-    await expect(page.getByText(`${r.orig_en} → ${r.dest_en}`)).toBeVisible();
-  }
+test('Find a Route lists every route with its start and end in words', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Find a Route' })).toBeVisible();
+
+  await expect(routeButton(page, '272P')).toHaveAccessibleName('272P, from Tuen Mun to Causeway Bay');
+  await expect(routeButton(page, '272P').getByText('To Causeway Bay')).toBeVisible();
+  for (const route of ['272X', '967', 'N29']) await expect(routeButton(page, route)).toBeVisible();
+  await expect(page.getByText(/Generated Timestamp/)).toHaveCount(0);
 });
 
-test('searching filters the route list', async ({ page }) => {
+test('typing in the bus number box narrows the list and says how many match', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
+  await expect(routeButton(page, '272X')).toBeVisible();
 
-  await page.getByPlaceholder('Search by route number...').fill('967');
+  await busNumber(page).fill('967');
 
-  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
-  await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toHaveCount(0);
+  await expect(routeButton(page, '967')).toBeVisible();
+  await expect(routeButton(page, '272X')).toHaveCount(0);
+  await expect(page.getByText('1 route matches “967”')).toBeVisible();
 });
 
-test('numeric keypad enters digits and backspace removes them', async ({ page }) => {
+test('number keys type digits, Delete removes one, Clear empties the box', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
+  await expect(routeButton(page, '272X')).toBeVisible();
 
-  await page.getByText('9', { exact: true }).click();
-  await page.getByText('6', { exact: true }).click();
-  await page.getByText('7', { exact: true }).click();
+  await key(page, '2').click();
+  await key(page, '7').click();
+  await expect(busNumber(page)).toHaveValue('27');
+  await expect(page.getByText('2 routes match “27”')).toBeVisible();
+  await expect(routeButton(page, '967')).toHaveCount(0);
 
-  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
+  await key(page, 'Delete').click();
+  await expect(busNumber(page)).toHaveValue('2');
 
-  await page.getByText('⌫', { exact: true }).click();
-  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
-
-  await page.getByText('Clear', { exact: true }).click();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toBeVisible();
+  await key(page, 'Clear').click();
+  await expect(busNumber(page)).toHaveValue('');
+  await expect(routeButton(page, '967')).toBeVisible();
 });
 
-test('letter keypad only offers letters that can follow the typed digits', async ({ page }) => {
+test('letter keys only offer letters that can come next', async ({ page }) => {
   await page.goto('/');
+  await expect(routeButton(page, '272X')).toBeVisible();
 
-  // Before typing anything, no letter is a valid next key for these routes
-  // other than the initial letters of routes that start with one (N29).
-  await expect(page.getByText('P', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('X', { exact: true })).toHaveCount(0);
+  // Nothing typed: only letters that start a route (N29).
+  await expect(key(page, 'N')).toBeVisible();
+  await expect(key(page, 'P')).toHaveCount(0);
 
-  await page.getByText('2', { exact: true }).click();
-  await page.getByText('7', { exact: true }).click();
-  await page.getByText('2', { exact: true }).click();
+  for (const digit of ['2', '7', '2']) await key(page, digit).click();
+  await expect(key(page, 'P')).toBeVisible();
+  await expect(key(page, 'X')).toBeVisible();
+  await expect(key(page, 'N')).toHaveCount(0);
 
-  // "272" is a prefix of 272P and 272X, so only P and X should be offered.
-  await expect(page.getByText('P', { exact: true })).toBeVisible();
-  await expect(page.getByText('X', { exact: true })).toBeVisible();
-  await expect(page.getByText('N', { exact: true })).toHaveCount(0);
-
-  await page.getByText('X', { exact: true }).click();
-
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toHaveCount(0);
-  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toHaveCount(0);
-
-  // "272X" is a full route code, so no further letter should be offered.
-  await expect(page.getByText('P', { exact: true })).toHaveCount(0);
-
-  await page.getByText('Clear', { exact: true }).click();
-  await expect(page.getByText('TUEN MUN → CAUSEWAY BAY')).toBeVisible();
+  await key(page, 'X').click();
+  await expect(routeButton(page, '272X')).toBeVisible();
+  await expect(routeButton(page, '272P')).toHaveCount(0);
+  // "272X" is complete, so no letter can follow.
+  await expect(key(page, 'P')).toHaveCount(0);
 });
 
-test('letter keypad surfaces letter-led routes and combines with the numeric keypad', async ({ page }) => {
+test('a letter-led route can be typed with the letter key then digits', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('MONG KOK → TSUEN WAN')).toBeVisible();
+  await key(page, 'N').click();
+  await expect(routeButton(page, 'N29')).toBeVisible();
+  await expect(routeButton(page, '272X')).toHaveCount(0);
+  await key(page, '2').click();
+  await key(page, '9').click();
+  await expect(busNumber(page)).toHaveValue('N29');
+  await expect(routeButton(page, 'N29')).toBeVisible();
+});
 
-  // With no digits typed, routes that start with a letter (N29) offer that letter.
-  await expect(page.getByText('N', { exact: true })).toBeVisible();
-
-  await page.getByText('N', { exact: true }).click();
-
-  // The route-code prefix match narrows to N29 immediately, unlike a plain
-  // substring search where "n" would also match names like "TUEN MUN".
-  await expect(page.getByText('MONG KOK → TSUEN WAN')).toBeVisible();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toHaveCount(0);
-  await expect(page.getByText('TIN SHUI WAI → ADMIRALTY')).toHaveCount(0);
-
-  // The rest of "N29" is digits, so the letter keypad has nothing to offer now.
-  await expect(page.getByText('X', { exact: true })).toHaveCount(0);
-
-  await page.getByText('2', { exact: true }).click();
-  await page.getByText('9', { exact: true }).click();
-  await expect(page.getByText('MONG KOK → TSUEN WAN')).toBeVisible();
-
-  await page.getByText('Clear', { exact: true }).click();
-  await expect(page.getByText('TUEN MUN → CENTRAL')).toBeVisible();
+test('tapping a result opens that route', async ({ page }) => {
+  await page.goto('/');
+  await routeButton(page, '967').click();
+  await expect(page.getByText('Route: 967')).toBeVisible();
 });

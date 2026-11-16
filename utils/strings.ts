@@ -32,8 +32,6 @@ export type Strings = {
   noEta: string
   noStops: string
   arrivesIn: (minutes: number, time: string) => string
-  generatedTimestamp: (time: string) => string
-  notAvailable: string
   noBusesForStop: string
   widgetLoading: string
   widgetEmpty: string
@@ -56,6 +54,12 @@ export type Strings = {
   remove: string
   findARoute: string
   back: string
+  busNumber: string
+  routesMatch: (count: number, query: string) => string
+  routeResultLabel: (route: string, from: string, to: string) => string
+  fromOrigin: string
+  keypadDelete: string
+  keypadLetters: string
 }
 
 const EN: Strings = {
@@ -64,7 +68,7 @@ const EN: Strings = {
   tabHome: 'Home',
   tabRoutesStop: 'Routes Stop',
   tabFavorites: 'My Buses',
-  searchPlaceholder: 'Search by route number...',
+  searchPlaceholder: 'Type the bus number',
   noRoutes: 'No routes found.',
   keypadClear: 'Clear',
   routeHeader: route => `Route: ${route}`,
@@ -86,8 +90,6 @@ const EN: Strings = {
   noEta: 'No ETA available',
   noStops: 'No stops found for this route.',
   arrivesIn: (minutes, time) => `arrives in ${minutes} minutes (ETA: ${time})`,
-  generatedTimestamp: time => `Generated Timestamp: ${time}`,
-  notAvailable: 'N/A',
   noBusesForStop: 'No buses found for this stop.',
   widgetLoading: 'Loading...',
   widgetEmpty: 'No buses available',
@@ -110,6 +112,12 @@ const EN: Strings = {
   remove: 'Remove',
   findARoute: 'Find a Route',
   back: 'Back',
+  busNumber: 'Bus number',
+  routesMatch: (count, query) => (count === 1 ? `1 route matches “${query}”` : `${count} routes match “${query}”`),
+  routeResultLabel: (route, from, to) => `${route}, from ${from} to ${to}`,
+  fromOrigin: 'From',
+  keypadDelete: 'Delete',
+  keypadLetters: 'Letters',
 }
 
 const TC: Strings = {
@@ -118,7 +126,7 @@ const TC: Strings = {
   tabHome: '主頁',
   tabRoutesStop: '路線車站',
   tabFavorites: '我的巴士',
-  searchPlaceholder: '輸入路線號碼…',
+  searchPlaceholder: '輸入巴士號碼',
   noRoutes: '找不到路線。',
   keypadClear: '清除',
   routeHeader: route => `路線：${route}`,
@@ -140,8 +148,6 @@ const TC: Strings = {
   noEta: '沒有到站時間',
   noStops: '此路線沒有車站。',
   arrivesIn: (minutes, time) => `${minutes} 分鐘後到達（${time}）`,
-  generatedTimestamp: time => `資料時間：${time}`,
-  notAvailable: '不適用',
   noBusesForStop: '此車站沒有巴士。',
   widgetLoading: '載入中…',
   widgetEmpty: '沒有巴士',
@@ -164,6 +170,12 @@ const TC: Strings = {
   remove: '移除',
   findARoute: '搜尋路線',
   back: '返回',
+  busNumber: '巴士號碼',
+  routesMatch: (count, query) => `${count} 條路線符合「${query}」`,
+  routeResultLabel: (route, from, to) => `${route}，由${from}往${to}`,
+  fromOrigin: '由',
+  keypadDelete: '刪除',
+  keypadLetters: '字母',
 }
 
 const SC: Strings = {
@@ -172,7 +184,7 @@ const SC: Strings = {
   tabHome: '主页',
   tabRoutesStop: '路线车站',
   tabFavorites: '我的巴士',
-  searchPlaceholder: '输入路线号码…',
+  searchPlaceholder: '输入巴士号码',
   noRoutes: '找不到路线。',
   keypadClear: '清除',
   routeHeader: route => `路线：${route}`,
@@ -194,8 +206,6 @@ const SC: Strings = {
   noEta: '没有到站时间',
   noStops: '此路线没有车站。',
   arrivesIn: (minutes, time) => `${minutes} 分钟后到达（${time}）`,
-  generatedTimestamp: time => `资料时间：${time}`,
-  notAvailable: '不适用',
   noBusesForStop: '此车站没有巴士。',
   widgetLoading: '载入中…',
   widgetEmpty: '没有巴士',
@@ -218,6 +228,12 @@ const SC: Strings = {
   remove: '移除',
   findARoute: '搜索路线',
   back: '返回',
+  busNumber: '巴士号码',
+  routesMatch: (count, query) => `${count} 条路线符合“${query}”`,
+  routeResultLabel: (route, from, to) => `${route}，由${from}往${to}`,
+  fromOrigin: '由',
+  keypadDelete: '删除',
+  keypadLetters: '字母',
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }

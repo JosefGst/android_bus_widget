@@ -13,7 +13,7 @@ index.ts                  # App entry — registers widget handler BEFORE expo-r
 widget-registration.ts    # Android widget handler registration (conditional on Platform.OS)
 app/                      # Expo Router screens (tab-based)
   _layout.tsx             # Tab layout: Home, Routes Stop, My Buses
-  index.tsx               # Route browser with search
+  index.tsx               # Find a Route: bus number box, result cards ("<route>, from <start> to <end>"), letter + number keys
   routes_stop.tsx         # Stop list for a route + ETA + favorite button + Route map
   my_favorites.tsx         # My Buses: saved Favorites as large cards per Stop, live minutes, "Change my buses" to remove
 utils/                    # Shared utilities (NOT inside app/)
@@ -32,6 +32,8 @@ utils/                    # Shared utilities (NOT inside app/)
 components/               # Shared non-route UI (files in app/ become routes, so UI lives here)
   theme.ts                # Senior-friendly colours, type sizes, touch target — use these, not raw values
   RouteBadge.tsx          # Route code on a dark tile
+  NumericKeypad.tsx       # Find a Route number keys (testIDs key-0…key-9, key-delete); compact below COMPACT_SCREEN_HEIGHT
+  LetterKeypad.tsx        # Letters that can come next, one row (testIDs letter-<L>)
   stop_map_html.ts        # STOP_MAP_HTML: self-contained Leaflet page (HK Lands Dept tiles) + StopMapProps
   StopMap.tsx             # Android host: react-native-webview
   StopMap.web.tsx         # Web host: <iframe srcDoc>
@@ -208,6 +210,7 @@ index.ts
 - Android too: the KMB CDN sometimes answers the app with 403 (seen after bursts of cold starts, while the device browser still gets 200). Nothing retries, so Home shows "No routes found." and Routes Stop shows Stop IDs / "Map unavailable" until the screen reloads.
 - Maestro flows (`.maestro/`) run against the real KMB API on a device — no mocks. Start the app with `subflows/open_app.yaml` (uses `openLink: bus://`; `launchApp` is blocked on Honor/Huawei ROMs). Keep `CLEAR_STATE: "false"` unless a flow needs a fresh install, to avoid tripping the 403s. Map markers in the WebView carry their Stop name as text, so tap list rows by their label (`"1, <Stop name>"`), not by the bare name. The resize handle's label carries its size (`"Resize map, small|half|large"`); `route_map_resize.yaml` drags it by screen percentages measured on a 1200x1920 device and leaves the map small + list at Stop 1 for later flows. Wait for the map attribution before dragging. `route_map_location.yaml` only asserts the "Show my location" button (it is hidden if location was denied on the device); it never taps it.
 - `language_toggle.yaml` cycles the language button (testID `language-button`) through 繁 and 简 on Home and Routes Stop and ends on English. Every other flow taps English labels, so leave the test device on English (a saved 繁/简 choice breaks them).
+- Find a Route keys are tapped by id (`key-1`, `letter-A`, `key-delete`, `clear-search`): a bare `"1"` also matches the route badge of Route 1. `subflows/open_app.yaml` waits for a result card (`".+, from .+ to .+"`), so it needs the app in English.
 - `favorite_to_route_stop.yaml` taps a starter Favorite row ("Open 272..."), asserts Routes Stop shows an expanded Stop, then goes back to My Buses.
 - E2E (`npm run test:e2e`, Playwright against the web export) mocks the KMB API and map tiles in `e2e/mocks.ts`; Route `N29` has three mock Stops for the map tests.
 - Domain terms (Route, Stop, ETA, Favorite, Favorite board) are defined in `GLOSSARY.md`.

@@ -16,6 +16,9 @@ export const COLORS = {
   nowBackground: '#FFE2A8',
   nowInk: '#5C3B00',
   danger: '#B42318',
+  keypadBackground: '#E4E2DB',
+  keyShadow: '#B9B5AA',
+  keyMuted: '#C9C6BD',
 } as const
 
 export const FONT_SIZES = {
@@ -30,3 +33,6 @@ export const FONT_SIZES = {
 export const TOUCH_TARGET = 52
 export const SCREEN_GUTTER = 16
 export const CARD_RADIUS = 20
+
+// Below this window height the Find a Route keypad uses smaller keys so results stay visible.
+export const COMPACT_SCREEN_HEIGHT = 720

@@ -58,5 +58,7 @@ A text-size setting. Revisit after the larger defaults ship.
 
 ## Status
 
-- Phase 1: built on branch `josefgst/ui_design` (not yet committed). Unit + e2e green. Maestro flows updated but not run on a device.
+- Phase 1: done (commit on `josefgst/ui_design`). Unit + e2e green.
+- Phase 2: done. Below a 720 px window height the keypad and title shrink so at least one result stays visible.
+- Maestro flows updated for both phases; device run pending.
 - Known gap until Phase 4: the empty My Buses text says "tap Save", but Routes Stop still uses the star button.

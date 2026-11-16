@@ -1,55 +1,54 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useLanguage } from './language_context'
+import { COLORS, FONT_SIZES } from './theme'
 
-type LetterKeypadProps = {
-  letters: string[];
-  onPressLetter: (letter: string) => void;
-};
+interface LetterKeypadProps {
+  letters: string[]
+  onPressLetter: (letter: string) => void
+}
 
-const VISIBLE_ROWS = 4;
-const KEY_HEIGHT = 48;
-const KEY_MARGIN = 10;
-const VISIBLE_HEIGHT = VISIBLE_ROWS * (KEY_HEIGHT + KEY_MARGIN) - KEY_MARGIN;
+const ROW_HEIGHT = 52
 
-const LetterKeypad = ({ letters, onPressLetter }: LetterKeypadProps) => {
+/** One row of the letters that can come next in a route number; scrolls sideways when there are many. */
+export function LetterKeypad({ letters, onPressLetter }: LetterKeypadProps): React.JSX.Element {
+  const { strings } = useLanguage()
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {letters.map((key) => (
-        <TouchableOpacity key={key} style={styles.key} onPress={() => onPressLetter(key)}>
-          <Text style={styles.keyText}>{key}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-};
+    <View style={styles.row}>
+      {letters.length > 0 && <Text style={styles.label}>{strings.keypadLetters}</Text>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.keys}>
+        {letters.map(letter => (
+          <Pressable
+            key={letter}
+            onPress={() => onPressLetter(letter)}
+            accessibilityRole="button"
+            testID={`letter-${letter}`}
+            style={({ pressed }) => [styles.key, pressed && styles.pressed]}
+          >
+            <Text style={styles.letter}>{letter}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
-  scroll: {
-    height: VISIBLE_HEIGHT,
-  },
-  container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
+  // Fixed height so the number keys don't jump when the letters come and go.
+  row: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  label: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  keys: { gap: 8, alignItems: 'center' },
   key: {
-    width: '48%',
-    height: KEY_HEIGHT,
-    marginBottom: KEY_MARGIN,
+    minWidth: 64,
+    height: ROW_HEIGHT,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#E6F4FE',
   },
-  keyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1976D2',
-  },
-});
-
-export default LetterKeypad;
+  letter: { fontSize: 24, fontWeight: '700', color: COLORS.accent },
+  pressed: { opacity: 0.6 },
+})
