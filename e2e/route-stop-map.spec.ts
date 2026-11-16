@@ -99,3 +99,16 @@ test('opening a second stop scrolls to its card, not past it', async ({ page }) 
   await expect(stopRow(page, 5, 'Long Stop 5')).toBeInViewport();
   await expect(nextBus(page)).toBeInViewport();
 });
+
+test('map pins use the app colours: white with a dark ring, the selected one in the accent blue', async ({ page }) => {
+  await showMap(page);
+  const style = (seq: number) => pin(page, seq).evaluate(el => {
+    const s = getComputedStyle(el);
+    return { background: s.backgroundColor, border: s.borderTopColor, text: s.color };
+  });
+  await expect.poll(() => style(1)).toEqual({ background: 'rgb(255, 255, 255)', border: 'rgb(20, 23, 31)', text: 'rgb(20, 23, 31)' });
+
+  await pin(page, 1).click();
+  await expect(pin(page, 1)).toHaveClass(/selected/);
+  await expect.poll(() => style(1)).toEqual({ background: 'rgb(10, 79, 191)', border: 'rgb(255, 255, 255)', text: 'rgb(255, 255, 255)' });
+});

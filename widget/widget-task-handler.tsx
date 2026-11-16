@@ -6,7 +6,7 @@ import { listForWidget } from "../utils/favorites";
 import { getLanguage } from "../utils/language";
 import { STRINGS } from "../utils/strings";
 import { formatClockTime } from "../utils/time_formatting";
-import { widgetRows } from "../utils/widget_rows";
+import { widgetSections } from "../utils/widget_sections";
 import { BusETAWidget } from "./BusETAWidget";
 
 // Must match the widget name in app.json.
@@ -47,7 +47,7 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
     return (
       <BusETAWidget
         strings={text}
-        rows={widgetRows(board.groups, now, language, text)}
+        sections={widgetSections(board.groups, now, language, text)}
         updated={text.widgetUpdated(formatClockTime(now, language))}
       />
     );

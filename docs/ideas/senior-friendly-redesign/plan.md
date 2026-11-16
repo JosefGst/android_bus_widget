@@ -63,7 +63,7 @@ A text-size setting. Revisit after the larger defaults ship.
 - Phase 3: done. `/` is My Buses (`app/index.tsx`), Find a Route moved to `/find_route`. Custom `BottomTabBar` with two tabs; Routes Stop stays a hidden route so tab history and Back keep working.
 - Phase 4: done. Save keeps the user on Routes Stop. Reopening the same Route keeps the Stop that was open. Find a Route shows "Try again" when the Route list can't load.
 - Honor tablet, Phase 4 build: 6 of 7 Maestro flows pass. `favorites` fails at start-up only: it clears app data, and the KMB CDN was refusing (403) the uncached Route list download after a day of test cold starts.
-- Phase 5: done. Widget rows come from `utils/widget_rows.ts`; `nextArrivalsText` is gone. The widget was not placed on a home screen by automation (launcher widget picker), so it is checked by unit tests and a manual look.
+- Phase 5: done. Widget content comes from `utils/widget_sections.ts` (a heading per Stop, so narrow widgets stay readable); `nextArrivalsText` is gone. The widget was not placed on a home screen by automation (launcher widget picker), so it is checked by unit tests and a manual look.
 - Phase 6: done. Atkinson Hyperlegible via `@expo-google-fonts/atkinson-hyperlegible`. Bold styles keep `fontWeight: '700'` so Chinese (system font fallback) stays bold. The search placeholder became "Bus number" because Atkinson is wider. The device showed "1:03pm" in Chinese (Hermes lacks Chinese Intl data); `formatClockTime` now writes 上午/下午 itself.
 - Device run (Honor tablet, landscape) found stop names still in capitals on My Buses; fixed, with an uppercase mock Stop name in e2e.
 - Known gap until Phase 4: the empty My Buses text says "tap Save", but Routes Stop still uses the star button.

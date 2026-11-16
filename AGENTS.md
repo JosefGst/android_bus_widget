@@ -27,7 +27,7 @@ utils/                    # Shared utilities (NOT inside app/)
   time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival(), formatClockTime() ("2:41 pm" / "下午2:41"; am/pm written in code because Hermes has no Chinese Intl data)
   arrival_display.ts      # arrivalTime()/routeRow(): Now / N min / unknown, plus the bus after, for Route rows
   tabs.ts                 # TAB_ROUTES and selectedTab(): which screens are tabs, which tab is highlighted
-  widget_rows.ts          # widgetRows(): the home-screen widget's rows (route, Stop, "Now"/"N min"/"--")
+  widget_sections.ts      # widgetSections(): the home-screen widget's content, per Stop: Routes with "Now"/"N min"/"--"
   route_stop_map.ts       # buildRouteMarkers(), map message types, parseFromMapMessage()
   *.test.ts               # Jest unit tests, colocated with the module they cover
 components/               # Shared non-route UI (files in app/ become routes, so UI lives here)
