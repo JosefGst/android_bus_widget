@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await mockKmbApi(page);
 });
 
-test('favoriting a stop adds it to My Favorites with a live ETA', async ({ page }) => {
+test('saving a stop adds it to My Buses with a live ETA', async ({ page }) => {
   await page.goto('/');
 
   // Home -> pick a route -> Routes Stop screen.
@@ -16,11 +16,13 @@ test('favoriting a stop adds it to My Favorites with a live ETA', async ({ page 
   await expect(page.getByText('Causeway Bay Station')).toBeVisible();
   await page.getByLabel('Favorite this stop').click();
 
-  // Star tap saves the favorite and navigates to My Favorites.
-  await expect(page.getByText('My Routes')).toBeVisible();
-  await expect(page.getByText('272P (Causeway Bay Station)')).toBeVisible();
-  // Both the default 272P stop and the newly favorited one produce this text; either confirms the ETA rendered.
-  await expect(page.getByText(/272P will arrive in \d+ minutes/).first()).toBeVisible();
+  // Star tap saves the favorite and navigates to My Buses.
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
+  const row = page.getByRole('button', { name: /^Open 272P at Causeway Bay Station/ });
+  await expect(row).toBeVisible();
+  await expect(row.getByText('Causeway Bay', { exact: true })).toBeVisible();
+  await expect(row).toHaveAccessibleName(/To Causeway Bay, \d+ min/);
+  await expect(row.getByText(/^\d+$/)).toBeVisible();
 });
 
 // Route 967 is not a starter Favorite, so its row and delete button are unambiguous.
@@ -29,16 +31,22 @@ async function star967(page: import('@playwright/test').Page) {
   await expect(page.getByText('Route: 967')).toBeVisible();
   await expect(page.getByText('Causeway Bay Station')).toBeVisible();
   await page.getByLabel('Favorite this stop').click();
-  await expect(page.getByText('My Routes')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
+}
+
+async function remove967(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Change my buses' }).click();
+  await page.getByRole('button', { name: 'Remove 967 at Causeway Bay Station' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
 }
 
 test('re-starring a Favorite that was just removed brings it back', async ({ page }) => {
   await page.goto('/');
   await star967(page);
-  const row = page.getByText('967 (Causeway Bay Station)');
+  const row = page.getByRole('button', { name: /^Open 967 at Causeway Bay Station/ });
   await expect(row).toBeVisible();
 
-  await page.getByLabel('Remove route 967').click();
+  await remove967(page);
   await expect(row).toHaveCount(0);
 
   // Go back to the same Stop list via Home and star the same Stop again.
@@ -50,14 +58,14 @@ test('re-starring a Favorite that was just removed brings it back', async ({ pag
 test('a removed Favorite stays removed after reloading the page', async ({ page }) => {
   await page.goto('/');
   await star967(page);
-  const row = page.getByText('967 (Causeway Bay Station)');
+  const row = page.getByRole('button', { name: /^Open 967 at Causeway Bay Station/ });
   await expect(row).toBeVisible();
 
-  await page.getByLabel('Remove route 967').click();
+  await remove967(page);
   await expect(row).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByText('My Routes')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Open 272P at Default Stop One/ })).toBeVisible();
   await expect(row).toHaveCount(0);
 });
 
@@ -67,9 +75,9 @@ test('tapping a Favorite row opens Routes Stop with that Stop selected', async (
   await expect(page.getByText('Jordan Map Stop')).toBeVisible();
   // Star the third Stop (rows are in order, so the third star is Jordan).
   await page.getByLabel('Favorite this stop').nth(2).click();
-  await expect(page.getByText('My Routes')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Open N29 at Jordan Map Stop' }).click();
+  await page.getByRole('button', { name: /^Open N29 at Jordan Map Stop/ }).click();
 
   await expect(page.getByText('Route: N29')).toBeVisible();
   // Only the Favorite's Stop is expanded, and its row is in view.
@@ -79,9 +87,9 @@ test('tapping a Favorite row opens Routes Stop with that Stop selected', async (
     page.frameLocator('iframe[title="Route map"]').locator('.stop-pin.selected')
   ).toHaveText('3');
 
-  // Back returns to My Favorites.
-  await page.goBack();
-  await expect(page.getByText('My Routes')).toBeVisible();
+  // The in-app Back button returns to My Buses (it follows the tab history, like Android's back button).
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
 });
 
 test('opening a second Favorite at the same Stop loads that Route, not the previous one', async ({ page }) => {
@@ -91,18 +99,18 @@ test('opening a second Favorite at the same Stop loads that Route, not the previ
     await page.getByText(label).click();
     await expect(page.getByText('Causeway Bay Station')).toBeVisible();
     await page.getByLabel('Favorite this stop').click();
-    await expect(page.getByText('My Routes')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
   }
 
-  await page.getByRole('button', { name: 'Open 272P at Causeway Bay Station' }).click();
+  await page.getByRole('button', { name: /^Open 272P at Causeway Bay Station/ }).click();
   await expect(page.getByText('Route: 272P')).toBeVisible();
   await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);
-  await page.getByRole('tab', { name: /My Favorites/ }).click();
-  await expect(page.getByText('My Routes')).toBeVisible();
+  await page.getByRole('tab', { name: /My Buses/ }).click();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
 
   // The ETA for 272X must be requested, not served from 272P's cached Stop ETAs.
   const etaRequest = page.waitForRequest(/\/eta\/MOCKSTOP001\/272X\/1/);
-  await page.getByRole('button', { name: 'Open 272X at Causeway Bay Station' }).click();
+  await page.getByRole('button', { name: /^Open 272X at Causeway Bay Station/ }).click();
   await etaRequest;
   await expect(page.getByText('Route: 272X')).toBeVisible();
   await expect(page.getByText(/arrives in \d+ minutes/)).toHaveCount(1);

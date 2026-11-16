@@ -32,5 +32,5 @@ tags:
 - assertVisible: "Route: 1A"
 
 # Tabs still switch by tapping.
-- tapOn: "My Favorites"
+- tapOn: "My Buses"
 - assertNotVisible: "Route: 1A"

@@ -1,5 +1,5 @@
 import { LANGUAGES } from './language'
-import { arrivalText, STRINGS } from './strings'
+import { arrivalText, spokenArrival, STRINGS } from './strings'
 
 describe('STRINGS', () => {
   it.each(LANGUAGES)('has text for every key in %s', language => {
@@ -20,7 +20,7 @@ describe('STRINGS', () => {
   it('writes Traditional and Simplified tab names differently where the characters differ', () => {
     expect(STRINGS.tc.tabRoutesStop).toBe('路線車站')
     expect(STRINGS.sc.tabRoutesStop).toBe('路线车站')
-    expect(STRINGS.sc.tabFavorites).toBe('我的收藏')
+    expect(STRINGS.sc.tabFavorites).toBe('我的巴士')
   })
 })
 
@@ -36,12 +36,24 @@ describe('arrivalText', () => {
 
   it('says 0 minutes for a bus that is due now', () => {
     expect(arrivalText(STRINGS.en, now, now)).toBe('arrives in 0 minutes (ETA: 12:50:00)')
-    expect(arrivalText(STRINGS.tc, now, now, '272P')).toBe('272P 0 分鐘後到達（12:50:00）')
   })
 
   it('says there is no ETA instead of a blank count when the API gives no time', () => {
     expect(arrivalText(STRINGS.en, '', now)).toBe('No ETA available')
-    expect(arrivalText(STRINGS.sc, '', now, '272P')).toBe('272P：没有到站时间')
-    expect(arrivalText(STRINGS.en, '', now, '272P')).toBe('272P: No ETA available')
+  })
+})
+
+describe('spokenArrival', () => {
+  it('reads the next bus and the one after it', () => {
+    expect(spokenArrival(STRINGS.en, { next: { kind: 'minutes', minutes: 3 }, then: 15 })).toBe('3 min, then 15 min')
+    expect(spokenArrival(STRINGS.tc, { next: { kind: 'minutes', minutes: 3 }, then: null })).toBe('3 分鐘')
+  })
+
+  it('says a due bus is here now', () => {
+    expect(spokenArrival(STRINGS.en, { next: { kind: 'now' }, then: 12 })).toBe('Now, then 12 min')
+  })
+
+  it('says there is no time yet when the API gave none', () => {
+    expect(spokenArrival(STRINGS.sc, { next: { kind: 'unknown' }, then: null })).toBe('未有时间')
   })
 })

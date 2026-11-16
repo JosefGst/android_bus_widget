@@ -1,4 +1,4 @@
-import { formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting';
+import { formatClockTime, formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting';
 
 describe('formatEtaToHKTime', () => {
   it('returns N/A for an empty string', () => {
@@ -54,3 +54,23 @@ describe('getMinutesUntilArrival', () => {
     jest.useRealTimers();
   });
 });
+
+describe('formatClockTime', () => {
+  // 06:41 UTC is 2:41 pm in Hong Kong.
+  const afternoon = '2026-11-13T06:41:00Z'
+
+  it('gives a 12-hour Hong Kong time without seconds in English', () => {
+    expect(formatClockTime(afternoon, 'en')).toBe('2:41 pm')
+    expect(formatClockTime('2026-11-13T01:05:00Z', 'en')).toBe('9:05 am')
+  })
+
+  it('marks morning and afternoon in Chinese', () => {
+    expect(formatClockTime(afternoon, 'tc')).toBe('下午2:41')
+    expect(formatClockTime(afternoon, 'sc')).toBe('下午2:41')
+  })
+
+  it('gives an empty string when there is no valid time', () => {
+    expect(formatClockTime('', 'en')).toBe('')
+    expect(formatClockTime('not-a-date', 'en')).toBe('')
+  })
+})

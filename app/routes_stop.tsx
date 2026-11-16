@@ -181,7 +181,7 @@ const RoutesStopScreen = () => {
 
   return (
     <View style={{ flex: 1, paddingTop: 40 }}>
-      <Pressable onPress={() => router.back()} style={{ position: 'absolute', left: 16, top: 40, padding: 8, zIndex: 10 }}>
+      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={strings.back} style={{ position: 'absolute', left: 16, top: 40, padding: 8, zIndex: 10 }}>
         <MaterialIcons name="navigate-before" size={42} color="#007aff" />
       </Pressable>
       <Text style={{ fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 }}>

@@ -28,13 +28,13 @@ test.describe('on an English phone', () => {
     await expect(page.getByText('屯門 → 銅鑼灣')).toBeVisible();
     await expect(tab(page, '主頁')).toBeVisible();
     await expect(tab(page, '路線車站')).toBeVisible();
-    await expect(tab(page, '我的最愛')).toBeVisible();
+    await expect(tab(page, '我的巴士')).toBeVisible();
     await expect(page.getByPlaceholder('輸入路線號碼…')).toBeVisible();
 
     await languageButton(page).click();
     await expect(languageButton(page)).toHaveText('简');
     await expect(page.getByText('屯门 → 铜锣湾')).toBeVisible();
-    await expect(tab(page, '我的收藏')).toBeVisible();
+    await expect(tab(page, '我的巴士')).toBeVisible();
 
     await languageButton(page).click();
     await expect(languageButton(page)).toHaveText('EN');
@@ -89,22 +89,23 @@ test.describe('on an English phone', () => {
     await expect.poll(() => labelTiles.some(url => url.includes('/label/hk/sc/'))).toBe(true);
   });
 
-  test('My Favorites shows Stop names and arrivals in Chinese', async ({ page }) => {
+  test('My Buses shows Stop names, destinations and arrivals in Chinese', async ({ page }) => {
     await page.goto('/my_favorites');
     await expect(page.getByText('Default Stop One', { exact: true })).toBeVisible();
 
     await languageButton(page).click();
+    await expect(page.getByRole('heading', { name: '我的巴士' })).toBeVisible();
     await expect(page.getByText('預設車站一', { exact: true })).toBeVisible();
-    await expect(page.getByText('我的路線')).toBeVisible();
-    await expect(page.getByText(/272P \d+ 分鐘後到達/).first()).toBeVisible();
+    await expect(page.getByText('銅鑼灣', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('分鐘', { exact: true }).first()).toBeVisible();
   });
 
-  test('the My Favorites clock is a 24-hour Hong Kong time in every language', async ({ page }) => {
+  test('My Buses says when it was updated as a 12-hour Hong Kong time', async ({ page }) => {
     await page.goto('/my_favorites');
-    await expect(page.getByText(/^Local Time: \d\d:\d\d:\d\d$/)).toBeVisible();
+    await expect(page.getByText(/^Updated \d{1,2}:\d\d [ap]m$/)).toBeVisible();
 
     await languageButton(page).click();
-    await expect(page.getByText(/^現在時間：\d\d:\d\d:\d\d$/)).toBeVisible();
+    await expect(page.getByText(/^更新時間：[上下]午\d{1,2}:\d\d$/)).toBeVisible();
   });
 });
 

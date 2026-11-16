@@ -1,3 +1,4 @@
+import type { RouteRow } from './arrival_display'
 import type { Language } from './language'
 import { formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting'
 
@@ -31,20 +32,30 @@ export type Strings = {
   noEta: string
   noStops: string
   arrivesIn: (minutes: number, time: string) => string
-  routeArrivesIn: (route: string, minutes: number, time: string) => string
-  routeNoEta: (route: string) => string
-  localTime: (time: string) => string
   generatedTimestamp: (time: string) => string
   notAvailable: string
   noBusesForStop: string
-  openRouteAtStop: (route: string, stop: string) => string
-  myRoutes: string
-  noRoutesAdded: string
-  removeRoute: (route: string) => string
   widgetLoading: string
   widgetEmpty: string
   widgetTapToRefresh: string
   minutesShort: (minutes: string) => string
+  myBuses: string
+  updatedAt: (time: string) => string
+  refresh: string
+  changeMyBuses: string
+  done: string
+  emptyMyBuses: string
+  toDestination: string
+  arrivingNow: string
+  minutesUnit: string
+  thenMinutes: (minutes: number) => string
+  noTimeYet: string
+  routeRowLabel: (route: string, stop: string, dest: string, time: string) => string
+  spokenMinutes: (minutes: number) => string
+  removeRouteAtStop: (route: string, stop: string) => string
+  remove: string
+  findARoute: string
+  back: string
 }
 
 const EN: Strings = {
@@ -52,7 +63,7 @@ const EN: Strings = {
   languageButtonLabel: 'Language: English. Tap to change.',
   tabHome: 'Home',
   tabRoutesStop: 'Routes Stop',
-  tabFavorites: 'My Favorites',
+  tabFavorites: 'My Buses',
   searchPlaceholder: 'Search by route number...',
   noRoutes: 'No routes found.',
   keypadClear: 'Clear',
@@ -75,20 +86,30 @@ const EN: Strings = {
   noEta: 'No ETA available',
   noStops: 'No stops found for this route.',
   arrivesIn: (minutes, time) => `arrives in ${minutes} minutes (ETA: ${time})`,
-  routeArrivesIn: (route, minutes, time) => `${route} will arrive in ${minutes} minutes (ETA: ${time})`,
-  routeNoEta: route => `${route}: No ETA available`,
-  localTime: time => `Local Time: ${time}`,
   generatedTimestamp: time => `Generated Timestamp: ${time}`,
   notAvailable: 'N/A',
   noBusesForStop: 'No buses found for this stop.',
-  openRouteAtStop: (route, stop) => `Open ${route} at ${stop}`,
-  myRoutes: 'My Routes',
-  noRoutesAdded: 'No routes added.',
-  removeRoute: route => `Remove route ${route}`,
   widgetLoading: 'Loading...',
   widgetEmpty: 'No buses available',
   widgetTapToRefresh: 'Tap to refresh',
   minutesShort: minutes => `${minutes} min`,
+  myBuses: 'My Buses',
+  updatedAt: time => `Updated ${time}`,
+  refresh: 'Refresh',
+  changeMyBuses: 'Change my buses',
+  done: 'Done',
+  emptyMyBuses: 'No buses saved yet. Find a route, tap your stop, then tap Save.',
+  toDestination: 'To',
+  arrivingNow: 'Now',
+  minutesUnit: 'min',
+  thenMinutes: minutes => `then ${minutes} min`,
+  noTimeYet: 'No time yet',
+  routeRowLabel: (route, stop, dest, time) => `Open ${route} at ${stop}. To ${dest}, ${time}`,
+  spokenMinutes: minutes => `${minutes} min`,
+  removeRouteAtStop: (route, stop) => `Remove ${route} at ${stop}`,
+  remove: 'Remove',
+  findARoute: 'Find a Route',
+  back: 'Back',
 }
 
 const TC: Strings = {
@@ -96,7 +117,7 @@ const TC: Strings = {
   languageButtonLabel: '語言：繁體中文。按此切換。',
   tabHome: '主頁',
   tabRoutesStop: '路線車站',
-  tabFavorites: '我的最愛',
+  tabFavorites: '我的巴士',
   searchPlaceholder: '輸入路線號碼…',
   noRoutes: '找不到路線。',
   keypadClear: '清除',
@@ -119,20 +140,30 @@ const TC: Strings = {
   noEta: '沒有到站時間',
   noStops: '此路線沒有車站。',
   arrivesIn: (minutes, time) => `${minutes} 分鐘後到達（${time}）`,
-  routeArrivesIn: (route, minutes, time) => `${route} ${minutes} 分鐘後到達（${time}）`,
-  routeNoEta: route => `${route}：沒有到站時間`,
-  localTime: time => `現在時間：${time}`,
   generatedTimestamp: time => `資料時間：${time}`,
   notAvailable: '不適用',
   noBusesForStop: '此車站沒有巴士。',
-  openRouteAtStop: (route, stop) => `打開 ${route}，${stop}`,
-  myRoutes: '我的路線',
-  noRoutesAdded: '未加入路線。',
-  removeRoute: route => `移除路線 ${route}`,
   widgetLoading: '載入中…',
   widgetEmpty: '沒有巴士',
   widgetTapToRefresh: '按此重新整理',
   minutesShort: minutes => `${minutes} 分`,
+  myBuses: '我的巴士',
+  updatedAt: time => `更新時間：${time}`,
+  refresh: '重新整理',
+  changeMyBuses: '更改我的巴士',
+  done: '完成',
+  emptyMyBuses: '未有收藏巴士。請先搜尋路線，按你的車站，再按「收藏」。',
+  toDestination: '往',
+  arrivingNow: '即將到站',
+  minutesUnit: '分鐘',
+  thenMinutes: minutes => `之後 ${minutes} 分鐘`,
+  noTimeYet: '未有時間',
+  routeRowLabel: (route, stop, dest, time) => `打開 ${route}，${stop}。往${dest}，${time}`,
+  spokenMinutes: minutes => `${minutes} 分鐘`,
+  removeRouteAtStop: (route, stop) => `移除 ${route}，${stop}`,
+  remove: '移除',
+  findARoute: '搜尋路線',
+  back: '返回',
 }
 
 const SC: Strings = {
@@ -140,7 +171,7 @@ const SC: Strings = {
   languageButtonLabel: '语言：简体中文。按此切换。',
   tabHome: '主页',
   tabRoutesStop: '路线车站',
-  tabFavorites: '我的收藏',
+  tabFavorites: '我的巴士',
   searchPlaceholder: '输入路线号码…',
   noRoutes: '找不到路线。',
   keypadClear: '清除',
@@ -163,29 +194,43 @@ const SC: Strings = {
   noEta: '没有到站时间',
   noStops: '此路线没有车站。',
   arrivesIn: (minutes, time) => `${minutes} 分钟后到达（${time}）`,
-  routeArrivesIn: (route, minutes, time) => `${route} ${minutes} 分钟后到达（${time}）`,
-  routeNoEta: route => `${route}：没有到站时间`,
-  localTime: time => `现在时间：${time}`,
   generatedTimestamp: time => `资料时间：${time}`,
   notAvailable: '不适用',
   noBusesForStop: '此车站没有巴士。',
-  openRouteAtStop: (route, stop) => `打开 ${route}，${stop}`,
-  myRoutes: '我的路线',
-  noRoutesAdded: '未加入路线。',
-  removeRoute: route => `移除路线 ${route}`,
   widgetLoading: '载入中…',
   widgetEmpty: '没有巴士',
   widgetTapToRefresh: '按此刷新',
   minutesShort: minutes => `${minutes} 分`,
+  myBuses: '我的巴士',
+  updatedAt: time => `更新时间：${time}`,
+  refresh: '刷新',
+  changeMyBuses: '更改我的巴士',
+  done: '完成',
+  emptyMyBuses: '还没有收藏巴士。请先搜索路线，按你的车站，再按“收藏”。',
+  toDestination: '往',
+  arrivingNow: '即将到站',
+  minutesUnit: '分钟',
+  thenMinutes: minutes => `之后 ${minutes} 分钟`,
+  noTimeYet: '未有时间',
+  routeRowLabel: (route, stop, dest, time) => `打开 ${route}，${stop}。往${dest}，${time}`,
+  spokenMinutes: minutes => `${minutes} 分钟`,
+  removeRouteAtStop: (route, stop) => `移除 ${route}，${stop}`,
+  remove: '移除',
+  findARoute: '搜索路线',
+  back: '返回',
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }
 
-/** One arrival line: minutes and Hong Kong time, or "no ETA" when the API gave no time. Pass `route` to name it. */
-export function arrivalText(strings: Strings, eta: string, now: string, route?: string): string {
+/** One arrival line: minutes and Hong Kong time, or "no ETA" when the API gave no time. */
+export function arrivalText(strings: Strings, eta: string, now: string): string {
   const minutes = getMinutesUntilArrival(eta, now)
-  if (route === undefined) {
-    return minutes === null ? strings.noEta : strings.arrivesIn(minutes, formatEtaToHKTime(eta))
-  }
-  return minutes === null ? strings.routeNoEta(route) : strings.routeArrivesIn(route, minutes, formatEtaToHKTime(eta))
+  return minutes === null ? strings.noEta : strings.arrivesIn(minutes, formatEtaToHKTime(eta))
+}
+
+/** A Route row read aloud: "3 min, then 15 min", "Now", or "No time yet". */
+export function spokenArrival(strings: Strings, { next, then }: RouteRow): string {
+  const first =
+    next.kind === 'now' ? strings.arrivingNow : next.kind === 'minutes' ? strings.spokenMinutes(next.minutes) : strings.noTimeYet
+  return then === null ? first : `${first}, ${strings.thenMinutes(then)}`
 }

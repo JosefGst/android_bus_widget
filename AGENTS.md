@@ -12,23 +12,26 @@ Expo React Native app (React 19, RN 0.81) targeting Android + Web. Displays KMB 
 index.ts                  # App entry — registers widget handler BEFORE expo-router
 widget-registration.ts    # Android widget handler registration (conditional on Platform.OS)
 app/                      # Expo Router screens (tab-based)
-  _layout.tsx             # Tab layout: Home, Routes Stop, My Favorites
+  _layout.tsx             # Tab layout: Home, Routes Stop, My Buses
   index.tsx               # Route browser with search
   routes_stop.tsx         # Stop list for a route + ETA + favorite button + Route map
-  my_favorites.tsx         # Saved favorites with real-time ETA countdown
+  my_favorites.tsx         # My Buses: saved Favorites as large cards per Stop, live minutes, "Change my buses" to remove
 utils/                    # Shared utilities (NOT inside app/)
   fetch.ts                # KMB API calls, types, 24h Route cache
   stops.ts                # getStopsFor(): Stop names/coords — no-expiry Stop cache, fills gaps via /stop/{id}
   favorites.ts            # Favorites: the only reader/writer of the Favorite list (list/add/remove/listForWidget/onFavoritesChanged)
-  favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/my_favorites.tsx
-  string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses)
+  favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/my_favorites.tsx; each Route carries its destination (`dest`)
+  string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses), displayPlaceName() (English title case)
   language.ts             # Language ('en'|'tc'|'sc'): phone language, saved choice, onLanguageChanged, localized()
   strings.ts              # STRINGS: the app's own text per Language (typed; a missing key is a compile error)
-  time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival()
+  time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival(), formatClockTime() ("2:41 pm" for Updated labels)
+  arrival_display.ts      # arrivalTime()/routeRow(): Now / N min / unknown, plus the bus after, for Route rows
   route_stop_map.ts       # buildRouteMarkers(), map message types, parseFromMapMessage()
   map_size.ts             # Route map height: snap sizes (⅓/½/85%), marker-tap grow, saved size
   *.test.ts               # Jest unit tests, colocated with the module they cover
 components/               # Shared non-route UI (files in app/ become routes, so UI lives here)
+  theme.ts                # Senior-friendly colours, type sizes, touch target — use these, not raw values
+  RouteBadge.tsx          # Route code on a dark tile
   stop_map_html.ts        # STOP_MAP_HTML: self-contained Leaflet page (HK Lands Dept tiles) + StopMapProps
   StopMap.tsx             # Android host: react-native-webview
   StopMap.web.tsx         # Web host: <iframe srcDoc>
@@ -81,7 +84,8 @@ index.ts
           ├─ app/index.tsx          → utils/fetch, utils/time_formatting
           ├─ app/routes_stop.tsx    → utils/fetch, utils/favorites, utils/time_formatting,
           │                            utils/route_stop_map, utils/stops, components/StopMap
-          └─ app/my_favorites.tsx   → utils/favorites, utils/favorite_board, utils/time_formatting
+          └─ app/my_favorites.tsx   → utils/favorites, utils/favorite_board, utils/arrival_display,
+                                       utils/time_formatting, components/RouteBadge, components/theme
 ```
 
 - **No circular dependencies.** Dependency direction: `app/` → `components/` → `utils/`, and `widget/` → `utils/`. Never import from `app/` into `components/`, `utils/` or `widget/`; `widget/` never imports `components/`.
@@ -92,8 +96,8 @@ index.ts
 - **Caching:** `getCachedRoutes()` — 24h AsyncStorage cache with `isCacheStale()` check. Stops: `getStopsFor(stopIds)` in `utils/stops.ts` — the full `/stop` list is downloaded only when there is no cache (it never expires); Stops missing from it are fetched one by one (max 4 parallel) and added; calls are queued so overlapping screens never download the list twice. Never re-download the full Stop list on a timer: bursts get the app 403'd. See `docs/ideas/stop-names-cache.md`.
 - **Language:** one `Language` (`'en' | 'tc' | 'sc'`, the KMB API's field suffixes) drives screens, the Route map and the widget. `utils/language.ts` owns it: the phone language (`expo-localization`) until the user taps the language button, then the saved choice (`app_language`). Read KMB names with `localized(record, 'name' | 'orig' | 'dest', language)`, never `*_en` directly; the app's own text comes from `STRINGS[language]` (`useLanguage()` in screens and components, `getLanguage()` in the widget). Keep Stop records, not name strings, in state so a switch needs no new request. The map page gets `setLanguage` (label tiles `label/hk/<language>` + attribution). Web starts in English to match the static pre-render, then switches.
 - **Favorites:** `utils/favorites.ts` is the only module that reads or writes the Favorite list. Writes are serialized internally; screens must not keep their own copies or queues. Never pass Favorite data through navigation params.
-- **Favorite → Routes Stop:** each Route row on My Favorites is a `Pressable` that pushes `/routes_stop` with `route`, `bound`, `service_type` and a `stop` param; once the Stop list loads, Routes Stop preselects that Stop through the marker-tap path (`onMarkerPress`). Back returns to My Favorites.
-- **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Favorites and the widget. It rejects only when every ETA request fails, so callers keep their last board.
+- **Favorite → Routes Stop:** each Route row on My Buses is a `Pressable` that pushes `/routes_stop` with `route`, `bound`, `service_type` and a `stop` param; once the Stop list loads, Routes Stop preselects that Stop through the marker-tap path (`onMarkerPress`). The in-app Back button (and Android back) returns to My Buses; on web the browser's back button does not, because the tabs keep their own history.
+- **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Buses and the widget. It rejects only when every ETA request fails, so callers keep their last board.
 - **Widget:** Runs as Android background task. See `widget/AGENTS.md` for critical constraints.
 
 ---
@@ -106,7 +110,7 @@ index.ts
 | Add/modify API calls | `utils/fetch.ts` | Use `fetchJson<T>()` helper |
 | Add or change UI text / translations | `utils/strings.ts` | Add the key to `Strings`; TypeScript forces all three languages |
 | Change how the language is picked | `utils/language.ts` | `languageFromLocales`, `getLanguage`, storage key `app_language` must not change |
-| Change ETA formatting | `utils/time_formatting.ts`, `utils/strings.ts` | `formatEtaToHKTime` (24-hour HK time, also the My Favorites clock), `getMinutesUntilArrival`; `arrivalText` builds each arrival line, "no ETA" when the API gives no time |
+| Change ETA formatting | `utils/time_formatting.ts`, `utils/strings.ts` | `formatEtaToHKTime` (24-hour HK time), `getMinutesUntilArrival`; `arrivalText` builds each arrival line, "no ETA" when the API gives no time |
 | Modify Favorite logic or starter Favorites | `utils/favorites.ts` | `add`/`remove`/`list`, `STARTER_FAVORITES`; storage key must not change |
 | Change ETA grouping/ordering | `utils/favorite_board.ts` | `loadFavoriteBoard` — used by `app/my_favorites.tsx` and `widget/widget-task-handler.tsx` |
 | React to Favorites changes | `utils/favorites.ts` | `onFavoritesChanged(listener)` |
@@ -194,14 +198,16 @@ index.ts
 
 ## Notes
 
+- Senior-friendly redesign in progress: `docs/ideas/senior-friendly-redesign/plan.md` (phases, design rules). New UI uses `components/theme.ts`; every label needs EN/TC/SC text in `utils/strings.ts`.
+
 - `app/(tabs)/` exists but is empty — tabs are defined directly in `_layout.tsx`.
 - `package.json` `"main": "index.ts"` is required for widget registration ordering.
 - iOS widget support is a known TODO.
-- Known bugs: widget sometimes stuck on "Loading..." (timeout handler mitigates). Web only: My Favorites logs a React hydration error (#418) on direct load because the "Local Time" clock differs from the pre-rendered HTML.
+- Known bugs: widget sometimes stuck on "Loading..." (timeout handler mitigates). Web only: the browser back button does not return from Routes Stop to My Buses (use the in-app Back button). Web only: a React hydration error (#418) was seen once on a direct load of `/my_favorites` (Nov 2026) and did not reproduce in 50 later loads on main or the redesign branch.
 - Web only: the KMB CDN sometimes serves `/stop` without the CORS header, so stop names and the Route map show IDs / "Map unavailable" in the browser.
 - Android too: the KMB CDN sometimes answers the app with 403 (seen after bursts of cold starts, while the device browser still gets 200). Nothing retries, so Home shows "No routes found." and Routes Stop shows Stop IDs / "Map unavailable" until the screen reloads.
 - Maestro flows (`.maestro/`) run against the real KMB API on a device — no mocks. Start the app with `subflows/open_app.yaml` (uses `openLink: bus://`; `launchApp` is blocked on Honor/Huawei ROMs). Keep `CLEAR_STATE: "false"` unless a flow needs a fresh install, to avoid tripping the 403s. Map markers in the WebView carry their Stop name as text, so tap list rows by their label (`"1, <Stop name>"`), not by the bare name. The resize handle's label carries its size (`"Resize map, small|half|large"`); `route_map_resize.yaml` drags it by screen percentages measured on a 1200x1920 device and leaves the map small + list at Stop 1 for later flows. Wait for the map attribution before dragging. `route_map_location.yaml` only asserts the "Show my location" button (it is hidden if location was denied on the device); it never taps it.
 - `language_toggle.yaml` cycles the language button (testID `language-button`) through 繁 and 简 on Home and Routes Stop and ends on English. Every other flow taps English labels, so leave the test device on English (a saved 繁/简 choice breaks them).
-- `favorite_to_route_stop.yaml` taps a starter Favorite row ("Open 272..."), asserts Routes Stop shows an expanded Stop, then goes back to My Favorites.
+- `favorite_to_route_stop.yaml` taps a starter Favorite row ("Open 272..."), asserts Routes Stop shows an expanded Stop, then goes back to My Buses.
 - E2E (`npm run test:e2e`, Playwright against the web export) mocks the KMB API and map tiles in `e2e/mocks.ts`; Route `N29` has three mock Stops for the map tests.
 - Domain terms (Route, Stop, ETA, Favorite, Favorite board) are defined in `GLOSSARY.md`.

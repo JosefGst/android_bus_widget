@@ -1,4 +1,5 @@
 // Utility functions for ETA formatting and calculation
+import type { Language } from './language';
 
 export const formatEtaToHKTime = (eta: string): string => {
   if (!eta) return 'N/A';
@@ -28,3 +29,19 @@ export const getMinutesUntilArrival = (eta: string, referenceTime?: string): num
   const diffMs = etaDate.getTime() - now.getTime();
   return Math.max(0, Math.round(diffMs / 60000));
 };
+
+const CLOCK_LOCALES: Record<Language, string> = { en: 'en-HK', tc: 'zh-HK', sc: 'zh-CN' }
+
+/** "2:41 pm" / "下午2:41" in Hong Kong time, for "Updated …" labels. Empty when there is no valid time. */
+export function formatClockTime(iso: string, language: Language): string {
+  const date = new Date(iso)
+  if (!iso || isNaN(date.getTime())) return ''
+  return date
+    .toLocaleTimeString(CLOCK_LOCALES[language], {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Hong_Kong',
+    })
+    .replace(/\s+/g, language === 'en' ? ' ' : '')
+}

@@ -6,22 +6,22 @@ tags:
 - runFlow: subflows/open_app.yaml
 
 # A fresh install shows the two starter Favorites.
-- tapOn: "My Favorites"
+- tapOn: "My Buses"
 - extendedWaitUntil:
-    visible: "My Routes"
+    visible: "Change my buses"
     timeout: 20000
-- assertVisible: "272P \\(.*\\)"
-- assertVisible: "272X \\(.*\\)"
-- assertNotVisible: "1A \\(.*\\)"
+- assertVisible: "Open 272P at .*"
+- assertVisible: "Open 272X at .*"
+- assertNotVisible: "Open 1A at .*"
 
-# Starring the first Stop of 1A saves it and jumps to My Favorites.
+# Starring the first Stop of 1A saves it and jumps to My Buses.
 - tapOn: "Home"
 - runFlow: subflows/open_route_1a.yaml
 - tapOn:
     text: "Favorite this stop"
     index: 0
 - extendedWaitUntil:
-    visible: "1A \\(.*\\)"
+    visible: "Open 1A at .*"
     timeout: 20000
 
 # The Favorite survives an app restart.
@@ -29,22 +29,24 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- tapOn: "My Favorites"
+- tapOn: "My Buses"
 - extendedWaitUntil:
-    visible: "1A \\(.*\\)"
+    visible: "Open 1A at .*"
     timeout: 20000
 
 # Removing it takes it off the list, and it stays removed after a restart.
-- tapOn: "Remove route 1A"
-- assertNotVisible: "1A \\(.*\\)"
-- assertVisible: "272P \\(.*\\)"
+- tapOn: "Change my buses"
+- tapOn: "Remove 1A at .*"
+- tapOn: "Done"
+- assertNotVisible: "Open 1A at .*"
+- assertVisible: "Open 272P at .*"
 - runFlow:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- tapOn: "My Favorites"
+- tapOn: "My Buses"
 - extendedWaitUntil:
-    visible: "My Routes"
+    visible: "Change my buses"
     timeout: 20000
-- assertNotVisible: "1A \\(.*\\)"
-- assertVisible: "272P \\(.*\\)"
+- assertNotVisible: "Open 1A at .*"
+- assertVisible: "Open 272P at .*"
