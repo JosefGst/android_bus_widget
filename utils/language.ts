@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getLocales, Locale } from 'expo-localization'
 
-// The one setting that picks English, Traditional or Simplified Chinese for all text.
+// The one setting that picks English, Hong Kong Cantonese (Traditional characters) or Simplified Chinese for all text.
 // The codes match the KMB API's field suffixes (`name_en`, `name_tc`, `name_sc`).
 
 export type Language = 'en' | 'tc' | 'sc'
@@ -18,7 +18,7 @@ type LocaleParts = Pick<Locale, 'languageCode' | 'languageScriptCode' | 'regionC
 
 const TRADITIONAL_REGIONS = new Set(['HK', 'MO', 'TW'])
 
-/** The first locale decides. Chinese without a script or known region reads as Traditional. */
+/** The first locale decides. Chinese without a script or known region reads as Cantonese (tc). */
 export function languageFromLocales(locales: readonly LocaleParts[]): Language {
   const first = locales[0]
   if (first?.languageCode !== 'zh') return 'en'

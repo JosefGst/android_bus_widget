@@ -7,7 +7,7 @@ import { useLanguage } from './language_context'
 export const LANGUAGE_BUTTON_TOP = 4
 export const LANGUAGE_BUTTON_HEIGHT = 32
 
-/** Shows the current language ("EN", "繁", "简"); each tap moves to the next and saves it. */
+/** Shows the current language ("EN", "粵", "简"); each tap moves to the next and saves it. */
 export function LanguageButton(): React.JSX.Element {
   const { language, strings, setLanguage } = useLanguage()
   return (

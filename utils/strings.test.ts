@@ -9,8 +9,8 @@ describe('STRINGS', () => {
     })
   })
 
-  it('writes Traditional and Simplified tab names differently where the characters differ', () => {
-    expect(STRINGS.tc.findARoute).toBe('搜尋路線')
+  it('writes the Cantonese and Mandarin tab names in their own words', () => {
+    expect(STRINGS.tc.findARoute).toBe('搵路線')
     expect(STRINGS.sc.findARoute).toBe('搜索路线')
     expect(STRINGS.sc.myBuses).toBe('我的巴士')
   })
@@ -35,7 +35,7 @@ describe('routesMatch', () => {
   it('says how many routes match, singular and plural', () => {
     expect(STRINGS.en.routesMatch(1, '967')).toBe('1 route matches “967”')
     expect(STRINGS.en.routesMatch(3, '27')).toBe('3 routes match “27”')
-    expect(STRINGS.tc.routesMatch(3, '27')).toBe('3 條路線符合「27」')
+    expect(STRINGS.tc.routesMatch(3, '27')).toBe('有 3 條路線啱「27」')
     expect(STRINGS.sc.routesMatch(3, '27')).toBe('3 条路线符合“27”')
   })
 })
@@ -43,6 +43,6 @@ describe('routesMatch', () => {
 describe('routeResultLabel', () => {
   it('reads a result card as route, start and end', () => {
     expect(STRINGS.en.routeResultLabel('272P', 'Tuen Mun', 'Causeway Bay')).toBe('272P, from Tuen Mun to Causeway Bay')
-    expect(STRINGS.tc.routeResultLabel('272P', '屯門', '銅鑼灣')).toBe('272P，由屯門往銅鑼灣')
+    expect(STRINGS.tc.routeResultLabel('272P', '屯門', '銅鑼灣')).toBe('272P，由屯門去銅鑼灣')
   })
 })
