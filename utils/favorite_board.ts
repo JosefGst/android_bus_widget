@@ -5,7 +5,6 @@ import type { Favorite } from './favorites'
 import { ETA, fetchStop, fetchStopETA, KMBResponse } from './fetch'
 import { Language, localized } from './language'
 import { normalizeStopName } from './string_formatting'
-import type { Strings } from './strings'
 import { getMinutesUntilArrival } from './time_formatting'
 
 export type Arrival = { eta: string; minutes: number | null }
@@ -86,14 +85,4 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
     })),
     generatedTimestamp: etaResponses.find(r => r !== null)?.generated_timestamp ?? '',
   }
-}
-
-/** The widget's line per Route: only its next arrival, e.g. "272A: 4 min". */
-export function nextArrivalsText(group: StopGroup, strings: Strings): string {
-  return group.routes
-    .map(({ route, arrivals }) => {
-      const minutes = arrivals[0]?.minutes ?? null
-      return minutes === null ? `${route}: --` : `${route}: ${strings.minutesShort(String(minutes))}`
-    })
-    .join('\n')
 }

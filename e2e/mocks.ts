@@ -10,6 +10,7 @@ export const MOCK_ROUTES = [
   { route: '272P', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', orig_tc: '屯門', orig_sc: '屯门', dest_en: 'CAUSEWAY BAY', dest_tc: '銅鑼灣', dest_sc: '铜锣湾' },
   { route: '272X', bound: 'O', service_type: '1', orig_en: 'TUEN MUN', orig_tc: '屯門', orig_sc: '屯门', dest_en: 'CENTRAL', dest_tc: '中環', dest_sc: '中环' },
   { route: '967', bound: 'O', service_type: '1', orig_en: 'TIN SHUI WAI', orig_tc: '天水圍', orig_sc: '天水围', dest_en: 'ADMIRALTY', dest_tc: '金鐘', dest_sc: '金钟' },
+  { route: '6', bound: 'O', service_type: '1', orig_en: 'TSIM SHA TSUI', dest_en: 'LAI CHI KOK' },
   { route: 'N29', bound: 'O', service_type: '1', orig_en: 'MONG KOK', orig_tc: '旺角', orig_sc: '旺角', dest_en: 'TSUEN WAN', dest_tc: '荃灣', dest_sc: '荃湾' },
 ];
 
@@ -53,6 +54,11 @@ export const MOCK_STOP_COORDS: Record<string, { lat: string; long: string }> = {
 // every other Route has a single Stop so its star button stays unambiguous.
 export const MAP_ROUTE = 'N29';
 const MAP_ROUTE_STOPS = ['MAPSTOP001', 'MAPSTOP002', 'MAPSTOP003'];
+
+// Route 6 has twelve Stops ("Long Stop 1".."Long Stop 12"), so its Stop list scrolls.
+export const LONG_ROUTE = '6';
+const LONG_ROUTE_STOPS = Array.from({ length: 12 }, (_, i) => `LONGSTOP${String(i + 1).padStart(2, '0')}`);
+LONG_ROUTE_STOPS.forEach((stop, i) => { MOCK_STOP_NAMES[stop] = `Long Stop ${i + 1}`; });
 
 // 1x1 transparent PNG served for every map tile, so tests never hit the tile server.
 const BLANK_PNG = Buffer.from(
@@ -117,7 +123,7 @@ export async function mockKmbApi(page: Page) {
         type: 'ROUTE-STOP',
         version: '1',
         generated_timestamp: NOW,
-        data: (routeCode === MAP_ROUTE ? MAP_ROUTE_STOPS : ['MOCKSTOP001']).map((stop, i) => ({
+        data: (routeCode === MAP_ROUTE ? MAP_ROUTE_STOPS : routeCode === LONG_ROUTE ? LONG_ROUTE_STOPS : ['MOCKSTOP001']).map((stop, i) => ({
           route: routeCode,
           bound: boundDir === 'inbound' ? 'I' : 'O',
           service_type: svcType,

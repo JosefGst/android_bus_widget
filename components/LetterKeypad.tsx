@@ -1,7 +1,7 @@
 import React from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLanguage } from './language_context'
-import { COLORS, FONT_SIZES } from './theme'
+import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 interface LetterKeypadProps {
   letters: string[]
@@ -36,7 +36,7 @@ export function LetterKeypad({ letters, onPressLetter }: LetterKeypadProps): Rea
 const styles = StyleSheet.create({
   // Fixed height so the number keys don't jump when the letters come and go.
   row: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  label: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  label: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   keys: { gap: 8, alignItems: 'center' },
   key: {
     minWidth: 64,
@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  letter: { fontSize: 24, fontWeight: '700', color: COLORS.accent },
+  letter: { fontSize: 24, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.accent },
   pressed: { opacity: 0.6 },
 })

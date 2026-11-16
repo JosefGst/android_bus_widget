@@ -8,7 +8,7 @@ import { useLanguage } from '../components/language_context'
 import { RouteBadge } from '../components/RouteBadge'
 import { SelectedStopCard } from '../components/SelectedStopCard'
 import { StopMap } from '../components/StopMap'
-import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
+import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { useUserLocation } from '../components/use_user_location'
 import { upcomingArrivals } from '../utils/arrival_display'
 import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
@@ -96,19 +96,19 @@ export default function RoutesStopScreen(): React.JSX.Element {
   }, [etaMap, route, service_type])
 
   // Selects a Stop and scrolls its row to the top, so its card (with Save) is in view.
-  // The scroll waits in scrollTarget until the list is on screen: a preselect can come before it is.
-  const [scrollTarget, setScrollTarget] = useState<string | null>(null)
+  // The scroll runs from the selected row's onLayout (scrollToSelected), not here: only then has the
+  // list measured the new layout. Scrolling earlier overshoots when another Stop's card closes above
+  // it, and does nothing when the list is not on screen yet (a preselect, or the Map view).
+  const scrollPending = useRef<string | null>(null)
   const focusStop = useCallback((stopId: string) => {
     selectStop(stopId)
-    setScrollTarget(stopId)
+    scrollPending.current = stopId
   }, [selectStop])
-  const listShown = !isLoading && error === null && view === 'list'
-  useEffect(() => {
-    if (!scrollTarget || !listShown || !listRef.current) return
-    const index = data.findIndex(item => item.stop === scrollTarget)
-    if (index >= 0) listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 })
-    setScrollTarget(null)
-  }, [scrollTarget, listShown, data])
+  const scrollToSelected = useCallback((stopId: string, index: number) => {
+    if (scrollPending.current !== stopId) return
+    scrollPending.current = null
+    requestAnimationFrame(() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 }))
+  }, [])
 
   // Preselect the Stop named by the `stop` param (e.g. from My Buses), once per route/bound/service/stop.
   const handledStopRef = useRef<string | null>(null)
@@ -321,11 +321,12 @@ export default function RoutesStopScreen(): React.JSX.Element {
               setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 100)
             }}
             keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const name = stopNames[item.stop] || item.stop
               const isSelected = item.stop === selectedStop
               return (
-                <View>
+                // Every row keeps an onLayout: on web, a view only reports layout if it had one when it mounted.
+                <View onLayout={() => { if (isSelected) scrollToSelected(item.stop, index) }}>
                   <Pressable
                     onPress={() => (isSelected ? selectStop(null) : focusStop(item.stop))}
                     accessibilityRole="button"
@@ -405,12 +406,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backText: { fontSize: 20, fontWeight: '700', color: COLORS.accent },
+  backText: { fontSize: 20, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.accent },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 56 },
   places: { flex: 1, minWidth: 0, gap: 2 },
-  place: { fontSize: 18, lineHeight: 24, color: COLORS.ink },
-  placeLabel: { fontWeight: '400', color: COLORS.inkMuted },
-  destination: { fontSize: 20, fontWeight: '700' },
+  place: { fontSize: 18, fontFamily: FONTS.regular, lineHeight: 24, color: COLORS.ink },
+  placeLabel: { fontFamily: FONTS.regular, fontWeight: '400', color: COLORS.inkMuted },
+  destination: { fontSize: 20, fontFamily: FONTS.bold, fontWeight: '700' },
   switch: { flexDirection: 'row', gap: 6, padding: 4, borderRadius: 16, backgroundColor: COLORS.keypadBackground },
   switchButton: {
     flex: 1,
@@ -422,13 +423,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   switchButtonActive: { backgroundColor: COLORS.surface },
-  switchText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.inkMuted },
+  switchText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.inkMuted },
   switchTextActive: { color: COLORS.ink },
   loading: { marginTop: 48 },
-  error: { fontSize: FONT_SIZES.body, color: COLORS.danger, textAlign: 'center', margin: 24 },
+  error: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.danger, textAlign: 'center', margin: 24 },
   body: { flex: 1 },
   list: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 24 },
-  hint: { fontSize: 18, color: COLORS.inkMuted, marginVertical: 12, marginHorizontal: 4 },
+  hint: { fontSize: 18, fontFamily: FONTS.regular, color: COLORS.inkMuted, marginVertical: 12, marginHorizontal: 4 },
   stopRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
   seq: {
     width: 40,
@@ -441,14 +442,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   seqSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  seqText: { fontSize: 17, fontWeight: '700', color: COLORS.ink },
+  seqText: { fontSize: 17, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   seqTextSelected: { color: COLORS.onAccent },
-  stopName: { flex: 1, fontSize: 20, color: COLORS.ink },
+  stopName: { flex: 1, fontSize: 20, fontFamily: FONTS.regular, color: COLORS.ink },
   listCard: { marginVertical: 6 },
   retry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: TOUCH_TARGET },
-  retryText: { fontSize: 18, color: COLORS.accent },
+  retryText: { fontSize: 18, fontFamily: FONTS.regular, color: COLORS.accent },
   map: { flex: 1, backgroundColor: COLORS.keypadBackground, justifyContent: 'center' },
-  mapUnavailable: { textAlign: 'center', fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
+  mapUnavailable: { textAlign: 'center', fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   mapButtons: { position: 'absolute', top: 12, right: 12, gap: 10, alignItems: 'flex-end' },
   mapButton: {
     minHeight: TOUCH_TARGET,
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  mapButtonText: { fontSize: 18, fontWeight: '700', color: COLORS.ink },
+  mapButtonText: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   mapCard: { padding: 12, backgroundColor: COLORS.background },
   pressed: { opacity: 0.6 },
 })

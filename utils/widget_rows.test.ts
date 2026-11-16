@@ -1,0 +1,43 @@
+import type { StopGroup } from './favorite_board'
+import { STRINGS } from './strings'
+import { widgetRows } from './widget_rows'
+
+const NOW = '2026-11-13T06:41:00Z'
+const inMinutes = (minutes: number): string => new Date(Date.parse(NOW) + minutes * 60_000).toISOString()
+
+const route = (code: string, stop: string, etas: string[]) => ({
+  route: code,
+  stop,
+  bound: 'O',
+  service_type: '1',
+  dest: 'X',
+  arrivals: etas.map(eta => ({ eta, minutes: null })),
+})
+
+const groups: StopGroup[] = [
+  { stopName: 'FO YIN ROAD', stopIds: ['S1'], routes: [route('272X', 'S1', [inMinutes(3), inMinutes(15)]), route('272P', 'S1', [])] },
+  { stopName: 'SIU HONG STATION', stopIds: ['S2'], routes: [route('967', 'S2', [inMinutes(0.2)])] },
+]
+
+describe('widgetRows', () => {
+  it('gives one row per Route with its Stop and next bus, in board order', () => {
+    expect(widgetRows(groups, NOW, 'en', STRINGS.en)).toEqual([
+      { key: 'S1|272X|O', route: '272X', stopName: 'Fo Yin Road', time: '3 min', isNow: false },
+      { key: 'S1|272P|O', route: '272P', stopName: 'Fo Yin Road', time: '--', isNow: false },
+      { key: 'S2|967|O', route: '967', stopName: 'Siu Hong Station', time: 'Now', isNow: true },
+    ])
+  })
+
+  it('counts the minutes from now, not from when the board was loaded', () => {
+    const later = inMinutes(2)
+    expect(widgetRows(groups, later, 'en', STRINGS.en)[0].time).toBe('1 min')
+  })
+
+  it('writes the time in the chosen language and leaves Chinese Stop names as they are', () => {
+    const chinese: StopGroup[] = [{ ...groups[1], stopName: '兆康站' }]
+    expect(widgetRows(chinese, NOW, 'tc', STRINGS.tc)).toEqual([
+      { key: 'S2|967|O', route: '967', stopName: '兆康站', time: '即將到站', isNow: true },
+    ])
+    expect(widgetRows([groups[0]], NOW, 'tc', STRINGS.tc)[0].time).toBe('3 分')
+  })
+})

@@ -56,3 +56,14 @@ test('a cold start downloads the Route list once', async ({ page }) => {
   await page.waitForTimeout(1000);
   expect(routeListRequests).toBe(1);
 });
+
+test('text uses Atkinson Hyperlegible, bold for headings', async ({ page }) => {
+  await page.goto('/');
+  const heading = page.getByRole('heading', { name: 'My Buses' });
+  await expect(heading).toBeVisible();
+  expect(await heading.evaluate(el => getComputedStyle(el).fontFamily)).toContain('AtkinsonHyperlegible_700Bold');
+  await expect.poll(() => page.evaluate(async () => {
+    await document.fonts.ready;
+    return document.fonts.check('16px AtkinsonHyperlegible_700Bold');
+  })).toBe(true);
+});

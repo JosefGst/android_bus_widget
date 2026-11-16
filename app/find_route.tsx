@@ -7,7 +7,7 @@ import { useLanguage } from '../components/language_context'
 import { LetterKeypad } from '../components/LetterKeypad'
 import { NumericKeypad } from '../components/NumericKeypad'
 import { RouteBadge } from '../components/RouteBadge'
-import { COLORS, COMPACT_SCREEN_HEIGHT, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
+import { COLORS, COMPACT_SCREEN_HEIGHT, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { getCachedRoutes, ROUTS } from '../utils/fetch'
 import { Language, localized } from '../utils/language'
 import { filterRoutesByQuery, getAvailableLetters } from '../utils/route_search'
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   header: { paddingHorizontal: SCREEN_GUTTER + 4, paddingBottom: 10, gap: 12 },
   // Leaves room for the floating language button at the top right.
-  title: { fontSize: FONT_SIZES.title, fontWeight: '700', color: COLORS.ink, marginRight: 64 },
-  titleCompact: { fontSize: 28 },
+  title: { fontSize: FONT_SIZES.title, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink, marginRight: 64 },
+  titleCompact: { fontSize: 28 , fontFamily: FONTS.regular},
   fieldRow: { flexDirection: 'row', gap: 10 },
   field: {
     flex: 1,
@@ -173,11 +173,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     paddingHorizontal: 18,
     fontSize: 30,
+    fontFamily: FONTS.bold,
     fontWeight: '700',
     letterSpacing: 2,
     color: COLORS.ink,
   },
-  fieldCompact: { height: 56, fontSize: 26 },
+  fieldCompact: { height: 56, fontSize: 26 , fontFamily: FONTS.regular},
   clearButton: {
     minWidth: 92,
     minHeight: TOUCH_TARGET,
@@ -189,14 +190,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearText: { fontSize: 18, fontWeight: '700', color: COLORS.ink },
+  clearText: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   results: { flex: 1, minHeight: 0 },
   resultList: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 12, gap: 8 },
   loading: { marginTop: 48 },
-  count: { fontSize: 18, color: COLORS.inkMuted, marginHorizontal: 4, marginBottom: 2 },
-  empty: { fontSize: FONT_SIZES.body, color: COLORS.ink, margin: 4 },
+  count: { fontSize: 18, fontFamily: FONTS.regular, color: COLORS.inkMuted, marginHorizontal: 4, marginBottom: 2 },
+  empty: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.ink, margin: 4 },
   failed: { margin: SCREEN_GUTTER, gap: 16 },
-  failedText: { fontSize: FONT_SIZES.body, lineHeight: 28, color: COLORS.ink },
+  failedText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, lineHeight: 28, color: COLORS.ink },
   tryAgain: {
     alignSelf: 'flex-start',
     minHeight: 56,
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  tryAgainText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.onAccent },
+  tryAgainText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.onAccent },
   result: {
     minHeight: 76,
     flexDirection: 'row',
@@ -222,9 +223,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   places: { flex: 1, minWidth: 0, gap: 2 },
-  place: { fontSize: 18, lineHeight: 24, color: COLORS.ink },
-  placeLabel: { fontWeight: '400', color: COLORS.inkMuted },
-  destination: { fontWeight: '700' },
+  place: { fontSize: 18, fontFamily: FONTS.regular, lineHeight: 24, color: COLORS.ink },
+  placeLabel: { fontFamily: FONTS.regular, fontWeight: '400', color: COLORS.inkMuted },
+  destination: { fontFamily: FONTS.bold, fontWeight: '700' },
   keypad: { backgroundColor: COLORS.keypadBackground, paddingHorizontal: SCREEN_GUTTER, paddingTop: 10, paddingBottom: 12, gap: 8 },
   pressed: { opacity: 0.6 },
 })

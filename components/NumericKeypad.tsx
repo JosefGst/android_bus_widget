@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useLanguage } from './language_context'
-import { COLORS, FONT_SIZES } from './theme'
+import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 interface NumericKeypadProps {
   onPressDigit: (digit: string) => void
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   wide: { flex: 2 },
   deleteKey: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.keyMuted, borderBottomColor: COLORS.keyMuted },
-  digit: { fontSize: 28, fontWeight: '700', color: COLORS.ink },
-  deleteText: { fontSize: FONT_SIZES.label + 2, fontWeight: '700', color: COLORS.ink },
+  digit: { fontSize: 28, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
+  deleteText: { fontSize: FONT_SIZES.label + 2, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   pressed: { opacity: 0.6 },
 })

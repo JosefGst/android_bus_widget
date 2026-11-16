@@ -1,3 +1,4 @@
+import { AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold, useFonts } from '@expo-google-fonts/atkinson-hyperlegible'
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
 import { withLayoutContext } from 'expo-router'
 import React from 'react'
@@ -12,6 +13,8 @@ const MaterialTopTabs = createMaterialTopTabNavigator()
 const Tabs = withLayoutContext(MaterialTopTabs.Navigator)
 
 export default function TabLayout(): React.JSX.Element {
+  // Not awaited: until the font arrives, text shows in the system font rather than a blank screen.
+  useFonts({ AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold })
   return (
     <LanguageProvider>
       <LocalizedTabs />

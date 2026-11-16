@@ -5,7 +5,7 @@ import type { UpcomingArrival } from '../utils/arrival_display'
 import type { Language } from '../utils/language'
 import type { Strings } from '../utils/strings'
 import { formatClockTime } from '../utils/time_formatting'
-import { COLORS, FONT_SIZES } from './theme'
+import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 interface SelectedStopCardProps {
   seq: string
@@ -86,18 +86,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  seqText: { color: COLORS.onAccent, fontSize: 18, fontWeight: '700' },
-  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontWeight: '700', color: COLORS.ink },
+  seqText: { color: COLORS.onAccent, fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700' },
+  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   tiles: { flexDirection: 'row', gap: 8 },
   tile: { flex: 1, backgroundColor: COLORS.background, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
-  tileLabel: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  tileLabel: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   minutesRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  minutes: { fontSize: 40, lineHeight: 46, fontWeight: '700', color: COLORS.ink },
-  minutesUnit: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  minutes: { fontSize: 40, fontFamily: FONTS.bold, fontWeight: '700', lineHeight: 46, color: COLORS.ink },
+  minutesUnit: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   now: {
     alignSelf: 'flex-start',
     marginVertical: 6,
     fontSize: 22,
+    fontFamily: FONTS.bold,
     fontWeight: '700',
     color: COLORS.nowInk,
     backgroundColor: COLORS.nowBackground,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     overflow: 'hidden',
   },
-  noTime: { fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
+  noTime: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   save: {
     minHeight: 58,
     borderRadius: 14,
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   saved: { backgroundColor: COLORS.accentSoft },
-  saveText: { fontSize: 20, fontWeight: '700', color: COLORS.onAccent },
+  saveText: { fontSize: 20, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.onAccent },
   savedText: { color: COLORS.accent },
   pressed: { opacity: 0.6 },
 })

@@ -1,60 +1,94 @@
 import React from "react";
-import {
-  FlexWidget,
-  TextWidget,
-} from "react-native-android-widget";
-import { nextArrivalsText, StopGroup } from "../utils/favorite_board";
+import { FlexWidget, ListWidget, TextWidget } from "react-native-android-widget";
 import type { Strings } from "../utils/strings";
+import type { WidgetRow } from "../utils/widget_rows";
+
+// Same palette as components/theme.ts; widget/ must not import components/.
+const INK = "#14171F";
+const ROW = "#262B36";
+const WHITE = "#FFFFFF";
+const MUTED = "#C9CDD6";
+const NOW_BACKGROUND = "#FFE2A8";
+const NOW_INK = "#5C3B00";
 
 interface BusETAWidgetProps {
   strings: Strings;
-  groups?: StopGroup[];
+  rows?: WidgetRow[];
+  /** "2:41 pm · tap to update" under the title. */
+  updated?: string;
   isLoading?: boolean;
   error?: string;
 }
 
-const TEXT_STYLE = { fontSize: 16, color: "#ffffff", fontWeight: "bold" } as const;
-
-export function BusETAWidget({ strings, groups, isLoading, error }: BusETAWidgetProps) {
-  const renderContent = () => {
-    if (isLoading) {
-      return [<TextWidget key="loading" text={strings.widgetLoading} style={TEXT_STYLE} />];
-    }
-    if (error) {
-      return [<TextWidget key="error" text={error} style={TEXT_STYLE} />];
-    }
-    if (!groups || groups.length === 0) {
-      return [<TextWidget key="empty" text={strings.widgetEmpty} style={TEXT_STYLE} />];
-    }
-    return groups.flatMap(group => [
-      <TextWidget
-        key={`stop-${group.stopName}`}
-        text={group.stopName}
-        style={{ ...TEXT_STYLE, marginLeft: 4, textAlign: "left" }}
-      />,
-      <TextWidget
-        key={`etas-${group.stopName}`}
-        text={nextArrivalsText(group, strings)}
-        style={{ ...TEXT_STYLE, marginLeft: 8, textAlign: "left" }}
-      />,
-    ]);
-  };
-
+/** Dark tile: "My Buses", then one row per Route with a white route badge, the Stop and large minutes. Tap to refresh. */
+export function BusETAWidget({ strings, rows, updated, isLoading, error }: BusETAWidgetProps) {
   return (
     <FlexWidget
       style={{
         height: "match_parent",
         width: "match_parent",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#000000",
-        borderRadius: 16,
-        padding: 16,
+        flexDirection: "column",
+        backgroundColor: INK,
+        borderRadius: 24,
+        padding: 12,
+        flexGap: 8,
       }}
       clickAction="UPDATE_ETA"
       clickActionData={{ action: "refresh" }}
     >
-      {renderContent()}
+      <FlexWidget style={{ width: "match_parent", flexDirection: "row", alignItems: "center", flexGap: 10 }}>
+        <TextWidget text={strings.myBuses} style={{ fontSize: 20, fontWeight: "bold", color: WHITE }} />
+        {updated ? (
+          <TextWidget text={updated} style={{ fontSize: 15, color: MUTED }} maxLines={1} truncate="END" />
+        ) : null}
+      </FlexWidget>
+      {renderBody({ strings, rows, isLoading, error })}
     </FlexWidget>
+  );
+}
+
+function message(text: string) {
+  return <TextWidget text={text} style={{ fontSize: 18, color: WHITE }} />;
+}
+
+function renderBody({ strings, rows, isLoading, error }: Omit<BusETAWidgetProps, "updated">) {
+  if (isLoading) return message(strings.widgetLoading);
+  if (error) return message(error);
+  if (!rows || rows.length === 0) return message(strings.widgetEmpty);
+  return (
+    <ListWidget style={{ height: "match_parent", width: "match_parent" }}>
+      {rows.map(row => (
+        <FlexWidget
+          key={row.key}
+          style={{
+            width: "match_parent",
+            flexDirection: "row",
+            alignItems: "center",
+            flexGap: 12,
+            backgroundColor: ROW,
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            marginBottom: 8,
+          }}
+          clickAction="UPDATE_ETA"
+          clickActionData={{ action: "refresh" }}
+        >
+          <FlexWidget style={{ backgroundColor: WHITE, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <TextWidget text={row.route} style={{ fontSize: 22, fontWeight: "bold", color: INK }} />
+          </FlexWidget>
+          <FlexWidget style={{ flex: 1 }}>
+            <TextWidget text={row.stopName} style={{ fontSize: 17, color: "#E6E8ED" }} maxLines={1} truncate="END" />
+          </FlexWidget>
+          {row.isNow ? (
+            <FlexWidget style={{ backgroundColor: NOW_BACKGROUND, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2 }}>
+              <TextWidget text={row.time} style={{ fontSize: 22, fontWeight: "bold", color: NOW_INK }} />
+            </FlexWidget>
+          ) : (
+            <TextWidget text={row.time} style={{ fontSize: 24, fontWeight: "bold", color: WHITE }} />
+          )}
+        </FlexWidget>
+      ))}
+    </ListWidget>
   );
 }

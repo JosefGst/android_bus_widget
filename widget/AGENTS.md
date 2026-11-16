@@ -19,7 +19,7 @@
 |------|---------|---------|
 | `widget-task-handler.tsx` | Entry point for widget lifecycle events. Shows Loading, then awaits `renderBusWidget()`. | `widgetTaskHandler(props)`, `renderBusWidget()`, `BUS_WIDGET_NAME` |
 | `refresh_widget.tsx` | Re-renders the widget immediately via `requestWidgetUpdate`. Subscribed to `onFavoritesChanged` and `onLanguageChanged` in `widget-registration.ts` (Android only). | `refreshBusWidget()` |
-| `BusETAWidget.tsx` | UI renderer. Shows each Stop group with the next arrival per Route. All text comes from the `strings` prop. | `BusETAWidget({ strings, groups, isLoading, error })` |
+| `BusETAWidget.tsx` | UI renderer: dark tile, "My Buses" + "<time> · tap to update", then a scrollable `ListWidget` with one row per Route (white route badge, Stop, large minutes or an amber "Now"). Layout only; all text comes from props. Colours mirror `components/theme.ts` (widget/ must not import components/). | `BusETAWidget({ strings, rows, updated, isLoading, error })` |
 | `HelloWidget.tsx` | Unused example widget. | `HelloWidget()` |
 
 ---
@@ -38,7 +38,8 @@ widgetTaskHandler (scheduled update, tap, add, resize)      refreshBusWidget (Fa
 
 - **One render path:** both the task handler and the immediate refresh use `renderBusWidget()`. Change data loading there, not in two places.
 - **Widget name:** `BUS_WIDGET_NAME` must match `app.json`. A new widget needs its own name check in `widgetTaskHandler` and an `app.json` entry.
-- **Grouping/ordering** live in `utils/favorite_board.ts` and are unit-tested there, as is the per-Route line (`nextArrivalsText`); this folder only lays out.
+- **Grouping/ordering** live in `utils/favorite_board.ts`; the rows (Stop name title-cased, "Now" / "N min" / "--", counted from render time) come from `widgetRows()` in `utils/widget_rows.ts`. Both are unit-tested; this folder only lays out.
+- **Widget styles:** only `FlexWidget`/`TextWidget`/`ListWidget` props exist (`flexGap`, `maxLines`, `truncate`, no `flex` on `TextWidget`; wrap it in a `FlexWidget`). No custom fonts in the widget.
 - **Language:** never hardcode widget text; add it to `utils/strings.ts`. Stop names arrive already localized in the board.
 
 ---

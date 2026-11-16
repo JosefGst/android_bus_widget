@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { COLORS, FONT_SIZES } from './theme'
+import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 interface RouteBadgeProps {
   route: string
@@ -25,5 +25,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: { color: COLORS.onAccent, fontSize: FONT_SIZES.badge, fontWeight: '700' },
+  text: { color: COLORS.onAccent, fontSize: FONT_SIZES.badge, fontFamily: FONTS.bold, fontWeight: '700' },
 })

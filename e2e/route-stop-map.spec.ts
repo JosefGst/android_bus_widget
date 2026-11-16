@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { MAP_ROUTE, mockKmbApi } from './mocks';
+import { LONG_ROUTE, MAP_ROUTE, mockKmbApi } from './mocks';
 
 test.beforeEach(async ({ page }) => {
   await mockKmbApi(page);
@@ -86,4 +86,16 @@ test('Save to My Buses saves the stop without leaving the screen', async ({ page
 
   await page.getByRole('tab', { name: 'My Buses' }).click();
   await expect(page.getByRole('button', { name: /^Open N29 at Yau Ma Tei Map Stop/ })).toBeVisible();
+});
+
+test('opening a second stop scrolls to its card, not past it', async ({ page }) => {
+  // The first stop's card closes as the second opens; the scroll must use the list's new layout.
+  await page.setViewportSize({ width: 390, height: 600 });
+  await page.goto(`/routes_stop?route=${LONG_ROUTE}&bound=O&service_type=1`);
+  await stopRow(page, 1, 'Long Stop 1').click();
+  await expect(nextBus(page)).toBeInViewport();
+
+  await stopRow(page, 5, 'Long Stop 5').click();
+  await expect(stopRow(page, 5, 'Long Stop 5')).toBeInViewport();
+  await expect(nextBus(page)).toBeInViewport();
 });

@@ -4,7 +4,7 @@ import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { selectedTab, TAB_ROUTES, TabRoute } from '../utils/tabs'
 import { useLanguage } from './language_context'
-import { COLORS, FONT_SIZES } from './theme'
+import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 const ICONS: Record<TabRoute, React.ComponentProps<typeof MaterialIcons>['name']> = {
   index: 'star',
@@ -63,6 +63,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tabSelected: { backgroundColor: COLORS.accentSoft },
-  label: { fontSize: FONT_SIZES.label + 2, fontWeight: '700' },
+  label: { fontSize: FONT_SIZES.label + 2, fontFamily: FONTS.bold, fontWeight: '700' },
   pressed: { opacity: 0.6 },
 })

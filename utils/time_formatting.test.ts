@@ -74,3 +74,18 @@ describe('formatClockTime', () => {
     expect(formatClockTime('not-a-date', 'en')).toBe('')
   })
 })
+
+describe('formatClockTime without Chinese locale data', () => {
+  // Hermes on Android formats every locale like English, so "下午" must not come from Intl.
+  afterEach(() => jest.restoreAllMocks())
+
+  it('still marks morning and afternoon in Chinese', () => {
+    const original = Date.prototype.toLocaleTimeString
+    jest.spyOn(Date.prototype, 'toLocaleTimeString').mockImplementation(function (this: Date, _locales, options) {
+      return original.call(this, 'en-US', options)
+    })
+    expect(formatClockTime('2026-11-13T06:41:00Z', 'tc')).toBe('下午2:41')
+    expect(formatClockTime('2026-11-13T01:05:00Z', 'sc')).toBe('上午9:05')
+    expect(formatClockTime('2026-11-13T06:41:00Z', 'en')).toBe('2:41 pm')
+  })
+})

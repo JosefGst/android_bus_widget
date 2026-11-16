@@ -24,13 +24,14 @@ utils/                    # Shared utilities (NOT inside app/)
   string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses), displayPlaceName() (English title case)
   language.ts             # Language ('en'|'tc'|'sc'): phone language, saved choice, onLanguageChanged, localized()
   strings.ts              # STRINGS: the app's own text per Language (typed; a missing key is a compile error)
-  time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival(), formatClockTime() ("2:41 pm" for Updated labels)
+  time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival(), formatClockTime() ("2:41 pm" / "下午2:41"; am/pm written in code because Hermes has no Chinese Intl data)
   arrival_display.ts      # arrivalTime()/routeRow(): Now / N min / unknown, plus the bus after, for Route rows
   tabs.ts                 # TAB_ROUTES and selectedTab(): which screens are tabs, which tab is highlighted
+  widget_rows.ts          # widgetRows(): the home-screen widget's rows (route, Stop, "Now"/"N min"/"--")
   route_stop_map.ts       # buildRouteMarkers(), map message types, parseFromMapMessage()
   *.test.ts               # Jest unit tests, colocated with the module they cover
 components/               # Shared non-route UI (files in app/ become routes, so UI lives here)
-  theme.ts                # Senior-friendly colours, type sizes, touch target — use these, not raw values
+  theme.ts                # Senior-friendly colours, type sizes, FONTS, touch target — use these, not raw values
   RouteBadge.tsx          # Route code on a dark tile
   BottomTabBar.tsx        # Two large labelled tabs (testIDs tab-index, tab-find_route); keeps the opening tab highlighted on Routes Stop
   NumericKeypad.tsx       # Find a Route number keys (testIDs key-0…key-9, key-delete); compact below COMPACT_SCREEN_HEIGHT
@@ -200,7 +201,8 @@ index.ts
 
 ## Notes
 
-- Senior-friendly redesign in progress: `docs/ideas/senior-friendly-redesign/plan.md` (phases, design rules). New UI uses `components/theme.ts`; every label needs EN/TC/SC text in `utils/strings.ts`.
+- Senior-friendly redesign: `docs/ideas/senior-friendly-redesign/plan.md` (phases, design rules). New UI uses `components/theme.ts`; every label needs EN/TC/SC text in `utils/strings.ts`.
+- Font: Atkinson Hyperlegible, loaded (not awaited) by `useFonts` in `app/_layout.tsx`. Android ignores `fontWeight` for custom fonts, so bold text sets `fontFamily: FONTS.bold` **and** `fontWeight: '700'` (the weight makes the Chinese fallback font bold); regular text sets `FONTS.regular`. Every text style needs a `fontFamily`.
 
 - `app/(tabs)/` exists but is empty — tabs are defined directly in `_layout.tsx`.
 - `package.json` `"main": "index.ts"` is required for widget registration ordering.

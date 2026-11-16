@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useLanguage } from '../components/language_context'
 import { RouteBadge } from '../components/RouteBadge'
-import { CARD_RADIUS, COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
+import { CARD_RADIUS, COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { ArrivalTime, routeRow } from '../utils/arrival_display'
 import { FavoriteBoard, loadFavoriteBoard, RouteArrivals } from '../utils/favorite_board'
 import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites'
@@ -251,9 +251,9 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 32, gap: 16 },
   header: { gap: 10, paddingHorizontal: 4 },
   // Leaves room for the floating language button at the top right.
-  title: { fontSize: FONT_SIZES.title, fontWeight: '700', color: COLORS.ink, marginRight: 64 },
+  title: { fontSize: FONT_SIZES.title, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink, marginRight: 64 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  updated: { flex: 1, fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
+  updated: { flex: 1, fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   loading: { marginTop: 48 },
   card: {
     backgroundColor: COLORS.surface,
@@ -263,8 +263,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stopHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 },
-  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontWeight: '700', color: COLORS.ink },
-  noBuses: { fontSize: FONT_SIZES.body, color: COLORS.inkMuted, paddingHorizontal: 18, paddingBottom: 16 },
+  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
+  noBuses: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted, paddingHorizontal: 18, paddingBottom: 16 },
   routeRow: {
     minHeight: 92,
     flexDirection: 'row',
@@ -279,14 +279,15 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   destination: { flex: 1, minWidth: 0 },
-  toLabel: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
-  destText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  toLabel: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
+  destText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   times: { alignItems: 'flex-end', gap: 2 },
   minutesRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  minutes: { fontSize: FONT_SIZES.minutes, lineHeight: FONT_SIZES.minutes + 4, fontWeight: '700', color: COLORS.ink },
-  minutesUnit: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  minutes: { fontSize: FONT_SIZES.minutes, fontFamily: FONTS.bold, fontWeight: '700', lineHeight: FONT_SIZES.minutes + 4, color: COLORS.ink },
+  minutesUnit: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   nowPill: {
     fontSize: 22,
+    fontFamily: FONTS.bold,
     fontWeight: '700',
     color: COLORS.nowInk,
     backgroundColor: COLORS.nowBackground,
@@ -295,10 +296,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     overflow: 'hidden',
   },
-  noTime: { fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
-  thenText: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  noTime: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
+  thenText: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   emptyCard: { padding: 18, gap: 16 },
-  emptyText: { fontSize: FONT_SIZES.body, lineHeight: 28, color: COLORS.ink },
+  emptyText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, lineHeight: 28, color: COLORS.ink },
   editRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.lineSoft,
   },
-  editStop: { flex: 1, fontSize: FONT_SIZES.body, color: COLORS.ink },
+  editStop: { flex: 1, fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.ink },
   removeButton: {
     minHeight: TOUCH_TARGET,
     paddingHorizontal: 14,
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  removeText: { fontSize: 18, fontWeight: '700', color: COLORS.danger },
+  removeText: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.danger },
   outlineButton: {
     minHeight: TOUCH_TARGET,
     paddingHorizontal: 18,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  outlineButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.accent },
+  outlineButtonText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.accent },
   primaryButton: {
     minHeight: 56,
     borderRadius: 16,
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  primaryButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.onAccent },
+  primaryButtonText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.onAccent },
   secondaryButton: {
     minHeight: 56,
     borderRadius: 16,
@@ -351,5 +352,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  secondaryButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  secondaryButtonText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
 })

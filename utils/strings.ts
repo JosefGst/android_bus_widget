@@ -61,12 +61,13 @@ export type Strings = {
   stopRowLabel: (seq: string, name: string) => string
   routesLoadFailed: string
   tryAgain: string
+  widgetUpdated: (time: string) => string
 }
 
 const EN: Strings = {
   languageButtonText: 'EN',
   languageButtonLabel: 'Language: English. Tap to change.',
-  searchPlaceholder: 'Type the bus number',
+  searchPlaceholder: 'Bus number',
   noRoutes: 'No routes found.',
   keypadClear: 'Clear',
   routeHeader: route => `Route: ${route}`,
@@ -121,12 +122,13 @@ const EN: Strings = {
   stopRowLabel: (seq, name) => `${seq}, ${name}`,
   routesLoadFailed: "Couldn't load the bus routes. Check the internet connection and try again.",
   tryAgain: 'Try again',
+  widgetUpdated: time => `${time} · tap to update`,
 }
 
 const TC: Strings = {
   languageButtonText: '繁',
   languageButtonLabel: '語言：繁體中文。按此切換。',
-  searchPlaceholder: '輸入巴士號碼',
+  searchPlaceholder: '巴士號碼',
   noRoutes: '找不到路線。',
   keypadClear: '清除',
   routeHeader: route => `路線：${route}`,
@@ -181,12 +183,13 @@ const TC: Strings = {
   stopRowLabel: (seq, name) => `${seq}，${name}`,
   routesLoadFailed: '未能載入巴士路線。請檢查網絡連線，然後再試一次。',
   tryAgain: '再試一次',
+  widgetUpdated: time => `${time} · 按此更新`,
 }
 
 const SC: Strings = {
   languageButtonText: '简',
   languageButtonLabel: '语言：简体中文。按此切换。',
-  searchPlaceholder: '输入巴士号码',
+  searchPlaceholder: '巴士号码',
   noRoutes: '找不到路线。',
   keypadClear: '清除',
   routeHeader: route => `路线：${route}`,
@@ -241,6 +244,7 @@ const SC: Strings = {
   stopRowLabel: (seq, name) => `${seq}，${name}`,
   routesLoadFailed: '未能载入巴士路线。请检查网络连接，然后再试一次。',
   tryAgain: '再试一次',
+  widgetUpdated: time => `${time} · 按此更新`,
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }

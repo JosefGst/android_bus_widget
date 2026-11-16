@@ -30,6 +30,13 @@ export const FONT_SIZES = {
   minutes: 44,
 } as const
 
+// Atkinson Hyperlegible (loaded in app/_layout.tsx). Android ignores fontWeight for custom fonts,
+// so bold text names the bold family. Chinese characters fall back to the system font.
+export const FONTS = {
+  regular: 'AtkinsonHyperlegible_400Regular',
+  bold: 'AtkinsonHyperlegible_700Bold',
+} as const
+
 export const TOUCH_TARGET = 52
 export const SCREEN_GUTTER = 16
 export const CARD_RADIUS = 20
