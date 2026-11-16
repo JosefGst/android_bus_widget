@@ -38,6 +38,11 @@ const parseStored = (saved: string | null): Favorite[] | null => {
 const sameFavorite = (a: Favorite, b: Favorite): boolean =>
   a.route === b.route && a.service_type === b.service_type && a.stop === b.stop
 
+/** Whether `favorite` (same route, service type and Stop) is in `favorites`. */
+export function includesFavorite(favorites: readonly Favorite[], favorite: Favorite): boolean {
+  return favorites.some(f => sameFavorite(f, favorite))
+}
+
 export async function list(): Promise<Favorite[]> {
   const saved = await AsyncStorage.getItem(STORAGE_KEY)
   return parseStored(saved) ?? STARTER_FAVORITES

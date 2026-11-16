@@ -1,10 +1,9 @@
-import { loadFavoriteBoard, nextArrivalsText, StopGroup } from './favorite_board'
-import { STRINGS } from './strings'
+import { loadFavoriteBoard } from './favorite_board'
 
 // A fake KMB API keyed by URL. Anything not listed fails like a network error.
 type FakeKmb = {
   // key: `${stop}/${route}/${service_type}` -> ETA rows, or 'fail'
-  etas?: Record<string, { route?: string; dir?: string; eta: string }[] | 'fail'>
+  etas?: Record<string, { route?: string; dir?: string; eta: string; dest?: string; destTc?: string }[] | 'fail'>
   // key: stop id -> English name, or 'fail'
   stopNames?: Record<string, string | 'fail'>
   // key: stop id -> Traditional Chinese name (also sent as the Simplified name)
@@ -29,7 +28,8 @@ function stubKmb({ etas = {}, stopNames = {}, chineseStopNames = {}, generatedTi
           route: r.route ?? route,
           dir: r.dir ?? 'O',
           service_type,
-          dest_en: 'X',
+          dest_en: r.dest ?? 'X',
+          ...(r.destTc ? { dest_tc: r.destTc, dest_sc: r.destTc } : {}),
           eta: r.eta,
           data_timestamp: generatedTimestamp,
         })),
@@ -67,7 +67,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
     const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([
-      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] }] },
+      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5), minutes: 5 }] }] },
     ])
   })
 
@@ -160,6 +160,17 @@ describe('loadFavoriteBoard: language', () => {
 
     expect(groups[0].stopName).toBe('Central')
   })
+
+  it('gives each Route its destination in the chosen language', async () => {
+    stubKmb({
+      etas: { 'S1/272P/1': [{ eta: at(3), dest: 'CAUSEWAY BAY', destTc: '銅鑼灣' }] },
+      stopNames: { S1: 'Stop' },
+    })
+    const fav = [{ stop: 'S1', route: '272P', service_type: '1' }]
+
+    expect((await loadFavoriteBoard(fav, NOW, 'en')).groups[0].routes[0].dest).toBe('CAUSEWAY BAY')
+    expect((await loadFavoriteBoard(fav, NOW, 'tc')).groups[0].routes[0].dest).toBe('銅鑼灣')
+  })
 })
 
 describe('loadFavoriteBoard: arrivals', () => {
@@ -204,8 +215,8 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
-      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: at(5), minutes: 5 }] },
-      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', arrivals: [{ eta: at(8), minutes: 8 }] },
+      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5), minutes: 5 }] },
+      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', arrivals: [{ eta: at(8), minutes: 8 }] },
     ])
   })
 
@@ -258,7 +269,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     expect(groups).toEqual([
       { stopName: 'Broken Stop', stopIds: ['S1'], routes: [] },
-      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', arrivals: [{ eta: at(6), minutes: 6 }] }] },
+      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(6), minutes: 6 }] }] },
     ])
   })
 
@@ -293,21 +304,5 @@ describe('loadFavoriteBoard: offline', () => {
         'en',
       ),
     ).rejects.toThrow('No ETAs could be loaded')
-  })
-})
-
-describe('nextArrivalsText', () => {
-  const group: StopGroup = {
-    stopName: '大學站',
-    stopIds: ['S1'],
-    routes: [
-      { route: '272A', stop: 'S1', bound: 'O', service_type: '1', arrivals: [{ eta: 'x', minutes: 4 }, { eta: 'y', minutes: 19 }] },
-      { route: '272K', stop: 'S1', bound: 'O', service_type: '1', arrivals: [] },
-    ],
-  }
-
-  it('shows the next arrival per Route, in the chosen language', () => {
-    expect(nextArrivalsText(group, STRINGS.en)).toBe('272A: 4 min\n272K: --')
-    expect(nextArrivalsText(group, STRINGS.tc)).toBe('272A: 4 分\n272K: --')
   })
 })

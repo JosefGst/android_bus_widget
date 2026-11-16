@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { add, list, listForWidget, onFavoritesChanged, remove, STARTER_FAVORITES } from './favorites'
+import { add, includesFavorite, list, listForWidget, onFavoritesChanged, remove, STARTER_FAVORITES } from './favorites'
 
 // The storage key is part of the persisted contract: existing users' Favorites live under it.
 const STORAGE_KEY = 'baseRoutesToFetch'
@@ -233,5 +233,16 @@ describe('onFavoritesChanged', () => {
     expect(await list()).toEqual([fav])
     broken()
     errorLog.mockRestore()
+  })
+})
+
+describe('includesFavorite', () => {
+  const fav = { route: '272P', service_type: '1', stop: 'S1' }
+
+  it('is true only when route, service type and Stop all match', () => {
+    expect(includesFavorite([fav], { ...fav })).toBe(true)
+    expect(includesFavorite([fav], { ...fav, stop: 'S2' })).toBe(false)
+    expect(includesFavorite([fav], { ...fav, service_type: '2' })).toBe(false)
+    expect(includesFavorite([], fav)).toBe(false)
   })
 })

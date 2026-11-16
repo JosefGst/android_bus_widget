@@ -19,7 +19,7 @@
 |------|---------|---------|
 | `widget-task-handler.tsx` | Entry point for widget lifecycle events. Shows Loading, then awaits `renderBusWidget()`. | `widgetTaskHandler(props)`, `renderBusWidget()`, `BUS_WIDGET_NAME` |
 | `refresh_widget.tsx` | Re-renders the widget immediately via `requestWidgetUpdate`. Subscribed to `onFavoritesChanged` and `onLanguageChanged` in `widget-registration.ts` (Android only). | `refreshBusWidget()` |
-| `BusETAWidget.tsx` | UI renderer. Shows each Stop group with the next arrival per Route. All text comes from the `strings` prop. | `BusETAWidget({ strings, groups, isLoading, error })` |
+| `BusETAWidget.tsx` | UI renderer: dark tile with no title (all space for ETAs; tap anywhere to refresh), a scrollable `ListWidget` with a heading per Stop and a row per Route (white route badge, large minutes or an amber "Now"). Layout only; all text comes from props. Colours mirror `components/theme.ts` (widget/ must not import components/). | `BusETAWidget({ strings, sections, isLoading, error })` |
 | `HelloWidget.tsx` | Unused example widget. | `HelloWidget()` |
 
 ---
@@ -38,7 +38,9 @@ widgetTaskHandler (scheduled update, tap, add, resize)      refreshBusWidget (Fa
 
 - **One render path:** both the task handler and the immediate refresh use `renderBusWidget()`. Change data loading there, not in two places.
 - **Widget name:** `BUS_WIDGET_NAME` must match `app.json`. A new widget needs its own name check in `widgetTaskHandler` and an `app.json` entry.
-- **Grouping/ordering** live in `utils/favorite_board.ts` and are unit-tested there, as is the per-Route line (`nextArrivalsText`); this folder only lays out.
+- **Grouping/ordering** live in `utils/favorite_board.ts`; the content (one section per Stop with a title-cased heading, then its Routes with "Now" / "N min" / "--", counted from render time) comes from `widgetSections()` in `utils/widget_sections.ts`. Both are unit-tested; this folder only lays out.
+- **Widget size:** the library draws the widget as a bitmap at the size the launcher reports (portrait: `OPTION_APPWIDGET_MIN_WIDTH` × `MAX_HEIGHT`). The Honor launcher kept reporting 224–302 × 132–184 dp after the widget was resized to about 323 × 386 dp, so the tile stays small in its slot there. Keep the layout readable at small sizes.
+- **Widget styles:** only `FlexWidget`/`TextWidget`/`ListWidget` props exist (`flexGap`, `maxLines`, `truncate`, no `flex` on `TextWidget`; wrap it in a `FlexWidget`). No custom fonts in the widget.
 - **Language:** never hardcode widget text; add it to `utils/strings.ts`. Stop names arrive already localized in the board.
 
 ---

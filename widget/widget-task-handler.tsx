@@ -5,6 +5,7 @@ import { loadFavoriteBoard } from "../utils/favorite_board";
 import { listForWidget } from "../utils/favorites";
 import { getLanguage } from "../utils/language";
 import { STRINGS } from "../utils/strings";
+import { widgetSections } from "../utils/widget_sections";
 import { BusETAWidget } from "./BusETAWidget";
 
 // Must match the widget name in app.json.
@@ -41,7 +42,8 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
       WIDGET_FETCH_TIMEOUT_MS,
       listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language))
     );
-    return <BusETAWidget strings={text} groups={board.groups} />;
+    const now = new Date().toISOString();
+    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, language, text)} />;
   } catch (e) {
     console.error("[Widget] ETA fetch failed:", e);
     return <BusETAWidget strings={text} error={text.widgetTapToRefresh} />;

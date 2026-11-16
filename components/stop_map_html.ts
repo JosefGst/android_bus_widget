@@ -2,6 +2,7 @@ import type { Language } from '../utils/language'
 import type { RouteMarker, UserLocation } from '../utils/route_stop_map'
 import { STRINGS } from '../utils/strings'
 import { LEAFLET_CSS, LEAFLET_JS } from './generated/leaflet_assets'
+import { COLORS } from './theme'
 
 /** Props shared by both StopMap hosts (StopMap.tsx on Android, StopMap.web.tsx on Web). */
 export interface StopMapProps {
@@ -161,15 +162,15 @@ const PAGE_CSS = `
 html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
 .stop-marker { background: transparent; border: 0; }
 .stop-pin {
-  width: 28px; height: 28px; border-radius: 14px; box-sizing: border-box;
-  background: red; color: white; border: 2px solid white;
-  font: bold 13px/24px sans-serif; text-align: center;
+  width: 32px; height: 32px; border-radius: 16px; box-sizing: border-box;
+  background: ${COLORS.surface}; color: ${COLORS.ink}; border: 3px solid ${COLORS.ink};
+  font: bold 14px/26px sans-serif; text-align: center;
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 .stop-pin.selected {
-  width: 38px; height: 38px; border-radius: 19px;
-  background: #007aff; border-width: 3px;
-  font-size: 16px; line-height: 32px;
+  width: 42px; height: 42px; border-radius: 21px;
+  background: ${COLORS.accent}; color: ${COLORS.onAccent}; border-color: ${COLORS.onAccent};
+  font-size: 18px; line-height: 36px;
 }
 .user-dot { fill: #1a73e8; fill-opacity: 1; stroke: white; stroke-width: 3; }
 .user-accuracy { fill: #1a73e8; fill-opacity: 0.12; stroke: #1a73e8; stroke-opacity: 0.3; stroke-width: 1; }

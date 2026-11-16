@@ -1,4 +1,4 @@
-# Starts the app from a clean state and waits for the Home screen with Routes loaded.
+# Starts the app from a clean state, opens Find a Route and waits for Routes to load.
 #
 # Uses openLink instead of launchApp: on Honor/Huawei ROMs launchApp's
 # activity start is blocked from the background and the app never appears.
@@ -6,9 +6,9 @@
 # Prefer it unless the flow needs a fresh install: every cleared start downloads
 # ~2 MB of Routes and Stops, and bursts of these get the device 403'd by the KMB CDN.
 #
-# The KMB API sometimes answers 403 and Home does not retry ("Generated
-# Timestamp: N/A", "No routes found."), so the launch is retried here; flows
-# that use this subflow are not testing startup.
+# The KMB API sometimes answers 403; Find a Route then shows "Try again", and the launch
+# is retried here; flows that use this subflow are not testing startup. Routes have loaded once a result card
+# ("<route>, from <start> to <end>") is on screen.
 appId: com.anonymous.bus
 ---
 - runFlow:
@@ -21,6 +21,19 @@ appId: com.anonymous.bus
     commands:
       - killApp
       - openLink: "bus://"
+      # The app opens on My Buses; flows start from Find a Route.
+      - tapOn:
+          id: "tab-find_route"
+      # A refused download shows "Try again"; tap it rather than rely on killApp, which on
+      # Honor ROMs can leave the app running with the failed state.
       - extendedWaitUntil:
-          visible: "Generated Timestamp: \\d\\d:\\d\\d:\\d\\d"
+          visible: ".+, from .+ to .+|Try again"
+          timeout: 30000
+      - runFlow:
+          when:
+            visible: "Try again"
+          commands:
+            - tapOn: "Try again"
+      - extendedWaitUntil:
+          visible: ".+, from .+ to .+"
           timeout: 30000

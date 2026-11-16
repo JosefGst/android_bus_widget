@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { DEFAULT_MAP_FRACTION, growForMarker, mapSizeName, loadMapSize, MAP_SIZE_KEY, saveMapSize, snapFraction } from './map_size'
+import { DEFAULT_MAP_FRACTION, loadMapSize, MAP_SIZE_KEY, mapSizeName, nextMapSize, saveMapSize, snapFraction } from './map_size'
 
 beforeEach(async () => {
   await AsyncStorage.clear()
@@ -18,13 +18,17 @@ describe('snapFraction', () => {
   })
 })
 
-describe('growForMarker', () => {
-  it('grows the smallest size to half', () => {
-    expect(growForMarker(1 / 3)).toBeCloseTo(1 / 2)
+describe('nextMapSize', () => {
+  it.each([
+    [1 / 3, 1 / 2],
+    [1 / 2, 0.85],
+    [0.85, 1 / 3],
+  ])('a tap on the handle moves %p to %p', (fraction, expected) => {
+    expect(nextMapSize(fraction)).toBeCloseTo(expected)
   })
 
-  it.each([1 / 2, 0.85])('leaves %p unchanged', fraction => {
-    expect(growForMarker(fraction)).toBe(fraction)
+  it('cycles from the nearest size when the map is between sizes', () => {
+    expect(nextMapSize(0.55)).toBeCloseTo(0.85)
   })
 })
 

@@ -1,5 +1,5 @@
-# Favorite -> Routes Stop: tapping a Route row on My Favorites opens Routes Stop
-# with that Stop expanded; back returns to My Favorites. Uses the starter
+# Favorite -> Routes Stop: tapping a Route row on My Buses opens Routes Stop
+# with that Stop expanded; back returns to My Buses. Uses the starter
 # Favorites (272P/272X) and the real KMB API.
 appId: com.anonymous.bus
 tags:
@@ -10,22 +10,23 @@ tags:
     env:
       CLEAR_STATE: "false"
 
-- tapOn: "My Favorites"
+- tapOn:
+    id: "tab-index"
 - extendedWaitUntil:
     visible: "Open 272.*"
     timeout: 30000
 - tapOn: "Open 272.*"
 
-# Routes Stop shows the Stop expanded (its ETA line is visible).
+# Routes Stop opens with that Stop's card: next buses (or no time yet) and Saved.
 - extendedWaitUntil:
     visible: "Route: 272.*"
     timeout: 20000
 - extendedWaitUntil:
-    visible: ".*arrives in.*|No ETA available"
+    visible: "Next bus|No time yet"
     timeout: 30000
 
-# Back returns to My Favorites.
+# Back returns to My Buses.
 - back
 - extendedWaitUntil:
-    visible: "Local Time.*"
+    visible: "Refresh"
     timeout: 20000

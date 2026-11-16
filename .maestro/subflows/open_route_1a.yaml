@@ -1,15 +1,20 @@
-# From Home, searches for Route 1A (outbound) and opens its Routes Stop screen.
+# From Find a Route, searches for Route 1A (outbound) and opens its Routes Stop screen.
 appId: com.anonymous.bus
 ---
-- tapOn: "Clear"
-- tapOn: "1"
-- tapOn: "A"
-- tapOn: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
+- tapOn:
+    id: "clear-search"
+- tapOn:
+    id: "key-1"
+- tapOn:
+    id: "letter-A"
+- tapOn: "1A, from Sau Mau Ping \\(Central\\) to Star Ferry"
 - extendedWaitUntil:
     visible: "Route: 1A"
     timeout: 10000
-- assertVisible: "Direction: O Service Type: 1"
-# Stop rows are labelled "<seq>, <Stop name or id>"; wait for the list.
-- extendedWaitUntil:
-    visible: "1, .*"
+- assertVisible: "From Sau Mau Ping \\(Central\\)"
+# Stop rows are labelled "<seq>, <Stop name or id>". Reopening the same Route keeps its scroll
+# position from an earlier flow, so scroll up to Stop 1.
+- scrollUntilVisible:
+    element: "1, .*"
+    direction: UP
     timeout: 20000

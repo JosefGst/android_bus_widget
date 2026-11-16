@@ -25,12 +25,13 @@ tags:
     direction: RIGHT
 - assertVisible: "Route: 1A"
 
-# A horizontal swipe on the Stop list does not switch tabs either.
+# A horizontal swipe on the Stop list (below the map) does not switch tabs either.
 - swipe:
     start: 80%, 85%
     end: 15%, 85%
 - assertVisible: "Route: 1A"
 
 # Tabs still switch by tapping.
-- tapOn: "My Favorites"
+- tapOn:
+    id: "tab-index"
 - assertNotVisible: "Route: 1A"

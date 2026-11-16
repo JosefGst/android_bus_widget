@@ -10,9 +10,11 @@ export function snapFraction(fraction: number): number {
   return MAP_SNAP_FRACTIONS.reduce((best, f) => (Math.abs(f - fraction) < Math.abs(best - fraction) ? f : best))
 }
 
-/** Size after a marker tap: the smallest size grows to half; larger sizes stay. */
-export function growForMarker(fraction: number): number {
-  return fraction < MAP_SNAP_FRACTIONS[1] ? MAP_SNAP_FRACTIONS[1] : fraction
+/** Size after a tap on the resize handle: the next larger size, wrapping from the largest to the smallest. */
+export function nextMapSize(fraction: number): number {
+  const snapped = snapFraction(fraction)
+  const index = MAP_SNAP_FRACTIONS.findIndex(f => f === snapped)
+  return MAP_SNAP_FRACTIONS[(index + 1) % MAP_SNAP_FRACTIONS.length]
 }
 
 /** The map size the user last chose, or the default. */
@@ -38,7 +40,9 @@ export async function saveMapSize(fraction: number): Promise<void> {
 }
 
 /** Spoken name of a map size, used in the resize handle's label. */
-export function mapSizeName(fraction: number): 'small' | 'half' | 'large' {
+export type MapSizeName = 'small' | 'half' | 'large'
+
+export function mapSizeName(fraction: number): MapSizeName {
   const snapped = snapFraction(fraction)
   if (snapped === MAP_SNAP_FRACTIONS[0]) return 'small'
   if (snapped === MAP_SNAP_FRACTIONS[1]) return 'half'

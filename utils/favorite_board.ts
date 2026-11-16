@@ -5,11 +5,11 @@ import type { Favorite } from './favorites'
 import { ETA, fetchStop, fetchStopETA, KMBResponse } from './fetch'
 import { Language, localized } from './language'
 import { normalizeStopName } from './string_formatting'
-import type { Strings } from './strings'
 import { getMinutesUntilArrival } from './time_formatting'
 
 export type Arrival = { eta: string; minutes: number | null }
-export type RouteArrivals = { route: string; stop: string; bound: string; service_type: string; arrivals: Arrival[] }
+// dest: where the Route is heading, in the board's language as KMB writes it.
+export type RouteArrivals = { route: string; stop: string; bound: string; service_type: string; dest: string; arrivals: Arrival[] }
 // stopIds: every Stop id merged into this group (several ids can share one normalized name).
 export type StopGroup = { stopName: string; stopIds: string[]; routes: RouteArrivals[] }
 export type FavoriteBoard = { groups: StopGroup[]; generatedTimestamp: string }
@@ -71,7 +71,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
     group.stopIds.add(favorite.stop)
     etaResponses[i]?.data.forEach(row => {
       const key = `${favorite.stop}|${row.route}|${row.dir}`
-      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, arrivals: [] }
+      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), arrivals: [] }
       group.routes.set(key, entry)
       entry.arrivals.push({ eta: row.eta, minutes: getMinutesUntilArrival(row.eta, reference) })
     })
@@ -85,14 +85,4 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
     })),
     generatedTimestamp: etaResponses.find(r => r !== null)?.generated_timestamp ?? '',
   }
-}
-
-/** The widget's line per Route: only its next arrival, e.g. "272A: 4 min". */
-export function nextArrivalsText(group: StopGroup, strings: Strings): string {
-  return group.routes
-    .map(({ route, arrivals }) => {
-      const minutes = arrivals[0]?.minutes ?? null
-      return minutes === null ? `${route}: --` : `${route}: ${strings.minutesShort(String(minutes))}`
-    })
-    .join('\n')
 }

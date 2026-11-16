@@ -1,4 +1,5 @@
-# Home: Route list loads from the API and the on-screen keypads filter it.
+# Find a Route: the Route list loads from the API and the on-screen keys filter it.
+# Keys are tapped by id: a bare "1" would also match the "1" route badge.
 appId: com.anonymous.bus
 tags:
   - home
@@ -8,27 +9,38 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- tapOn: "Clear"
-- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+- assertVisible: "Find a Route"
+- tapOn:
+    id: "clear-search"
+- assertVisible: "1, from Chuk Yuen Estate to Star Ferry"
 
-# Numeric + letter keypad narrow the list to Route 1A.
-- tapOn: "1"
-- assertVisible: "A"
-- tapOn: "A"
-- assertVisible: "1A SAU MAU PING \\(CENTRAL\\) → STAR FERRY"
-- assertVisible: "1A STAR FERRY → SAU MAU PING \\(CENTRAL\\)"
-- assertNotVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+# Number + letter keys narrow the list to Route 1A.
+- tapOn:
+    id: "key-1"
+- assertVisible:
+    id: "letter-A"
+- tapOn:
+    id: "letter-A"
+- assertVisible: "1A, from Sau Mau Ping \\(Central\\) to Star Ferry"
+- assertVisible: "1A, from Star Ferry to Sau Mau Ping \\(Central\\)"
+- assertVisible: "\\d+ routes match “1A”"
+- assertNotVisible: "1, from Chuk Yuen Estate to Star Ferry"
 
-# Backspace removes the letter, so Route 1 is back.
-- tapOn: "⌫"
-- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+# Delete removes the letter, so Route 1 is back.
+- tapOn:
+    id: "key-delete"
+- assertVisible: "1, from Chuk Yuen Estate to Star Ferry"
 
 # A search with no matching Route shows the empty state.
-- tapOn: "0"
-- tapOn: "0"
-- tapOn: "0"
+- tapOn:
+    id: "key-0"
+- tapOn:
+    id: "key-0"
+- tapOn:
+    id: "key-0"
 - assertVisible: "No routes found."
 
 # Clear resets the search.
-- tapOn: "Clear"
-- assertVisible: "1 CHUK YUEN ESTATE → STAR FERRY"
+- tapOn:
+    id: "clear-search"
+- assertVisible: "1, from Chuk Yuen Estate to Star Ferry"

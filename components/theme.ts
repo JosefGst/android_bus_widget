@@ -1,0 +1,45 @@
+// Senior-friendly look shared by the screens: large text, large targets, high contrast.
+// See docs/ideas/senior-friendly-redesign/plan.md for the rules behind these values.
+
+export const COLORS = {
+  background: '#F2F1EC',
+  surface: '#FFFFFF',
+  ink: '#14171F',
+  inkMuted: '#3D4452',
+  line: '#D6D3CB',
+  lineSoft: '#E6E3DC',
+  outline: '#8A8578',
+  chevron: '#6B7280',
+  accent: '#0A4FBF',
+  accentSoft: '#E3ECFB',
+  onAccent: '#FFFFFF',
+  nowBackground: '#FFE2A8',
+  nowInk: '#5C3B00',
+  danger: '#B42318',
+  keypadBackground: '#E4E2DB',
+  keyShadow: '#B9B5AA',
+  keyMuted: '#C9C6BD',
+} as const
+
+export const FONT_SIZES = {
+  label: 16,
+  body: 19,
+  stopName: 21,
+  badge: 26,
+  title: 34,
+  minutes: 44,
+} as const
+
+// Atkinson Hyperlegible (loaded in app/_layout.tsx). Android ignores fontWeight for custom fonts,
+// so bold text names the bold family. Chinese characters fall back to the system font.
+export const FONTS = {
+  regular: 'AtkinsonHyperlegible_400Regular',
+  bold: 'AtkinsonHyperlegible_700Bold',
+} as const
+
+export const TOUCH_TARGET = 52
+export const SCREEN_GUTTER = 16
+export const CARD_RADIUS = 20
+
+// Below this window height the Find a Route keypad uses smaller keys so results stay visible.
+export const COMPACT_SCREEN_HEIGHT = 720
