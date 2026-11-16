@@ -121,3 +121,28 @@ test('opening a second Favorite at the same Stop loads that Route, not the previ
   await expect(page.getByRole('heading', { name: 'Route: 272X' })).toBeVisible();
   await expect(page.getByText('Next bus', { exact: true })).toHaveCount(1);
 });
+
+test('opening the same Favorite again selects its Stop again and fetches fresh times', async ({ page }) => {
+  let etaRequests = 0;
+  page.on('request', request => {
+    if (request.url().includes('/v1/transport/kmb/eta/') && request.url().includes('/N29/')) etaRequests++;
+  });
+  await page.goto('/routes_stop?route=N29&bound=O&service_type=1');
+  await saveStop(page, 'Jordan Map Stop');
+  await page.getByRole('tab', { name: 'My Buses' }).click();
+  const openFavorite = () => page.getByRole('button', { name: /^Open N29 at Jordan Map Stop/ }).click();
+  const nextBus = page.getByText('Next bus', { exact: true });
+
+  await openFavorite();
+  await expect(nextBus).toBeVisible();
+  // Close the Stop's card, then leave and open the same Favorite again.
+  await page.getByRole('button', { name: '3, Jordan Map Stop', exact: true }).click();
+  await expect(nextBus).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
+  const before = etaRequests;
+  await openFavorite();
+
+  await expect(nextBus).toBeVisible();
+  await expect.poll(() => etaRequests).toBeGreaterThan(before);
+});

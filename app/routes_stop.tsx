@@ -22,6 +22,8 @@ type RouteView = 'list' | 'map'
 
 // Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
 const CLOCK_TICK_MS = 10_000
+// Same pace as My Buses: fresh enough for a countdown, slow enough not to trip the KMB CDN's 403s.
+const ETA_REFRESH_MS = 30_000
 
 export default function RoutesStopScreen(): React.JSX.Element {
   const router = useRouter()
@@ -83,17 +85,34 @@ export default function RoutesStopScreen(): React.JSX.Element {
   }, [])
   useFocusEffect(useCallback(() => { reloadFavorites() }, [reloadFavorites]))
 
-  const selectStop = useCallback(async (stopId: string | null) => {
+  const selectStop = useCallback((stopId: string | null) => {
     setSelectedStop(stopId)
-    if (!stopId || etaMap[stopId]) return
-    try {
-      const etaRes = await fetchStopETA(stopId, route as string, service_type as string)
-      setEtaMap(prev => ({ ...prev, [stopId]: etaRes.data }))
-    } catch (e) {
-      console.error('Failed to load ETAs', e)
-      setEtaMap(prev => ({ ...prev, [stopId]: [] }))
+  }, [])
+
+  // ETAs for the selected Stop: fetched on select and on focus, then polled while the screen has
+  // focus, so the card never counts down to buses that have left. Cleanup drops a late response,
+  // so a request for the previous Route or Stop never lands in `etaMap`.
+  useEffect(() => {
+    if (!isFocused || !selectedStop || dataRouteKey !== routeKey) return
+    if (typeof route !== 'string' || typeof service_type !== 'string') return
+    let cancelled = false
+    const loadEtas = async () => {
+      try {
+        const etaRes = await fetchStopETA(selectedStop, route, service_type)
+        if (!cancelled) setEtaMap(prev => ({ ...prev, [selectedStop]: etaRes.data }))
+      } catch (e) {
+        console.error('Failed to load ETAs', e)
+        // Keep the last times on a failed refresh; show "no time" only if there were none.
+        if (!cancelled) setEtaMap(prev => (prev[selectedStop] ? prev : { ...prev, [selectedStop]: [] }))
+      }
     }
-  }, [etaMap, route, service_type])
+    loadEtas()
+    const timer = setInterval(loadEtas, ETA_REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [isFocused, selectedStop, dataRouteKey, routeKey, route, service_type])
 
   // Selects a Stop and scrolls its row to the top, so its card (with Save) is in view.
   // The scroll runs from the selected row's onLayout (scrollToSelected), not here: only then has the
@@ -110,17 +129,22 @@ export default function RoutesStopScreen(): React.JSX.Element {
     requestAnimationFrame(() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 }))
   }, [])
 
-  // Preselect the Stop named by the `stop` param (e.g. from My Buses), once per route/bound/service/stop.
+  // Preselect the Stop named by the `stop` param (e.g. from My Buses), once per opening of the page:
+  // leaving the page forgets it, so tapping the same Favorite row again selects its Stop again.
   const handledStopRef = useRef<string | null>(null)
   const { stop: stopParam } = params
   useEffect(() => {
+    if (!isFocused) {
+      handledStopRef.current = null
+      return
+    }
     if (typeof stopParam !== 'string' || dataRouteKey !== routeKey) return
     if (!data.some(item => item.stop === stopParam)) return
     const key = `${routeKey}|${stopParam}`
     if (handledStopRef.current === key) return
     handledStopRef.current = key
     focusStop(stopParam)
-  }, [stopParam, routeKey, dataRouteKey, data, focusStop])
+  }, [isFocused, stopParam, routeKey, dataRouteKey, data, focusStop])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
