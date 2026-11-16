@@ -19,7 +19,7 @@
 |------|---------|---------|
 | `widget-task-handler.tsx` | Entry point for widget lifecycle events. Shows Loading, then awaits `renderBusWidget()`. | `widgetTaskHandler(props)`, `renderBusWidget()`, `BUS_WIDGET_NAME` |
 | `refresh_widget.tsx` | Re-renders the widget immediately via `requestWidgetUpdate`. Subscribed to `onFavoritesChanged` and `onLanguageChanged` in `widget-registration.ts` (Android only). | `refreshBusWidget()` |
-| `BusETAWidget.tsx` | UI renderer: dark tile, "My Buses" + "<time> · tap to update", then a scrollable `ListWidget` with a heading per Stop and a row per Route (white route badge, large minutes or an amber "Now"). Layout only; all text comes from props. Colours mirror `components/theme.ts` (widget/ must not import components/). | `BusETAWidget({ strings, sections, updated, isLoading, error })` |
+| `BusETAWidget.tsx` | UI renderer: dark tile with no title (all space for ETAs; tap anywhere to refresh), a scrollable `ListWidget` with a heading per Stop and a row per Route (white route badge, large minutes or an amber "Now"). Layout only; all text comes from props. Colours mirror `components/theme.ts` (widget/ must not import components/). | `BusETAWidget({ strings, sections, isLoading, error })` |
 | `HelloWidget.tsx` | Unused example widget. | `HelloWidget()` |
 
 ---

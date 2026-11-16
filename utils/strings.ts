@@ -61,7 +61,6 @@ export type Strings = {
   stopRowLabel: (seq: string, name: string) => string
   routesLoadFailed: string
   tryAgain: string
-  widgetUpdated: (time: string) => string
 }
 
 const EN: Strings = {
@@ -122,7 +121,6 @@ const EN: Strings = {
   stopRowLabel: (seq, name) => `${seq}, ${name}`,
   routesLoadFailed: "Couldn't load the bus routes. Check the internet connection and try again.",
   tryAgain: 'Try again',
-  widgetUpdated: time => `${time} · tap to update`,
 }
 
 const TC: Strings = {
@@ -183,7 +181,6 @@ const TC: Strings = {
   stopRowLabel: (seq, name) => `${seq}，${name}`,
   routesLoadFailed: '未能載入巴士路線。請檢查網絡連線，然後再試一次。',
   tryAgain: '再試一次',
-  widgetUpdated: time => `${time} · 按此更新`,
 }
 
 const SC: Strings = {
@@ -244,7 +241,6 @@ const SC: Strings = {
   stopRowLabel: (seq, name) => `${seq}，${name}`,
   routesLoadFailed: '未能载入巴士路线。请检查网络连接，然后再试一次。',
   tryAgain: '再试一次',
-  widgetUpdated: time => `${time} · 按此更新`,
 }
 
 export const STRINGS: Record<Language, Strings> = { en: EN, tc: TC, sc: SC }

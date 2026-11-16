@@ -14,17 +14,15 @@ const NOW_INK = "#5C3B00";
 interface BusETAWidgetProps {
   strings: Strings;
   sections?: WidgetSection[];
-  /** "2:41 pm · tap to update" under the title. */
-  updated?: string;
   isLoading?: boolean;
   error?: string;
 }
 
 /**
- * Dark tile: "My Buses" and "<time> · tap to update", then per Stop a heading and its Routes
+ * Dark tile with no title, so the space goes to the ETAs: per Stop a heading and its Routes
  * (white route badge, large minutes or an amber "Now"). Tap anywhere to refresh.
  */
-export function BusETAWidget({ strings, sections, updated, isLoading, error }: BusETAWidgetProps) {
+export function BusETAWidget({ strings, sections, isLoading, error }: BusETAWidgetProps) {
   return (
     <FlexWidget
       style={{
@@ -39,12 +37,6 @@ export function BusETAWidget({ strings, sections, updated, isLoading, error }: B
       clickAction="UPDATE_ETA"
       clickActionData={{ action: "refresh" }}
     >
-      <FlexWidget style={{ width: "match_parent", flexDirection: "column" }}>
-        <TextWidget text={strings.myBuses} style={{ fontSize: 20, fontWeight: "bold", color: WHITE }} />
-        {updated ? (
-          <TextWidget text={updated} style={{ fontSize: 14, color: MUTED }} maxLines={1} truncate="END" />
-        ) : null}
-      </FlexWidget>
       {renderBody({ strings, sections, isLoading, error })}
     </FlexWidget>
   );
@@ -54,7 +46,7 @@ function message(text: string) {
   return <TextWidget text={text} style={{ fontSize: 18, color: WHITE }} />;
 }
 
-function renderBody({ strings, sections, isLoading, error }: Omit<BusETAWidgetProps, "updated">) {
+function renderBody({ strings, sections, isLoading, error }: BusETAWidgetProps) {
   if (isLoading) return message(strings.widgetLoading);
   if (error) return message(error);
   if (!sections || sections.length === 0) return message(strings.widgetEmpty);
