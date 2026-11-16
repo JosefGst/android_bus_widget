@@ -398,8 +398,7 @@ interface MapButtonProps {
 function MapButton({ label, icon, onPress }: MapButtonProps): React.JSX.Element {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}>
-      <MaterialIcons name={icon} size={24} color={COLORS.accent} />
-      <Text style={styles.mapButtonText}>{label}</Text>
+      <MaterialIcons name={icon} size={28} color={COLORS.accent} />
     </Pressable>
   )
 }
@@ -453,20 +452,19 @@ const styles = StyleSheet.create({
   map: { backgroundColor: COLORS.keypadBackground, justifyContent: 'center' },
   mapUnavailable: { textAlign: 'center', fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   mapButtons: { position: 'absolute', top: 12, right: 12, gap: 10, alignItems: 'flex-end' },
+  // Icon only, so the buttons cover little of the map; the label is still read out.
   mapButton: {
-    minHeight: TOUCH_TARGET,
-    paddingHorizontal: 16,
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
     borderRadius: TOUCH_TARGET / 2,
     backgroundColor: COLORS.surface,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  mapButtonText: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   pressed: { opacity: 0.6 },
 })
