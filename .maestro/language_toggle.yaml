@@ -1,4 +1,4 @@
-# Language button: cycles English → 繁 → 简 → English across Home and Routes Stop.
+# Language button: cycles English → 粵 (Cantonese) → 简 → English across Home and Routes Stop.
 # Ends on English, because every other flow taps English labels.
 appId: com.anonymous.bus
 tags:
@@ -15,16 +15,16 @@ tags:
 
 - tapOn:
     id: "language-button"
-- assertVisible: "繁"
-- assertVisible: "1，由竹園邨往尖沙咀碼頭"
-- assertVisible: "搜尋路線"
-- assertVisible: "我的巴士"
+- assertVisible: "粵"
+- assertVisible: "1，由竹園邨去尖沙咀碼頭"
+- assertVisible: "搵路線"
+- assertVisible: "我嘅巴士"
 
-# Routes Stop: Stop names, buttons and map attribution in Traditional Chinese.
-- tapOn: "1，由竹園邨往尖沙咀碼頭"
+# Routes Stop: Stop names, buttons and map attribution in Cantonese.
+- tapOn: "1，由竹園邨去尖沙咀碼頭"
 - assertVisible: "路線：1"
 - assertVisible: "由 竹園邨"
-- assertVisible: "整條路線"
+- assertVisible: "成條路線"
 - extendedWaitUntil:
     visible: ".*地圖資料由地政總署提供.*"
     timeout: 20000

@@ -20,15 +20,15 @@ test.describe('on an English phone', () => {
     await expect(tab(page, 'Find a Route')).toBeVisible();
   });
 
-  test('the button cycles English, Traditional, Simplified and back', async ({ page }) => {
+  test('the button cycles English, Cantonese, Simplified and back', async ({ page }) => {
     await page.goto('/find_route');
     await expect(routeButton(page, '272P')).toBeVisible();
 
     await languageButton(page).click();
-    await expect(languageButton(page)).toHaveText('繁');
-    await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
-    await expect(tab(page, '搜尋路線')).toBeVisible();
-    await expect(tab(page, '我的巴士')).toBeVisible();
+    await expect(languageButton(page)).toHaveText('粵');
+    await expect(result(page, '272P，由屯門去銅鑼灣')).toBeVisible();
+    await expect(tab(page, '搵路線')).toBeVisible();
+    await expect(tab(page, '我嘅巴士')).toBeVisible();
     await expect(page.getByLabel('巴士號碼')).toBeVisible();
 
     await languageButton(page).click();
@@ -44,11 +44,11 @@ test.describe('on an English phone', () => {
   test('the choice survives a reload', async ({ page }) => {
     await page.goto('/find_route');
     await languageButton(page).click();
-    await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
+    await expect(result(page, '272P，由屯門去銅鑼灣')).toBeVisible();
 
     await page.reload();
-    await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
-    await expect(languageButton(page)).toHaveText('繁');
+    await expect(result(page, '272P，由屯門去銅鑼灣')).toBeVisible();
+    await expect(languageButton(page)).toHaveText('粵');
   });
 
   test('Routes Stop shows Stop names, markers and map labels in Chinese', async ({ page }) => {
@@ -59,19 +59,19 @@ test.describe('on an English phone', () => {
 
     await page.goto('/find_route');
     await languageButton(page).click();
-    await result(page, 'N29，由旺角往荃灣').click();
+    await result(page, 'N29，由旺角去荃灣').click();
 
     await expect(page.getByRole('heading', { name: `路線：${MAP_ROUTE}` })).toBeVisible();
     await expect(page.getByText('油麻地地圖站')).toBeVisible();
     await page.getByText('油麻地地圖站').click();
     await expect(page.getByText('下一班', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: '收藏到我的巴士' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '加入我嘅巴士' })).toBeVisible();
 
-    await expect(page.getByTestId('map-resize-handle')).toHaveAttribute('aria-label', /^地圖大小：三分之一/);
+    await expect(page.getByTestId('map-resize-handle')).toHaveAttribute('aria-label', /^地圖大細：三分一/);
     await expect(map(page).getByText('地圖資料由地政總署提供')).toBeVisible();
     await expect(map(page).locator('.leaflet-marker-icon[title="油麻地地圖站"]')).toHaveCount(1);
     await expect.poll(() => labelTiles.some(url => url.includes('/label/hk/tc/'))).toBe(true);
-    await expect(page.getByRole('button', { name: '整條路線' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '成條路線' })).toBeVisible();
   });
 
   test('switching language with the map open swaps the map labels', async ({ page }) => {
@@ -96,7 +96,7 @@ test.describe('on an English phone', () => {
     await expect(page.getByText('Default Stop One', { exact: true })).toBeVisible();
 
     await languageButton(page).click();
-    await expect(page.getByRole('heading', { name: '我的巴士' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '我嘅巴士' })).toBeVisible();
     await expect(page.getByText('預設車站一', { exact: true })).toBeVisible();
     await expect(page.getByText('銅鑼灣', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('分鐘', { exact: true }).first()).toBeVisible();
@@ -107,17 +107,17 @@ test.describe('on an English phone', () => {
     await expect(page.getByText(/^Updated \d{1,2}:\d\d [ap]m$/)).toBeVisible();
 
     await languageButton(page).click();
-    await expect(page.getByText(/^更新時間：[上下]午\d{1,2}:\d\d$/)).toBeVisible();
+    await expect(page.getByText(/^[上下]午\d{1,2}:\d\d 更新$/)).toBeVisible();
   });
 });
 
 test.describe('on a Hong Kong Chinese phone', () => {
   test.use({ locale: 'zh-HK' });
 
-  test('starts in Traditional Chinese without a tap', async ({ page }) => {
+  test('starts in Cantonese without a tap', async ({ page }) => {
     await page.goto('/find_route');
-    await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
-    await expect(languageButton(page)).toHaveText('繁');
+    await expect(result(page, '272P，由屯門去銅鑼灣')).toBeVisible();
+    await expect(languageButton(page)).toHaveText('粵');
   });
 });
 

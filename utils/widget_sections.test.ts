@@ -41,7 +41,7 @@ describe('widgetSections', () => {
   it('writes the time in the chosen language and leaves Chinese Stop names as they are', () => {
     const chinese: StopGroup[] = [{ ...groups[1], stopName: '兆康站' }]
     expect(widgetSections(chinese, NOW, 'tc', STRINGS.tc)).toEqual([
-      { key: '兆康站', stopName: '兆康站', rows: [{ key: 'S2|967|O', route: '967', time: '即將到站', isNow: true }] },
+      { key: '兆康站', stopName: '兆康站', rows: [{ key: 'S2|967|O', route: '967', time: '到站', isNow: true }] },
     ])
     expect(widgetSections([groups[0]], NOW, 'tc', STRINGS.tc)[0].rows[0].time).toBe('3 分')
   })

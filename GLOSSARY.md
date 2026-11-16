@@ -15,4 +15,4 @@ _Avoid_: "favorite stop" (a Favorite is a Route at a Stop, not a Stop), "routes 
 
 **Favorite board**: the user's Favorites with their live ETAs, grouped by Stop display name, Routes and arrivals sorted soonest first. Built by `loadFavoriteBoard()`; rendered by both the My Buses screen (next two arrivals per Route) and the widget (next arrival per Route).
 
-**Language**: the one setting that picks English, Traditional Chinese (繁, `tc`) or Simplified Chinese (简, `sc`) for everything the user reads: screens, Route map labels and the widget. Follows the phone until the user picks one with the header button. Owned by `utils/language.ts`; the codes match the KMB API's field suffixes.
+**Language**: the one setting that picks English, Hong Kong Cantonese in Traditional characters (粵, `tc`; KMB names stay formal written Chinese) or Simplified Chinese (简, `sc`) for everything the user reads: screens, Route map labels and the widget. Follows the phone until the user picks one with the header button. Owned by `utils/language.ts`; the codes match the KMB API's field suffixes.
