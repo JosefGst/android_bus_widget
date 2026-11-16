@@ -42,7 +42,7 @@ Two tabs, **My Buses** (first) and **Find a Route**, with 84px tab bar, 28px ico
 
 ### Phase 4. Route screen
 
-Header with the route badge and From / To in words. A "Stop list | Map" switch replaces the drag handle (`MapResizeHandle` and `utils/map_size.ts` go away). Tapping a Stop opens a card with the next two arrivals and a full-width **Save to My Buses** button that stays on the screen and changes to "Saved". The map buttons get text labels ("Where am I?", "Whole route").
+Header with the route badge and From / To in words. The map stays above the Stop list and is resizable (1/3 by default; drag the handle, or tap it to step through 1/3, 1/2 and large). An earlier "Stop list | Map" switch was dropped: the map was too small on phones. Tapping a Stop opens a card with the next two arrivals and a full-width **Save to My Buses** button that stays on the screen and changes to "Saved". The map buttons get text labels ("Where am I?", "Whole route").
 
 ### Phase 5. Widget
 

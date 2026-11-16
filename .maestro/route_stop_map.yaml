@@ -1,4 +1,4 @@
-# Routes Stop: Stop list, opening a Stop (next buses + Save), and the Map view (WebView).
+# Routes Stop: the map (WebView) above the Stop list, resizing the map, and opening a Stop (next buses + Save).
 appId: com.anonymous.bus
 tags:
   - routes_stop
@@ -26,9 +26,7 @@ tags:
 - tapOn: "2, .*"
 - assertNotVisible: "Next bus|No time yet"
 
-# The Map view shows the map with the Lands Department attribution; the list view hides it.
-- tapOn:
-    id: "view-map"
+# The map is always shown above the Stop list, with the Lands Department attribution.
 - assertVisible:
     id: "route-map"
 - assertNotVisible: "Map unavailable"
@@ -36,8 +34,16 @@ tags:
     visible: ".*Map information from Lands Department"
     timeout: 15000
 - assertVisible: "Whole route"
+
+# Tapping the handle steps the map through a third, half and large, then back to a third.
+# The size is remembered, so the flow ends on a third for the other flows.
+- assertVisible: "Map size: a third.*"
 - tapOn:
-    id: "view-list"
-- assertNotVisible:
-    id: "route-map"
-- assertVisible: "1, Sau Mau Ping \\(Central\\)"
+    id: "map-resize-handle"
+- assertVisible: "Map size: half.*"
+- tapOn:
+    id: "map-resize-handle"
+- assertVisible: "Map size: large.*"
+- tapOn:
+    id: "map-resize-handle"
+- assertVisible: "Map size: a third.*"

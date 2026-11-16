@@ -13,8 +13,6 @@ tags:
     env:
       CLEAR_STATE: "false"
 - runFlow: subflows/open_route_1a.yaml
-- tapOn:
-    id: "view-map"
 - extendedWaitUntil:
     visible: ".*Map information from Lands Department"
     timeout: 15000

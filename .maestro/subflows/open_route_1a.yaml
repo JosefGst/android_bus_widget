@@ -12,10 +12,8 @@ appId: com.anonymous.bus
     visible: "Route: 1A"
     timeout: 10000
 - assertVisible: "From Sau Mau Ping \\(Central\\)"
-# Stop rows are labelled "<seq>, <Stop name or id>". Reopening the same Route keeps its view and
-# scroll position from an earlier flow, so show the list and scroll up to Stop 1.
-- tapOn:
-    id: "view-list"
+# Stop rows are labelled "<seq>, <Stop name or id>". Reopening the same Route keeps its scroll
+# position from an earlier flow, so scroll up to Stop 1.
 - scrollUntilVisible:
     element: "1, .*"
     direction: UP

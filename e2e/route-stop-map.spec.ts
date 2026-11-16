@@ -10,17 +10,61 @@ test.beforeEach(async ({ page }) => {
 const map = (page: Page) => page.frameLocator('iframe[title="Route map"]');
 const pin = (page: Page, seq: number) => map(page).locator('.stop-pin', { hasText: new RegExp(`^${seq}$`) });
 const stopRow = (page: Page, seq: number, name: string) => page.getByRole('button', { name: `${seq}, ${name}`, exact: true });
-const showMap = (page: Page) => page.getByRole('button', { name: 'Map', exact: true }).click();
-const showList = (page: Page) => page.getByRole('button', { name: 'Stop list', exact: true }).click();
+const mapArea = (page: Page) => page.getByTestId('route-map');
+const handle = (page: Page) => page.getByTestId('map-resize-handle');
+const mapHeight = async (page: Page) => (await mapArea(page).boundingBox())?.height ?? 0;
+// The map's share of the area below the header (map + handle + Stop list).
+const mapShare = async (page: Page) => {
+  const map = await mapArea(page).boundingBox();
+  const content = await page.getByTestId('route-content').boundingBox();
+  return map && content ? map.height / content.height : 0;
+};
 const nextBus = (page: Page) => page.getByText('Next bus', { exact: true });
 
-test('shows the route with its start and end in words, and opens on the stop list', async ({ page }) => {
+test('shows the route with its start and end in words, with the map above the stop list', async ({ page }) => {
   const header = page.getByRole('heading', { name: `Route: ${MAP_ROUTE}` });
   await expect(header.getByText('From Mong Kok')).toBeVisible();
   await expect(header.getByText('To Tsuen Wan')).toBeVisible();
   await expect(page.getByText(/Direction: O/)).toHaveCount(0);
   await expect(stopRow(page, 1, 'Mong Kok Map Stop')).toBeVisible();
-  await expect(page.locator('iframe[title="Route map"]')).toHaveCount(0);
+  await expect(page.locator('iframe[title="Route map"]')).toBeVisible();
+  // No switch between list and map any more: both are always on screen.
+  await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Stop list', exact: true })).toHaveCount(0);
+});
+
+test('the map opens at a third of the screen below the header', async ({ page }) => {
+  await expect.poll(() => mapShare(page)).toBeCloseTo(1 / 3, 1);
+});
+
+test('tapping the handle steps the map through a third, half and large, then back', async ({ page }) => {
+  for (const share of [1 / 2, 0.85, 1 / 3]) {
+    await handle(page).click();
+    await expect.poll(() => mapShare(page)).toBeCloseTo(share, 1);
+  }
+});
+
+test('dragging the handle resizes the map and snaps to the nearest size', async ({ page }) => {
+  const box = await handle(page).boundingBox();
+  const content = await page.getByTestId('route-content').boundingBox();
+  if (!box || !content) throw new Error('handle or content not laid out');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // Drag down by 0.2 of the area: a third + 0.2 = 0.53, nearest size is half.
+  await page.mouse.move(x, y + content.height * 0.1, { steps: 5 });
+  await page.mouse.move(x, y + content.height * 0.2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => mapShare(page)).toBeCloseTo(1 / 2, 1);
+});
+
+test('the map size is remembered', async ({ page }) => {
+  await handle(page).click();
+  await expect.poll(() => mapShare(page)).toBeCloseTo(1 / 2, 1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: `Route: ${MAP_ROUTE}` })).toBeVisible();
+  await expect.poll(() => mapShare(page)).toBeCloseTo(1 / 2, 1);
 });
 
 test('tapping a stop shows its next buses and a Save button; one stop at a time', async ({ page }) => {
@@ -40,32 +84,28 @@ test('tapping the open stop again closes it', async ({ page }) => {
 });
 
 test('the map shows one numbered marker per stop', async ({ page }) => {
-  await showMap(page);
   await expect(map(page).locator('.stop-pin')).toHaveText(['1', '2', '3']);
   await expect(map(page).getByText('Map information from Lands Department')).toBeVisible();
 });
 
-test('tapping a marker selects the stop and shows its next buses under the map', async ({ page }) => {
-  await showMap(page);
+test('tapping a marker opens that stop in the list; the map keeps its size', async ({ page }) => {
+  await expect.poll(() => mapHeight(page)).toBeGreaterThan(0);
+  const before = await mapHeight(page);
   await pin(page, 3).click();
   await expect(pin(page, 3)).toHaveClass(/selected/);
-  await expect(nextBus(page)).toBeVisible();
-  await expect(page.getByText('Jordan Map Stop', { exact: true })).toBeVisible();
+  await expect(nextBus(page)).toBeInViewport();
+  await expect(stopRow(page, 3, 'Jordan Map Stop')).toBeInViewport();
   await expect(page.getByRole('button', { name: 'Save to My Buses' })).toBeVisible();
+  expect(await mapHeight(page)).toBeCloseTo(before, 0);
 });
 
-test('switching between list and map keeps the selected stop', async ({ page }) => {
+test('tapping a stop in the list highlights its marker', async ({ page }) => {
   await stopRow(page, 1, 'Mong Kok Map Stop').click();
-  await showMap(page);
   await expect(pin(page, 1)).toHaveClass(/selected/);
-
-  await showList(page);
-  await expect(page.locator('iframe[title="Route map"]')).toHaveCount(0);
   await expect(nextBus(page)).toBeVisible();
 });
 
 test('Whole route fits all stops back into view after zooming to one', async ({ page }) => {
-  await showMap(page);
   await pin(page, 1).click();
   await expect(pin(page, 1)).toHaveClass(/selected/);
   // Selecting zooms in on Stop 1, which pushes the other Stops out of the map's view.
@@ -101,7 +141,6 @@ test('opening a second stop scrolls to its card, not past it', async ({ page }) 
 });
 
 test('map pins use the app colours: white with a dark ring, the selected one in the accent blue', async ({ page }) => {
-  await showMap(page);
   const style = (seq: number) => pin(page, seq).evaluate(el => {
     const s = getComputedStyle(el);
     return { background: s.backgroundColor, border: s.borderTopColor, text: s.color };

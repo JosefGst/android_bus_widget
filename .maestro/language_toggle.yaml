@@ -24,8 +24,6 @@ tags:
 - tapOn: "1，由竹園邨往尖沙咀碼頭"
 - assertVisible: "路線：1"
 - assertVisible: "由 竹園邨"
-- tapOn:
-    id: "view-map"
 - assertVisible: "整條路線"
 - extendedWaitUntil:
     visible: ".*地圖資料由地政總署提供.*"

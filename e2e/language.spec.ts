@@ -67,7 +67,7 @@ test.describe('on an English phone', () => {
     await expect(page.getByText('下一班', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '收藏到我的巴士' })).toBeVisible();
 
-    await page.getByRole('button', { name: '地圖', exact: true }).click();
+    await expect(page.getByTestId('map-resize-handle')).toHaveAttribute('aria-label', /^地圖大小：三分之一/);
     await expect(map(page).getByText('地圖資料由地政總署提供')).toBeVisible();
     await expect(map(page).locator('.leaflet-marker-icon[title="油麻地地圖站"]')).toHaveCount(1);
     await expect.poll(() => labelTiles.some(url => url.includes('/label/hk/tc/'))).toBe(true);
@@ -82,7 +82,6 @@ test.describe('on an English phone', () => {
 
     await page.goto('/find_route');
     await routeButton(page, 'N29').click();
-    await page.getByRole('button', { name: 'Map', exact: true }).click();
     await expect(page.frameLocator('iframe[title="Route map"]').getByText('Map information from Lands Department')).toBeVisible();
 
     await languageButton(page).click();

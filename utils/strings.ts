@@ -1,5 +1,6 @@
 import type { RouteRow } from './arrival_display'
 import type { Language } from './language'
+import type { MapSizeName } from './map_size'
 
 // The app's own text. KMB names (Routes, Stops) come from the API in each language instead.
 
@@ -48,8 +49,8 @@ export type Strings = {
   fromOrigin: string
   keypadDelete: string
   keypadLetters: string
-  stopListView: string
-  mapView: string
+  /** Spoken label of the map's resize handle, with the current size. */
+  mapSizeLabel: (size: MapSizeName) => string
   tapYourStop: string
   nextBus: string
   afterThat: string
@@ -108,8 +109,7 @@ const EN: Strings = {
   fromOrigin: 'From',
   keypadDelete: 'Delete',
   keypadLetters: 'Letters',
-  stopListView: 'Stop list',
-  mapView: 'Map',
+  mapSizeLabel: size => `Map size: ${{ small: 'a third', half: 'half', large: 'large' }[size]}. Tap or drag to change.`,
   tapYourStop: 'Tap your stop to see the next buses',
   nextBus: 'Next bus',
   afterThat: 'After that',
@@ -168,8 +168,7 @@ const TC: Strings = {
   fromOrigin: '由',
   keypadDelete: '刪除',
   keypadLetters: '字母',
-  stopListView: '車站列表',
-  mapView: '地圖',
+  mapSizeLabel: size => `地圖大小：${{ small: '三分之一', half: '一半', large: '大' }[size]}。點按或拖動以更改。`,
   tapYourStop: '按你的車站，查看下一班巴士',
   nextBus: '下一班',
   afterThat: '再下一班',
@@ -228,8 +227,7 @@ const SC: Strings = {
   fromOrigin: '由',
   keypadDelete: '删除',
   keypadLetters: '字母',
-  stopListView: '车站列表',
-  mapView: '地图',
+  mapSizeLabel: size => `地图大小：${{ small: '三分之一', half: '一半', large: '大' }[size]}。点按或拖动以更改。`,
   tapYourStop: '按你的车站，查看下一班巴士',
   nextBus: '下一班',
   afterThat: '再下一班',

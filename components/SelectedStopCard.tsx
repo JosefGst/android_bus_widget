@@ -8,10 +8,6 @@ import { formatClockTime } from '../utils/time_formatting'
 import { COLORS, FONT_SIZES, FONTS } from './theme'
 
 interface SelectedStopCardProps {
-  seq: string
-  stopName: string
-  /** Off in the stop list, where the row right above already names the Stop. */
-  showTitle: boolean
   /** null while the ETAs load. */
   arrivals: UpcomingArrival[] | null
   saved: boolean
@@ -20,18 +16,11 @@ interface SelectedStopCardProps {
   strings: Strings
 }
 
-/** The open Stop: its next two buses and a Save to My Buses button. Used in the stop list and under the map. */
-export function SelectedStopCard({ seq, stopName, showTitle, arrivals, saved, onSave, language, strings }: SelectedStopCardProps): React.JSX.Element {
+/** The open Stop: its next two buses and a Save to My Buses button. Shown under its row in the stop list,
+ * which already names the Stop. */
+export function SelectedStopCard({ arrivals, saved, onSave, language, strings }: SelectedStopCardProps): React.JSX.Element {
   return (
     <View style={styles.card}>
-      {showTitle && (
-        <View style={styles.titleRow}>
-          <View style={styles.seq}>
-            <Text style={styles.seqText}>{seq}</Text>
-          </View>
-          <Text style={styles.stopName}>{stopName}</Text>
-        </View>
-      )}
       {arrivals === null ? (
         <ActivityIndicator color={COLORS.accent} accessibilityLabel={strings.loadingEta} />
       ) : arrivals.length === 0 ? (
@@ -77,17 +66,6 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  seq: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  seqText: { color: COLORS.onAccent, fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700' },
-  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   tiles: { flexDirection: 'row', gap: 8 },
   tile: { flex: 1, backgroundColor: COLORS.background, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   tileLabel: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },

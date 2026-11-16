@@ -8,17 +8,17 @@ import { useLanguage } from '../components/language_context'
 import { RouteBadge } from '../components/RouteBadge'
 import { SelectedStopCard } from '../components/SelectedStopCard'
 import { StopMap } from '../components/StopMap'
+import { MapResizeHandle } from '../components/MapResizeHandle'
 import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { useUserLocation } from '../components/use_user_location'
 import { upcomingArrivals } from '../utils/arrival_display'
 import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedRoutes, ROUTS, Stop } from '../utils/fetch'
 import { localized } from '../utils/language'
+import { DEFAULT_MAP_FRACTION, loadMapSize, mapSizeName, nextMapSize, saveMapSize, snapFraction } from '../utils/map_size'
 import { buildRouteMarkers } from '../utils/route_stop_map'
 import { getStopsFor } from '../utils/stops'
 import { displayPlaceName } from '../utils/string_formatting'
-
-type RouteView = 'list' | 'map'
 
 // Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
 const CLOCK_TICK_MS = 10_000
@@ -51,16 +51,31 @@ export default function RoutesStopScreen(): React.JSX.Element {
   // Bumped by the Retry row to load the Stop names again.
   const [namesAttempt, setNamesAttempt] = useState(0)
   const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop])
-  const [view, setView] = useState<RouteView>('list')
+  // Height of the area below the header; the map is a fraction of it, so handle and list stay on
+  // screen. The map waits for this measurement so it never flashes at the wrong size.
+  const [contentHeight, setContentHeight] = useState(0)
+  // The saved snap size, or the live value while dragging.
+  const [mapFraction, setMapFraction] = useState(DEFAULT_MAP_FRACTION)
+  useEffect(() => {
+    let cancelled = false
+    loadMapSize().then(f => { if (!cancelled) setMapFraction(f) })
+    return () => { cancelled = true }
+  }, [])
+  const settleMapSize = useCallback((fraction: number) => {
+    setMapFraction(fraction)
+    saveMapSize(fraction)
+  }, [])
+  const onMapResizeRelease = useCallback((fraction: number) => settleMapSize(snapFraction(fraction)), [settleMapSize])
+  const onMapResizeTap = useCallback(() => settleMapSize(nextMapSize(mapFraction)), [settleMapSize, mapFraction])
   const [selectedStop, setSelectedStop] = useState<string | null>(null)
   const [error, setError] = useState<'invalidRoute' | 'fetchFailed' | null>(null)
   const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({})
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const listRef = useRef<FlatList<ROUTS>>(null)
 
-  // The user's position: watched only while this screen has focus and the map is shown.
+  // The user's position: watched only while this screen has focus.
   const isFocused = useIsFocused()
-  const userLocation = useUserLocation(isFocused && view === 'map')
+  const userLocation = useUserLocation(isFocused)
   const [centerOnUserToken, setCenterOnUserToken] = useState(0)
   const [fitRouteToken, setFitRouteToken] = useState(0)
   // A "Where am I?" tap made before the first position arrived; centers once it does.
@@ -117,7 +132,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
   // Selects a Stop and scrolls its row to the top, so its card (with Save) is in view.
   // The scroll runs from the selected row's onLayout (scrollToSelected), not here: only then has the
   // list measured the new layout. Scrolling earlier overshoots when another Stop's card closes above
-  // it, and does nothing when the list is not on screen yet (a preselect, or the Map view).
+  // it, and does nothing when the list is not on screen yet (a preselect).
   const scrollPending = useRef<string | null>(null)
   const focusStop = useCallback((stopId: string) => {
     selectStop(stopId)
@@ -238,12 +253,8 @@ export default function RoutesStopScreen(): React.JSX.Element {
   }, [reloadFavorites])
 
   const nowIso = new Date(now).toISOString()
-  const selectedItem = data.find(item => item.stop === selectedStop) ?? null
-  const renderCard = (item: ROUTS, showTitle: boolean): React.JSX.Element => (
+  const renderCard = (item: ROUTS): React.JSX.Element => (
     <SelectedStopCard
-      seq={item.seq}
-      stopName={stopNames[item.stop] || item.stop}
-      showTitle={showTitle}
       arrivals={etaMap[item.stop] ? upcomingArrivals(etaMap[item.stop], nowIso, 2) : null}
       saved={includesFavorite(favorites, { route: item.route, service_type: item.service_type, stop: item.stop })}
       onSave={() => onSave(item)}
@@ -284,45 +295,49 @@ export default function RoutesStopScreen(): React.JSX.Element {
             )}
           </View>
         </View>
-        <View style={styles.switch}>
-          <ViewButton view="list" label={strings.stopListView} icon="format-list-numbered" active={view === 'list'} onPress={setView} />
-          <ViewButton view="map" label={strings.mapView} icon="map" active={view === 'map'} onPress={setView} />
-        </View>
       </View>
 
       {isLoading ? (
         <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
       ) : error ? (
         <Text style={styles.error}>{strings[error]}</Text>
-      ) : view === 'map' ? (
-        <View style={styles.body}>
-          <View style={styles.map} testID="route-map">
-            {markers.length > 0 ? (
-              <StopMap
-                markers={markers}
-                selectedStop={selectedStop}
-                onMarkerPress={focusStop}
-                userLocation={location}
-                centerOnUserToken={centerOnUserToken}
-                fitRouteToken={fitRouteToken}
-                language={language}
-              />
-            ) : (
-              <Text style={styles.mapUnavailable}>{strings.mapUnavailable}</Text>
-            )}
-            {markers.length > 0 && (
-              <View style={styles.mapButtons}>
-                {showLocateMe && (
-                  <MapButton label={strings.whereAmI} icon="my-location" onPress={onLocateMe} />
-                )}
-                <MapButton label={strings.wholeRoute} icon="zoom-out-map" onPress={() => setFitRouteToken(t => t + 1)} />
-              </View>
-            )}
-          </View>
-          {selectedItem && <View style={styles.mapCard}>{renderCard(selectedItem, true)}</View>}
-        </View>
       ) : (
-        <View style={styles.body}>
+        <View style={styles.body} testID="route-content" onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
+          {contentHeight > 0 && (
+            <>
+              <View style={[styles.map, { height: Math.round(contentHeight * mapFraction) }]} testID="route-map">
+                {markers.length > 0 ? (
+                  <StopMap
+                    markers={markers}
+                    selectedStop={selectedStop}
+                    onMarkerPress={focusStop}
+                    userLocation={location}
+                    centerOnUserToken={centerOnUserToken}
+                    fitRouteToken={fitRouteToken}
+                    language={language}
+                  />
+                ) : (
+                  <Text style={styles.mapUnavailable}>{strings.mapUnavailable}</Text>
+                )}
+                {markers.length > 0 && (
+                  <View style={styles.mapButtons}>
+                    {showLocateMe && (
+                      <MapButton label={strings.whereAmI} icon="my-location" onPress={onLocateMe} />
+                    )}
+                    <MapButton label={strings.wholeRoute} icon="zoom-out-map" onPress={() => setFitRouteToken(t => t + 1)} />
+                  </View>
+                )}
+              </View>
+              <MapResizeHandle
+                fraction={mapFraction}
+                areaHeight={contentHeight}
+                label={strings.mapSizeLabel(mapSizeName(mapFraction))}
+                onDrag={setMapFraction}
+                onRelease={onMapResizeRelease}
+                onTap={onMapResizeTap}
+              />
+            </>
+          )}
           {namesMissing && (
             <Pressable
               onPress={() => setNamesAttempt(n => n + 1)}
@@ -362,7 +377,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
                     </View>
                     <Text style={styles.stopName}>{name}</Text>
                   </Pressable>
-                  {isSelected && <View style={styles.listCard}>{renderCard(item, false)}</View>}
+                  {isSelected && <View style={styles.listCard}>{renderCard(item)}</View>}
                 </View>
               )
             }}
@@ -371,30 +386,6 @@ export default function RoutesStopScreen(): React.JSX.Element {
         </View>
       )}
     </View>
-  )
-}
-
-interface ViewButtonProps {
-  view: RouteView
-  label: string
-  icon: React.ComponentProps<typeof MaterialIcons>['name']
-  active: boolean
-  onPress: (view: RouteView) => void
-}
-
-function ViewButton({ view, label, icon, active, onPress }: ViewButtonProps): React.JSX.Element {
-  return (
-    <Pressable
-      onPress={() => onPress(view)}
-      testID={`view-${view}`}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      aria-pressed={active}
-      style={({ pressed }) => [styles.switchButton, active && styles.switchButtonActive, pressed && styles.pressed]}
-    >
-      <MaterialIcons name={icon} size={24} color={active ? COLORS.ink : COLORS.inkMuted} />
-      <Text style={[styles.switchText, active && styles.switchTextActive]}>{label}</Text>
-    </Pressable>
   )
 }
 
@@ -436,19 +427,6 @@ const styles = StyleSheet.create({
   place: { fontSize: 18, fontFamily: FONTS.regular, lineHeight: 24, color: COLORS.ink },
   placeLabel: { fontFamily: FONTS.regular, fontWeight: '400', color: COLORS.inkMuted },
   destination: { fontSize: 20, fontFamily: FONTS.bold, fontWeight: '700' },
-  switch: { flexDirection: 'row', gap: 6, padding: 4, borderRadius: 16, backgroundColor: COLORS.keypadBackground },
-  switchButton: {
-    flex: 1,
-    minHeight: 50,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  switchButtonActive: { backgroundColor: COLORS.surface },
-  switchText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.inkMuted },
-  switchTextActive: { color: COLORS.ink },
   loading: { marginTop: 48 },
   error: { fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.danger, textAlign: 'center', margin: 24 },
   body: { flex: 1 },
@@ -472,7 +450,7 @@ const styles = StyleSheet.create({
   listCard: { marginVertical: 6 },
   retry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: TOUCH_TARGET },
   retryText: { fontSize: 18, fontFamily: FONTS.regular, color: COLORS.accent },
-  map: { flex: 1, backgroundColor: COLORS.keypadBackground, justifyContent: 'center' },
+  map: { backgroundColor: COLORS.keypadBackground, justifyContent: 'center' },
   mapUnavailable: { textAlign: 'center', fontSize: FONT_SIZES.body, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   mapButtons: { position: 'absolute', top: 12, right: 12, gap: 10, alignItems: 'flex-end' },
   mapButton: {
@@ -490,6 +468,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   mapButtonText: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
-  mapCard: { padding: 12, backgroundColor: COLORS.background },
   pressed: { opacity: 0.6 },
 })

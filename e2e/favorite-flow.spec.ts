@@ -89,7 +89,6 @@ test('tapping a Favorite row opens Routes Stop with that Stop selected', async (
   await expect(page.getByText('Next bus', { exact: true })).toBeInViewport();
   await expect(page.getByRole('button', { name: 'Saved to My Buses' })).toBeVisible();
   // The map shows the same Stop selected.
-  await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(
     page.frameLocator('iframe[title="Route map"]').locator('.stop-pin.selected')
   ).toHaveText('3');
