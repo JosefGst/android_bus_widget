@@ -293,7 +293,7 @@ const RoutesStopScreen = () => {
                     // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
                     const saved = await addFavorite({ route: item.route, service_type: item.service_type, stop: item.stop });
                     if (saved) {
-                      router.push('/my_favorites');
+                      router.push('/');
                     } else {
                       console.error('Failed to save Favorite');
                     }

@@ -1,4 +1,4 @@
-# Starts the app from a clean state and waits for Find a Route with Routes loaded.
+# Starts the app from a clean state, opens Find a Route and waits for Routes to load.
 #
 # Uses openLink instead of launchApp: on Honor/Huawei ROMs launchApp's
 # activity start is blocked from the background and the app never appears.
@@ -22,6 +22,9 @@ appId: com.anonymous.bus
     commands:
       - killApp
       - openLink: "bus://"
+      # The app opens on My Buses; flows start from Find a Route.
+      - tapOn:
+          id: "tab-find_route"
       - extendedWaitUntil:
           visible: ".+, from .+ to .+"
           timeout: 30000

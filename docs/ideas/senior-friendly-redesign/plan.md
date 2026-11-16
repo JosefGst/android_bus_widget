@@ -60,5 +60,6 @@ A text-size setting. Revisit after the larger defaults ship.
 
 - Phase 1: done (commit on `josefgst/ui_design`). Unit + e2e green.
 - Phase 2: done. Below a 720 px window height the keypad and title shrink so at least one result stays visible.
-- Maestro flows updated for both phases; device run pending.
+- Phase 3: done. `/` is My Buses (`app/index.tsx`), Find a Route moved to `/find_route`. Custom `BottomTabBar` with two tabs; Routes Stop stays a hidden route so tab history and Back keep working.
+- Device run (Honor tablet, landscape) found stop names still in capitals on My Buses; fixed, with an uppercase mock Stop name in e2e.
 - Known gap until Phase 4: the empty My Buses text says "tap Save", but Routes Stop still uses the star button.

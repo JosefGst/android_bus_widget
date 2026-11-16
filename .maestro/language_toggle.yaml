@@ -8,6 +8,9 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
+# On some ROMs killApp leaves the app running, so an earlier search can still be typed.
+- tapOn:
+    id: "clear-search"
 - assertVisible: "1, from Chuk Yuen Estate to Star Ferry"
 
 - tapOn:
@@ -15,7 +18,6 @@ tags:
 - assertVisible: "繁"
 - assertVisible: "1，由竹園邨往尖沙咀碼頭"
 - assertVisible: "搜尋路線"
-- assertVisible: "主頁"
 - assertVisible: "我的巴士"
 
 # Routes Stop: Stop names, buttons and map attribution in Traditional Chinese.
@@ -30,7 +32,7 @@ tags:
     id: "language-button"
 - assertVisible: "简"
 - assertVisible: "隐藏地图"
-- assertVisible: "路线车站"
+- assertVisible: "搜索路线"
 - extendedWaitUntil:
     visible: ".*地图资料由地政总署提供.*"
     timeout: 20000

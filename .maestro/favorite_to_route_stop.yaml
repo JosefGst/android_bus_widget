@@ -10,7 +10,8 @@ tags:
     env:
       CLEAR_STATE: "false"
 
-- tapOn: "My Buses"
+- tapOn:
+    id: "tab-index"
 - extendedWaitUntil:
     visible: "Open 272.*"
     timeout: 30000
@@ -27,5 +28,5 @@ tags:
 # Back returns to My Buses.
 - back
 - extendedWaitUntil:
-    visible: "Change my buses"
+    visible: "Refresh"
     timeout: 20000

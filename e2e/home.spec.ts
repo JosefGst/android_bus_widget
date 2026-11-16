@@ -9,7 +9,7 @@ const key = (page: Page, name: string) => page.getByRole('button', { name, exact
 const busNumber = (page: Page) => page.getByLabel('Bus number');
 
 test('Find a Route lists every route with its start and end in words', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await expect(page.getByRole('heading', { name: 'Find a Route' })).toBeVisible();
 
   await expect(routeButton(page, '272P')).toHaveAccessibleName('272P, from Tuen Mun to Causeway Bay');
@@ -19,7 +19,7 @@ test('Find a Route lists every route with its start and end in words', async ({ 
 });
 
 test('typing in the bus number box narrows the list and says how many match', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await expect(routeButton(page, '272X')).toBeVisible();
 
   await busNumber(page).fill('967');
@@ -30,7 +30,7 @@ test('typing in the bus number box narrows the list and says how many match', as
 });
 
 test('number keys type digits, Delete removes one, Clear empties the box', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await expect(routeButton(page, '272X')).toBeVisible();
 
   await key(page, '2').click();
@@ -48,7 +48,7 @@ test('number keys type digits, Delete removes one, Clear empties the box', async
 });
 
 test('letter keys only offer letters that can come next', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await expect(routeButton(page, '272X')).toBeVisible();
 
   // Nothing typed: only letters that start a route (N29).
@@ -68,7 +68,7 @@ test('letter keys only offer letters that can come next', async ({ page }) => {
 });
 
 test('a letter-led route can be typed with the letter key then digits', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await key(page, 'N').click();
   await expect(routeButton(page, 'N29')).toBeVisible();
   await expect(routeButton(page, '272X')).toHaveCount(0);
@@ -79,7 +79,7 @@ test('a letter-led route can be typed with the letter key then digits', async ({
 });
 
 test('tapping a result opens that route', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/find_route');
   await routeButton(page, '967').click();
   await expect(page.getByText('Route: 967')).toBeVisible();
 });

@@ -14,28 +14,27 @@ test.describe('on an English phone', () => {
   test.use({ locale: 'en-US' });
 
   test('starts in English', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/find_route');
     await expect(routeButton(page, '272P')).toBeVisible();
     await expect(languageButton(page)).toHaveText('EN');
-    await expect(tab(page, 'Home')).toBeVisible();
+    await expect(tab(page, 'Find a Route')).toBeVisible();
   });
 
   test('the button cycles English, Traditional, Simplified and back', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/find_route');
     await expect(routeButton(page, '272P')).toBeVisible();
 
     await languageButton(page).click();
     await expect(languageButton(page)).toHaveText('繁');
     await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
-    await expect(tab(page, '主頁')).toBeVisible();
-    await expect(tab(page, '路線車站')).toBeVisible();
+    await expect(tab(page, '搜尋路線')).toBeVisible();
     await expect(tab(page, '我的巴士')).toBeVisible();
     await expect(page.getByLabel('巴士號碼')).toBeVisible();
 
     await languageButton(page).click();
     await expect(languageButton(page)).toHaveText('简');
     await expect(result(page, '272P，由屯门往铜锣湾')).toBeVisible();
-    await expect(tab(page, '我的巴士')).toBeVisible();
+    await expect(tab(page, '搜索路线')).toBeVisible();
 
     await languageButton(page).click();
     await expect(languageButton(page)).toHaveText('EN');
@@ -43,7 +42,7 @@ test.describe('on an English phone', () => {
   });
 
   test('the choice survives a reload', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/find_route');
     await languageButton(page).click();
     await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
 
@@ -58,7 +57,7 @@ test.describe('on an English phone', () => {
       if (request.url().includes('/label/hk/')) labelTiles.push(request.url());
     });
 
-    await page.goto('/');
+    await page.goto('/find_route');
     await languageButton(page).click();
     await result(page, 'N29，由旺角往荃灣').click();
 
@@ -79,7 +78,7 @@ test.describe('on an English phone', () => {
       if (request.url().includes('/label/hk/')) labelTiles.push(request.url());
     });
 
-    await page.goto('/');
+    await page.goto('/find_route');
     await routeButton(page, 'N29').click();
     await expect(page.frameLocator('iframe[title="Route map"]').getByText('Map information from Lands Department')).toBeVisible();
 
@@ -91,7 +90,7 @@ test.describe('on an English phone', () => {
   });
 
   test('My Buses shows Stop names, destinations and arrivals in Chinese', async ({ page }) => {
-    await page.goto('/my_favorites');
+    await page.goto('/');
     await expect(page.getByText('Default Stop One', { exact: true })).toBeVisible();
 
     await languageButton(page).click();
@@ -102,7 +101,7 @@ test.describe('on an English phone', () => {
   });
 
   test('My Buses says when it was updated as a 12-hour Hong Kong time', async ({ page }) => {
-    await page.goto('/my_favorites');
+    await page.goto('/');
     await expect(page.getByText(/^Updated \d{1,2}:\d\d [ap]m$/)).toBeVisible();
 
     await languageButton(page).click();
@@ -114,7 +113,7 @@ test.describe('on a Hong Kong Chinese phone', () => {
   test.use({ locale: 'zh-HK' });
 
   test('starts in Traditional Chinese without a tap', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/find_route');
     await expect(result(page, '272P，由屯門往銅鑼灣')).toBeVisible();
     await expect(languageButton(page)).toHaveText('繁');
   });
@@ -124,7 +123,7 @@ test.describe('on a mainland Chinese phone', () => {
   test.use({ locale: 'zh-CN' });
 
   test('starts in Simplified Chinese without a tap', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/find_route');
     await expect(result(page, '272P，由屯门往铜锣湾')).toBeVisible();
     await expect(languageButton(page)).toHaveText('简');
   });

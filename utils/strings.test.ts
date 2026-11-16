@@ -18,9 +18,9 @@ describe('STRINGS', () => {
   })
 
   it('writes Traditional and Simplified tab names differently where the characters differ', () => {
-    expect(STRINGS.tc.tabRoutesStop).toBe('路線車站')
-    expect(STRINGS.sc.tabRoutesStop).toBe('路线车站')
-    expect(STRINGS.sc.tabFavorites).toBe('我的巴士')
+    expect(STRINGS.tc.findARoute).toBe('搜尋路線')
+    expect(STRINGS.sc.findARoute).toBe('搜索路线')
+    expect(STRINGS.sc.myBuses).toBe('我的巴士')
   })
 })
 

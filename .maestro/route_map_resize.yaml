@@ -49,7 +49,8 @@ tags:
 - assertVisible: "Resize map, large"
 
 # The size is remembered after leaving and reopening the Route.
-- tapOn: "Home"
+- tapOn:
+    id: "tab-find_route"
 - tapOn:
     id: "clear-search"
 - tapOn:

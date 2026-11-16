@@ -6,16 +6,19 @@ tags:
 - runFlow: subflows/open_app.yaml
 
 # A fresh install shows the two starter Favorites.
-- tapOn: "My Buses"
+# "Refresh" marks My Buses with Favorites; it stays at the top, unlike "Change my buses".
+- tapOn:
+    id: "tab-index"
 - extendedWaitUntil:
-    visible: "Change my buses"
+    visible: "Refresh"
     timeout: 20000
 - assertVisible: "Open 272P at .*"
 - assertVisible: "Open 272X at .*"
 - assertNotVisible: "Open 1A at .*"
 
 # Starring the first Stop of 1A saves it and jumps to My Buses.
-- tapOn: "Home"
+- tapOn:
+    id: "tab-find_route"
 - runFlow: subflows/open_route_1a.yaml
 - tapOn:
     text: "Favorite this stop"
@@ -29,12 +32,15 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- tapOn: "My Buses"
+- tapOn:
+    id: "tab-index"
 - extendedWaitUntil:
     visible: "Open 1A at .*"
     timeout: 20000
 
 # Removing it takes it off the list, and it stays removed after a restart.
+- scrollUntilVisible:
+    element: "Change my buses"
 - tapOn: "Change my buses"
 - tapOn: "Remove 1A at .*"
 - tapOn: "Done"
@@ -44,9 +50,10 @@ tags:
     file: subflows/open_app.yaml
     env:
       CLEAR_STATE: "false"
-- tapOn: "My Buses"
+- tapOn:
+    id: "tab-index"
 - extendedWaitUntil:
-    visible: "Change my buses"
+    visible: "Refresh"
     timeout: 20000
 - assertNotVisible: "Open 1A at .*"
 - assertVisible: "Open 272P at .*"

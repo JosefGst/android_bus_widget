@@ -32,5 +32,6 @@ tags:
 - assertVisible: "Route: 1A"
 
 # Tabs still switch by tapping.
-- tapOn: "My Buses"
+- tapOn:
+    id: "tab-index"
 - assertNotVisible: "Route: 1A"

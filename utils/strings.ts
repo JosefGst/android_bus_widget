@@ -7,9 +7,6 @@ import { formatEtaToHKTime, getMinutesUntilArrival } from './time_formatting'
 export type Strings = {
   languageButtonText: string
   languageButtonLabel: string
-  tabHome: string
-  tabRoutesStop: string
-  tabFavorites: string
   searchPlaceholder: string
   noRoutes: string
   keypadClear: string
@@ -65,9 +62,6 @@ export type Strings = {
 const EN: Strings = {
   languageButtonText: 'EN',
   languageButtonLabel: 'Language: English. Tap to change.',
-  tabHome: 'Home',
-  tabRoutesStop: 'Routes Stop',
-  tabFavorites: 'My Buses',
   searchPlaceholder: 'Type the bus number',
   noRoutes: 'No routes found.',
   keypadClear: 'Clear',
@@ -123,9 +117,6 @@ const EN: Strings = {
 const TC: Strings = {
   languageButtonText: '繁',
   languageButtonLabel: '語言：繁體中文。按此切換。',
-  tabHome: '主頁',
-  tabRoutesStop: '路線車站',
-  tabFavorites: '我的巴士',
   searchPlaceholder: '輸入巴士號碼',
   noRoutes: '找不到路線。',
   keypadClear: '清除',
@@ -181,9 +172,6 @@ const TC: Strings = {
 const SC: Strings = {
   languageButtonText: '简',
   languageButtonLabel: '语言：简体中文。按此切换。',
-  tabHome: '主页',
-  tabRoutesStop: '路线车站',
-  tabFavorites: '我的巴士',
   searchPlaceholder: '输入巴士号码',
   noRoutes: '找不到路线。',
   keypadClear: '清除',

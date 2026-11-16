@@ -1,193 +1,355 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { useLanguage } from '../components/language_context'
-import { LetterKeypad } from '../components/LetterKeypad'
-import { NumericKeypad } from '../components/NumericKeypad'
 import { RouteBadge } from '../components/RouteBadge'
-import { COLORS, COMPACT_SCREEN_HEIGHT, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
-import { getCachedRoutes, ROUTS } from '../utils/fetch'
-import { Language, localized } from '../utils/language'
-import { filterRoutesByQuery, getAvailableLetters } from '../utils/route_search'
+import { CARD_RADIUS, COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET } from '../components/theme'
+import { ArrivalTime, routeRow } from '../utils/arrival_display'
+import { FavoriteBoard, loadFavoriteBoard, RouteArrivals } from '../utils/favorite_board'
+import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites'
+import type { Language } from '../utils/language'
 import { displayPlaceName } from '../utils/string_formatting'
-import { Strings } from '../utils/strings'
+import { spokenArrival, Strings } from '../utils/strings'
+import { formatClockTime } from '../utils/time_formatting'
 
-export default function FindARoute(): React.JSX.Element {
+const EMPTY_BOARD: FavoriteBoard = { groups: [], generatedTimestamp: '' }
+const BOARD_REFRESH_MS = 30_000
+// Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
+const CLOCK_TICK_MS = 10_000
+
+export default function MyBuses(): React.JSX.Element {
   const router = useRouter()
-  const { language, strings } = useLanguage()
   const insets = useSafeAreaInsets()
-  const compact = useWindowDimensions().height < COMPACT_SCREEN_HEIGHT
+  const { language, strings } = useLanguage()
   const [isLoading, setLoading] = useState(true)
-  const [routes, setRoutes] = useState<ROUTS[]>([])
-  const [query, setQuery] = useState('')
+  const [isRefreshing, setRefreshing] = useState(false)
+  const [board, setBoard] = useState<FavoriteBoard>(EMPTY_BOARD)
+  const [now, setNow] = useState(Date.now())
+  const [isEditing, setEditing] = useState(false)
+  // null until the first read from storage completes.
+  const [favorites, setFavorites] = useState<Favorite[] | null>(null)
 
-  useEffect(() => {
-    const loadRoutes = async () => {
-      try {
-        setRoutes((await getCachedRoutes()).routes)
-      } catch (e) {
-        console.error('Failed to load Routes', e)
-      } finally {
-        setLoading(false)
-      }
+  const reloadFavorites = useCallback(async () => {
+    try {
+      setFavorites(await listFavorites())
+    } catch (e) {
+      console.error('Failed to load Favorites', e)
     }
-    loadRoutes()
   }, [])
 
-  const results = useMemo(() => filterRoutesByQuery(routes, query), [routes, query])
-  const letters = useMemo(() => getAvailableLetters(routes, query), [routes, query])
+  // Re-read on every focus: this tab stays mounted while the user saves Stops elsewhere.
+  useFocusEffect(
+    useCallback(() => {
+      reloadFavorites()
+    }, [reloadFavorites])
+  )
+
+  const refreshBoard = useCallback(async () => {
+    if (favorites === null) return
+    try {
+      setBoard(await loadFavoriteBoard(favorites, new Date(), language))
+      setNow(Date.now())
+    } catch (e) {
+      console.error('Failed to load Favorite board', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [favorites, language])
+
+  useEffect(() => {
+    refreshBoard()
+    const id = setInterval(refreshBoard, BOARD_REFRESH_MS)
+    return () => clearInterval(id)
+  }, [refreshBoard])
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
+    return () => clearInterval(id)
+  }, [])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refreshBoard()
+    setRefreshing(false)
+  }, [refreshBoard])
+
+  const onRemove = useCallback(async (favorite: Favorite) => {
+    await removeFavorite(favorite)
+    await reloadFavorites()
+  }, [reloadFavorites])
+
+  // Stop id -> display name, for the rows in "Change my buses".
+  const stopNameById = useMemo(() => {
+    const names: Record<string, string> = {}
+    board.groups.forEach(group => group.stopIds.forEach(id => { names[id] = displayPlaceName(group.stopName, language) }))
+    return names
+  }, [board, language])
+
+  const nowIso = new Date(now).toISOString()
+  const updated = formatClockTime(board.generatedTimestamp, language)
+  const hasFavorites = favorites !== null && favorites.length > 0
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + (compact ? 12 : 24) }]}>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={[styles.title, compact && styles.titleCompact]}>{strings.findARoute}</Text>
-        <View style={styles.fieldRow}>
-          <TextInput
-            style={[styles.field, compact && styles.fieldCompact]}
-            accessibilityLabel={strings.busNumber}
-            placeholder={strings.searchPlaceholder}
-            placeholderTextColor={COLORS.inkMuted}
-            value={query}
-            onChangeText={text => setQuery(text.toUpperCase())}
-            autoCorrect={false}
-            autoCapitalize="characters"
-            // The keypad below types; the phone keyboard would cover the results.
-            showSoftInputOnFocus={false}
-          />
+        <Text accessibilityRole="header" style={styles.title}>{strings.myBuses}</Text>
+        {hasFavorites && <View style={styles.headerRow}>
+          <Text style={styles.updated}>{updated ? strings.updatedAt(updated) : ' '}</Text>
           <Pressable
-            onPress={() => setQuery('')}
+            onPress={onRefresh}
+            disabled={isRefreshing}
             accessibilityRole="button"
-            testID="clear-search"
-            style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
           >
-            <Text style={styles.clearText}>{strings.keypadClear}</Text>
+            {isRefreshing ? (
+              <ActivityIndicator color={COLORS.accent} />
+            ) : (
+              <MaterialIcons name="refresh" size={26} color={COLORS.accent} />
+            )}
+            <Text style={styles.outlineButtonText}>{strings.refresh}</Text>
+          </Pressable>
+        </View>}
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
+      ) : !hasFavorites ? (
+        <View style={[styles.card, styles.emptyCard]}>
+          <Text style={styles.emptyText}>{strings.emptyMyBuses}</Text>
+          <Pressable
+            onPress={() => router.push('/find_route')}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+          >
+            <MaterialIcons name="search" size={26} color={COLORS.onAccent} />
+            <Text style={styles.primaryButtonText}>{strings.findARoute}</Text>
           </Pressable>
         </View>
-      </View>
-
-      <View style={styles.results}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
-        ) : (
-          <FlatList
-            data={results}
-            keyExtractor={item => `${item.route}|${item.bound}|${item.service_type}`}
-            contentContainerStyle={styles.resultList}
-            keyboardShouldPersistTaps="handled"
-            ListHeaderComponent={query ? <Text style={styles.count}>{strings.routesMatch(results.length, query)}</Text> : null}
-            renderItem={({ item }) => (
-              <RouteResult
-                route={item}
-                language={language}
-                strings={strings}
-                onPress={() => router.push({
-                  pathname: '/routes_stop',
-                  params: { route: item.route, bound: item.bound, service_type: item.service_type },
-                })}
-              />
+      ) : isEditing ? (
+        <View style={styles.card}>
+          {favorites.map(favorite => {
+            const stopName = stopNameById[favorite.stop] ?? favorite.stop
+            return (
+              <View key={`${favorite.stop}|${favorite.route}|${favorite.service_type}`} style={styles.editRow}>
+                <RouteBadge route={favorite.route} />
+                <Text style={styles.editStop}>{stopName}</Text>
+                <Pressable
+                  onPress={() => onRemove(favorite)}
+                  accessibilityRole="button"
+                  accessibilityLabel={strings.removeRouteAtStop(favorite.route, stopName)}
+                  style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+                >
+                  <MaterialIcons name="delete-outline" size={24} color={COLORS.danger} />
+                  <Text style={styles.removeText}>{strings.remove}</Text>
+                </Pressable>
+              </View>
+            )
+          })}
+        </View>
+      ) : (
+        board.groups.map(group => {
+          const stopName = displayPlaceName(group.stopName, language)
+          return (
+          <View key={group.stopName} style={styles.card}>
+            <View style={styles.stopHeader}>
+              <MaterialIcons name="place" size={26} color={COLORS.inkMuted} />
+              <Text style={styles.stopName}>{stopName}</Text>
+            </View>
+            {group.routes.length === 0 ? (
+              <Text style={styles.noBuses}>{strings.noBusesForStop}</Text>
+            ) : (
+              group.routes.map(route => (
+                <RouteRowButton
+                  key={`${route.stop}|${route.route}|${route.bound}`}
+                  route={route}
+                  stopName={stopName}
+                  now={nowIso}
+                  language={language}
+                  strings={strings}
+                  onPress={() => router.push({
+                    pathname: '/routes_stop',
+                    params: { route: route.route, bound: route.bound, service_type: route.service_type, stop: route.stop },
+                  })}
+                />
+              ))
             )}
-            ListEmptyComponent={<Text style={styles.empty}>{strings.noRoutes}</Text>}
-          />
-        )}
-      </View>
+          </View>
+          )
+        })
+      )}
 
-      <View style={styles.keypad}>
-        <LetterKeypad letters={letters} onPressLetter={letter => setQuery(q => q + letter)} />
-        <NumericKeypad compact={compact} onPressDigit={digit => setQuery(q => q + digit)} onDelete={() => setQuery(q => q.slice(0, -1))} />
-      </View>
-    </View>
+      {hasFavorites && !isLoading && (
+        <Pressable
+          onPress={() => setEditing(e => !e)}
+          accessibilityRole="button"
+          style={({ pressed }) => [isEditing ? styles.primaryButton : styles.secondaryButton, pressed && styles.pressed]}
+        >
+          <MaterialIcons name={isEditing ? 'check' : 'edit'} size={24} color={isEditing ? COLORS.onAccent : COLORS.ink} />
+          <Text style={isEditing ? styles.primaryButtonText : styles.secondaryButtonText}>
+            {isEditing ? strings.done : strings.changeMyBuses}
+          </Text>
+        </Pressable>
+      )}
+    </ScrollView>
   )
 }
 
-interface RouteResultProps {
-  route: ROUTS
+interface RouteRowButtonProps {
+  route: RouteArrivals
+  stopName: string
+  now: string
   language: Language
   strings: Strings
   onPress: () => void
 }
 
-function RouteResult({ route, language, strings, onPress }: RouteResultProps): React.JSX.Element {
-  const from = displayPlaceName(localized(route, 'orig', language), language)
-  const to = displayPlaceName(localized(route, 'dest', language), language)
+function RouteRowButton({ route, stopName, now, language, strings, onPress }: RouteRowButtonProps): React.JSX.Element {
+  const row = routeRow(route.arrivals, now)
+  const dest = displayPlaceName(route.dest, language)
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={strings.routeResultLabel(route.route, from, to)}
-      style={({ pressed }) => [styles.result, pressed && styles.pressed]}
+      accessibilityLabel={strings.routeRowLabel(route.route, stopName, dest, spokenArrival(strings, row))}
+      style={({ pressed }) => [styles.routeRow, pressed && styles.pressed]}
     >
       <RouteBadge route={route.route} />
-      <View style={styles.places}>
-        <Text style={styles.place}>
-          <Text style={styles.placeLabel}>{strings.fromOrigin} </Text>{from}
-        </Text>
-        <Text style={[styles.place, styles.destination]}>
-          <Text style={styles.placeLabel}>{strings.toDestination} </Text>{to}
-        </Text>
+      <View style={styles.destination}>
+        <Text style={styles.toLabel}>{strings.toDestination}</Text>
+        <Text style={styles.destText}>{dest}</Text>
+      </View>
+      <View style={styles.times}>
+        <NextArrival time={row.next} strings={strings} />
+        {row.then !== null && <Text style={styles.thenText}>{strings.thenMinutes(row.then)}</Text>}
       </View>
       <MaterialIcons name="chevron-right" size={28} color={COLORS.chevron} />
     </Pressable>
   )
 }
 
+function NextArrival({ time, strings }: { time: ArrivalTime; strings: Strings }): React.JSX.Element {
+  switch (time.kind) {
+    case 'now':
+      return <Text style={styles.nowPill}>{strings.arrivingNow}</Text>
+    case 'minutes':
+      return (
+        <View style={styles.minutesRow}>
+          <Text style={styles.minutes}>{time.minutes}</Text>
+          <Text style={styles.minutesUnit}>{strings.minutesUnit}</Text>
+        </View>
+      )
+    case 'unknown':
+      return <Text style={styles.noTime}>{strings.noTimeYet}</Text>
+  }
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: SCREEN_GUTTER + 4, paddingBottom: 10, gap: 12 },
+  content: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 32, gap: 16 },
+  header: { gap: 10, paddingHorizontal: 4 },
   // Leaves room for the floating language button at the top right.
   title: { fontSize: FONT_SIZES.title, fontWeight: '700', color: COLORS.ink, marginRight: 64 },
-  titleCompact: { fontSize: 28 },
-  fieldRow: { flexDirection: 'row', gap: 10 },
-  field: {
-    flex: 1,
-    minWidth: 0,
-    height: 64,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: COLORS.accent,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 18,
-    fontSize: 30,
-    fontWeight: '700',
-    letterSpacing: 2,
-    color: COLORS.ink,
-  },
-  fieldCompact: { height: 56, fontSize: 26 },
-  clearButton: {
-    minWidth: 92,
-    minHeight: TOUCH_TARGET,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.outline,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearText: { fontSize: 18, fontWeight: '700', color: COLORS.ink },
-  results: { flex: 1, minHeight: 0 },
-  resultList: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 12, gap: 8 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  updated: { flex: 1, fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
   loading: { marginTop: 48 },
-  count: { fontSize: 18, color: COLORS.inkMuted, marginHorizontal: 4, marginBottom: 2 },
-  empty: { fontSize: FONT_SIZES.body, color: COLORS.ink, margin: 4 },
-  result: {
-    minHeight: 76,
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    overflow: 'hidden',
+  },
+  stopHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 },
+  stopName: { flex: 1, fontSize: FONT_SIZES.stopName, fontWeight: '700', color: COLORS.ink },
+  noBuses: { fontSize: FONT_SIZES.body, color: COLORS.inkMuted, paddingHorizontal: 18, paddingBottom: 16 },
+  routeRow: {
+    minHeight: 92,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.line,
+    paddingLeft: 18,
+    paddingRight: 10,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lineSoft,
     backgroundColor: COLORS.surface,
   },
-  places: { flex: 1, minWidth: 0, gap: 2 },
-  place: { fontSize: 18, lineHeight: 24, color: COLORS.ink },
-  placeLabel: { fontWeight: '400', color: COLORS.inkMuted },
-  destination: { fontWeight: '700' },
-  keypad: { backgroundColor: COLORS.keypadBackground, paddingHorizontal: SCREEN_GUTTER, paddingTop: 10, paddingBottom: 12, gap: 8 },
   pressed: { opacity: 0.6 },
+  destination: { flex: 1, minWidth: 0 },
+  toLabel: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  destText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  times: { alignItems: 'flex-end', gap: 2 },
+  minutesRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  minutes: { fontSize: FONT_SIZES.minutes, lineHeight: FONT_SIZES.minutes + 4, fontWeight: '700', color: COLORS.ink },
+  minutesUnit: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
+  nowPill: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.nowInk,
+    backgroundColor: COLORS.nowBackground,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    overflow: 'hidden',
+  },
+  noTime: { fontSize: FONT_SIZES.body, color: COLORS.inkMuted },
+  thenText: { fontSize: FONT_SIZES.label, color: COLORS.inkMuted },
+  emptyCard: { padding: 18, gap: 16 },
+  emptyText: { fontSize: FONT_SIZES.body, lineHeight: 28, color: COLORS.ink },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lineSoft,
+  },
+  editStop: { flex: 1, fontSize: FONT_SIZES.body, color: COLORS.ink },
+  removeButton: {
+    minHeight: TOUCH_TARGET,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: COLORS.danger,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  removeText: { fontSize: 18, fontWeight: '700', color: COLORS.danger },
+  outlineButton: {
+    minHeight: TOUCH_TARGET,
+    paddingHorizontal: 18,
+    borderRadius: TOUCH_TARGET / 2,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  outlineButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.accent },
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 16,
+    backgroundColor: COLORS.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  primaryButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.onAccent },
+  secondaryButton: {
+    minHeight: 56,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.outline,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  secondaryButtonText: { fontSize: FONT_SIZES.body, fontWeight: '700', color: COLORS.ink },
 })

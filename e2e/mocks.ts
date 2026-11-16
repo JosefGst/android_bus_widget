@@ -14,7 +14,8 @@ export const MOCK_ROUTES = [
 ];
 
 export const MOCK_STOP_NAMES: Record<string, string> = {
-  B464BD6334A93FA1: 'Default Stop One',
+  // Capitals, as KMB sends English Stop names; screens show it as "Default Stop One".
+  B464BD6334A93FA1: 'DEFAULT STOP ONE',
   B644204AEDE7A031: 'Default Stop Two',
   MOCKSTOP001: 'Causeway Bay Station',
   MAPSTOP001: 'Mong Kok Map Stop',
