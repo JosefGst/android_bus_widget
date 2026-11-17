@@ -13,10 +13,10 @@ function deferred<T>(): Deferred<T> {
 // Fake KMB: every call is recorded and waits until the test answers it.
 type Call<A, R> = { args: A; reply: Deferred<R> }
 function fakeDeps() {
-  const routeStops: Call<{ route: string; bound: string; serviceType: string }, ROUTS[]>[] = []
-  const etas: Call<{ stop: string; route: string; serviceType: string }, ETA[]>[] = []
+  const routeStops: Call<{ route: string; bound: string; service_type: string }, ROUTS[]>[] = []
+  const etas: Call<{ stop: string; route: string; service_type: string }, ETA[]>[] = []
   const stops: Call<string[], Stop[]>[] = []
-  const routeInfo: Call<{ route: string; bound: string; serviceType: string }, ROUTS | null>[] = []
+  const routeInfo: Call<{ route: string; bound: string; service_type: string }, ROUTS | null>[] = []
   const record = <A, R>(calls: Call<A, R>[]) => (args: A): Promise<R> => {
     const reply = deferred<R>()
     calls.push({ args, reply })
@@ -65,7 +65,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
 
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     expect(session.getState().status).toBe('loading')
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
     kmb.routeInfo[0].reply.resolve(routeStop('1A', 0, ''))
@@ -74,7 +74,7 @@ describe('Route page session', () => {
     await flush()
 
     const state = session.getState()
-    expect(kmb.routeStops[0].args).toEqual({ route: '1A', bound: 'O', serviceType: '1' })
+    expect(kmb.routeStops[0].args).toEqual({ route: '1A', bound: 'O', service_type: '1' })
     expect(kmb.stops[0].args).toEqual(['S1', 'S2'])
     expect(state.status).toBe('ready')
     expect(state.routeStops.map(r => r.stop)).toEqual(['S1', 'S2'])
@@ -87,7 +87,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1')])
     kmb.routeInfo[0].reply.resolve(routeStop('1A', 0, ''))
     await flush()
@@ -97,7 +97,7 @@ describe('Route page session', () => {
     await flush()
     expect(session.getState().etaRows).toHaveLength(1)
 
-    session.open({ route: '2', bound: 'O', serviceType: '1' })
+    session.open({ route: '2', bound: 'O', service_type: '1' })
 
     const state = session.getState()
     expect(state.status).toBe('loading')
@@ -112,27 +112,27 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'SHARED')])
     await flush()
     session.select('1')
     kmb.etas[0].reply.resolve([eta(3, { route: '1A' })])
     await flush()
 
-    session.open({ route: '2', bound: 'O', serviceType: '1' })
+    session.open({ route: '2', bound: 'O', service_type: '1' })
     kmb.routeStops[1].reply.resolve([routeStop('2', 1, 'SHARED')])
     await flush()
     session.select('1')
 
     expect(session.getState().etaRows).toBeNull()
-    expect(kmb.etas[1].args).toEqual({ stop: 'SHARED', route: '2', serviceType: '1' })
+    expect(kmb.etas[1].args).toEqual({ stop: 'SHARED', route: '2', service_type: '1' })
   })
 
   it('drops the previous Route\'s Stop list when it arrives after the new Route was opened', async () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
-    session.open({ route: '2', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
+    session.open({ route: '2', bound: 'O', service_type: '1' })
 
     kmb.routeStops[1].reply.resolve([routeStop('2', 1, 'NEW')])
     await flush()
@@ -146,7 +146,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
     await flush()
 
@@ -166,7 +166,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1', stop: 'S2' })
+    session.open({ route: '1A', bound: 'O', service_type: '1', stop: 'S2' })
     expect(session.getState().selected).toBeNull()
 
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
@@ -179,7 +179,7 @@ describe('Route page session', () => {
   it('waits for the page to have focus before preselecting', async () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
-    session.open({ route: '1A', bound: 'O', serviceType: '1', stop: 'S1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1', stop: 'S1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1')])
     await flush()
     expect(session.getState().selected).toBeNull()
@@ -193,11 +193,11 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
     await flush()
 
-    session.open({ route: '2', bound: 'O', serviceType: '1', stop: 'S2' })
+    session.open({ route: '2', bound: 'O', service_type: '1', stop: 'S2' })
     await flush()
 
     expect(session.getState().selected).toBeNull()
@@ -207,19 +207,20 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1', stop: 'S2' })
+    session.open({ route: '1A', bound: 'O', service_type: '1', stop: 'S2' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
     await flush()
     const first = session.getState().selected
 
     session.select(null)
-    session.open({ route: '1A', bound: 'O', serviceType: '1', stop: 'S2' })
+    session.open({ route: '1A', bound: 'O', service_type: '1', stop: 'S2' })
     expect(session.getState().selected).toBeNull()
 
     session.blur()
     session.focus()
     expect(session.getState().selected).toMatchObject({ seq: '2' })
-    expect(session.getState().selected?.id).not.toBe(first?.id)
+    // A new selection object, so the screen scrolls to it again.
+    expect(session.getState().selected).not.toBe(first)
   })
 
   it('polls the selected Stop\'s ETAs only while the page has focus', async () => {
@@ -227,7 +228,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1')])
     await flush()
     session.select('1')
@@ -250,7 +251,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2')])
     await flush()
 
@@ -273,7 +274,7 @@ describe('Route page session', () => {
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '10', bound: 'O', serviceType: '1' })
+    session.open({ route: '10', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('10', 1, 'LOOP'), routeStop('10', 2, 'MID'), routeStop('10', 3, 'LOOP')])
     await flush()
 
@@ -297,7 +298,7 @@ describe('Route page session', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {})
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1')])
     await flush()
     kmb.stops[0].reply.reject(new Error('403'))
@@ -313,19 +314,40 @@ describe('Route page session', () => {
     jest.restoreAllMocks()
   })
 
+  it('keeps the newest Stop names when an earlier Retry fails after it', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const kmb = fakeDeps()
+    session = createRouteStopSession(kmb.deps)
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
+    kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1')])
+    await flush()
+    kmb.stops[0].reply.reject(new Error('403'))
+    await flush()
+
+    session.retryStopNames()
+    session.retryStopNames()
+    kmb.stops[2].reply.resolve([{ stop: 'S1', name_en: 'One' }])
+    await flush()
+    kmb.stops[1].reply.reject(new Error('403'))
+    await flush()
+
+    expect(session.getState().stopNamesStatus).toBe('loaded')
+    jest.restoreAllMocks()
+  })
+
   it('starts over after dispose: the next open loads the Route again and late replies are dropped', async () => {
     jest.useFakeTimers()
     const kmb = fakeDeps()
     session = createRouteStopSession(kmb.deps)
     session.focus()
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
 
     session.dispose()
     kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'OLD')])
     await flush()
     expect(session.getState().status).toBe('idle')
 
-    session.open({ route: '1A', bound: 'O', serviceType: '1' })
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
     session.focus()
     kmb.routeStops[1].reply.resolve([routeStop('1A', 1, 'NEW')])
     await flush()

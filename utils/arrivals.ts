@@ -34,6 +34,15 @@ const matches = (row: ArrivalRow, filter?: ArrivalFilter): boolean => {
   return filter.seq === undefined || row.seq === undefined || Number(row.seq) === Number(filter.seq)
 }
 
+/** Order of two ETA times: sooner first, no time (or an unreadable one) last. */
+export function compareEtas(a: string, b: string): number {
+  const ma = Date.parse(a)
+  const mb = Date.parse(b)
+  if (Number.isNaN(ma)) return Number.isNaN(mb) ? 0 : 1
+  if (Number.isNaN(mb)) return -1
+  return ma - mb
+}
+
 /**
  * The buses still to come, as the user sees them at `now`: soonest first, buses that have left
  * dropped, buses with no time last.
@@ -43,7 +52,7 @@ export function arrivals(rows: readonly ArrivalRow[], now: string, filter?: Arri
     .filter(row => matches(row, filter))
     .map(({ eta }) => ({ eta, minutes: minutesUntil(eta, now) }))
     .filter(a => a.minutes === null || a.minutes > -GONE_AFTER_MINUTES)
-    .sort((a, b) => (a.minutes === null ? (b.minutes === null ? 0 : 1) : b.minutes === null ? -1 : a.minutes - b.minutes))
+    .sort((a, b) => compareEtas(a.eta, b.eta))
     .map(({ eta }) => ({ eta, time: arrivalTime(eta, now) }))
 }
 

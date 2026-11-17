@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLanguage } from '../components/language_context'
@@ -37,7 +37,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
     {
       route: typeof route === 'string' ? route : undefined,
       bound: typeof bound === 'string' ? bound : undefined,
-      serviceType: typeof service_type === 'string' ? service_type : undefined,
+      service_type: typeof service_type === 'string' ? service_type : undefined,
       stop: typeof stop === 'string' ? stop : undefined,
     },
     isFocused,
@@ -99,8 +99,9 @@ export default function RoutesStopScreen(): React.JSX.Element {
   // The scroll runs from the selected row's onLayout (scrollToSelected), not here: only then has the
   // list measured the new layout. Scrolling earlier overshoots when another Stop's card closes above
   // it, and does nothing when the list is not on screen yet (a preselect).
+  // A layout effect, so the flag is set before the selected row reports its layout.
   const scrollPending = useRef<string | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (selected) scrollPending.current = selected.seq
   }, [selected])
   const scrollToSelected = useCallback((seq: string, index: number) => {
@@ -169,7 +170,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
       {state.status === 'idle' || state.status === 'loading' ? (
         <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
       ) : state.status !== 'ready' ? (
-        <Text style={styles.error}>{strings[state.status]}</Text>
+        <Text style={styles.error}>{state.status === 'fetchFailed' ? strings.fetchFailed : strings.invalidRoute}</Text>
       ) : (
         <View style={styles.body} testID="route-content" onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
           {contentHeight > 0 && (

@@ -91,7 +91,7 @@ index.ts
       └─ app/_layout.tsx (2 tabs + Routes Stop page)
           ├─ app/find_route.tsx     → utils/fetch, utils/route_search, components/NumericKeypad, components/LetterKeypad
           ├─ app/routes_stop.tsx    → components/use_route_stop_session → utils/route_stop_session, utils/favorites,
-          │                            utils/route_stop_map, utils/stops, components/StopMap, components/SelectedStopCard
+          │                            utils/route_stop_map, components/StopMap, components/SelectedStopCard
           └─ app/index.tsx          → utils/favorites, utils/favorite_board, utils/arrivals,
                                        utils/time_formatting, components/RouteBadge, components/theme
 ```

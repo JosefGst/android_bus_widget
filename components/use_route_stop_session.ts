@@ -6,14 +6,14 @@ import { createRouteStopSession, OpenParams, RouteStopSession, RouteStopState } 
  * the page has focus. All loading, preselecting and ETA refresh rules live in utils/route_stop_session.
  */
 export function useRouteStopSession(
-  { route, bound, serviceType, stop }: OpenParams,
+  { route, bound, service_type, stop }: OpenParams,
   focused: boolean,
 ): { state: RouteStopState; session: RouteStopSession } {
   const [session] = useState(() => createRouteStopSession())
   useEffect(() => () => session.dispose(), [session])
   useEffect(() => {
-    session.open({ route, bound, serviceType, stop })
-  }, [session, route, bound, serviceType, stop])
+    session.open({ route, bound, service_type, stop })
+  }, [session, route, bound, service_type, stop])
   useEffect(() => {
     if (focused) session.focus()
     else session.blur()

@@ -1,18 +1,18 @@
 // Favorite board: the user's Favorites with live ETAs, grouped by Stop name, ready to display.
 // Shared by the My Favorites screen and the home-screen widget.
 
-import { arrivals as arrivalsAt } from './arrivals'
+import { arrivals, compareEtas } from './arrivals'
 import type { Favorite } from './favorites'
 import { ETA, fetchStop, fetchStopETA, KMBResponse } from './fetch'
 import { Language, localized } from './language'
 import { normalizeStopName } from './string_formatting'
 
-// One predicted bus as KMB gave it; Now / N min is worked out by utils/arrivals at render time.
-export type Arrival = { eta: string }
+// One ETA's time as KMB gave it; the Arrival (Now / N min) is worked out by utils/arrivals at render time.
+export type BoardEta = { eta: string }
 // dest: where the Route is heading, in the board's language as KMB writes it.
-export type RouteArrivals = { route: string; stop: string; bound: string; service_type: string; dest: string; arrivals: Arrival[] }
+export type BoardRoute = { route: string; stop: string; bound: string; service_type: string; dest: string; etas: BoardEta[] }
 // stopIds: every Stop id merged into this group (several ids can share one normalized name).
-export type StopGroup = { stopName: string; stopIds: string[]; routes: RouteArrivals[] }
+export type StopGroup = { stopName: string; stopIds: string[]; routes: BoardRoute[] }
 export type FavoriteBoard = { groups: StopGroup[]; generatedTimestamp: string }
 
 async function loadStopNames(stopIds: string[], language: Language): Promise<Map<string, string>> {
@@ -38,13 +38,9 @@ async function loadEtas(favorite: Favorite): Promise<KMBResponse<ETA> | null> {
 
 // Each Route's arrivals soonest first (gone buses dropped), then Routes ordered by their next
 // arrival, Routes with no time last. Uses utils/arrivals so the board and the rows agree.
-function sortRoutes(routes: Iterable<RouteArrivals>, now: string): RouteArrivals[] {
-  const sorted = Array.from(routes, route => ({ ...route, arrivals: arrivalsAt(route.arrivals, now).map(({ eta }) => ({ eta })) }))
-  const nextMs = (route: RouteArrivals): number => {
-    const ms = Date.parse(route.arrivals[0]?.eta ?? '')
-    return Number.isNaN(ms) ? Infinity : ms
-  }
-  return sorted.sort((a, b) => nextMs(a) - nextMs(b))
+function sortRoutes(routes: Iterable<BoardRoute>, now: string): BoardRoute[] {
+  return Array.from(routes, route => ({ ...route, etas: arrivals(route.etas, now).map(({ eta }) => ({ eta })) }))
+    .sort((a, b) => compareEtas(a.etas[0]?.eta ?? '', b.etas[0]?.eta ?? ''))
 }
 
 export async function loadFavoriteBoard(favorites: Favorite[], now: Date, language: Language): Promise<FavoriteBoard> {
@@ -59,17 +55,17 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
   const reference = now.toISOString()
 
   // stopName -> its Stop ids and (stop+route+direction -> arrivals). Maps keep first-seen order.
-  const groups = new Map<string, { stopIds: Set<string>; routes: Map<string, RouteArrivals> }>()
+  const groups = new Map<string, { stopIds: Set<string>; routes: Map<string, BoardRoute> }>()
   favorites.forEach((favorite, i) => {
     const stopName = stopNames.get(favorite.stop) ?? favorite.stop
-    const group = groups.get(stopName) ?? { stopIds: new Set<string>(), routes: new Map<string, RouteArrivals>() }
+    const group = groups.get(stopName) ?? { stopIds: new Set<string>(), routes: new Map<string, BoardRoute>() }
     groups.set(stopName, group)
     group.stopIds.add(favorite.stop)
     etaResponses[i]?.data.forEach(row => {
       const key = `${favorite.stop}|${row.route}|${row.dir}`
-      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), arrivals: [] }
+      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), etas: [] }
       group.routes.set(key, entry)
-      entry.arrivals.push({ eta: row.eta })
+      entry.etas.push({ eta: row.eta })
     })
   })
 

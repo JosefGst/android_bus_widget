@@ -21,7 +21,7 @@ export function widgetSections(groups: readonly StopGroup[], now: string, langua
       key: group.stopName,
       stopName: displayPlaceName(group.stopName, language),
       rows: group.routes.map(route => {
-        const { next } = routeRow(route.arrivals, now)
+        const { next } = routeRow(route.etas, now)
         return {
           key: `${route.stop}|${route.route}|${route.bound}`,
           route: route.route,

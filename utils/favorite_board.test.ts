@@ -67,7 +67,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
     const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([
-      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5) }] }] },
+      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] }] },
     ])
   })
 
@@ -184,7 +184,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
-    expect(groups[0].routes[0].arrivals.map(a => a.eta)).toEqual([at(4), at(20), ''])
+    expect(groups[0].routes[0].etas.map(a => a.eta)).toEqual([at(4), at(20), ''])
   })
 
   it('sorts Routes within a Stop by their next arrival, with no-time Routes last', async () => {
@@ -233,8 +233,8 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
-      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5) }] },
-      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', arrivals: [{ eta: at(8) }] },
+      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] },
+      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', etas: [{ eta: at(8) }] },
     ])
   })
 
@@ -298,7 +298,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     expect(groups).toEqual([
       { stopName: 'Broken Stop', stopIds: ['S1'], routes: [] },
-      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(6) }] }] },
+      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(6) }] }] },
     ])
   })
 

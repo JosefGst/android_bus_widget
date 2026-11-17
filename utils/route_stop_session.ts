@@ -9,21 +9,21 @@ import { getStopsFor } from './stops'
 // Same pace as My Buses: fresh enough for a countdown, slow enough not to trip the KMB CDN's 403s.
 export const ETA_REFRESH_MS = 30_000
 
-// bound is the Route's direction as KMB writes it in Route records: 'O' or 'I'.
-export type RouteRef = { route: string; bound: string; serviceType: string }
+// A Route as KMB names it in Route records; bound is 'O' or 'I'.
+export type RouteRef = { route: string; bound: string; service_type: string }
 
 export type RouteStopDeps = {
   fetchRouteStops: (ref: RouteRef) => Promise<ROUTS[]>
-  fetchStopEtas: (query: { stop: string; route: string; serviceType: string }) => Promise<ETA[]>
+  fetchStopEtas: (query: { stop: string; route: string; service_type: string }) => Promise<ETA[]>
   getStopsFor: (stopIds: string[]) => Promise<Stop[]>
   getRouteInfo: (ref: RouteRef) => Promise<ROUTS | null>
 }
 
 export type RouteStopStatus = 'idle' | 'loading' | 'ready' | 'invalidRoute' | 'fetchFailed'
 
-// A position on the Route. `id` changes on every selection, so the screen can scroll to it again
+// A position on the Route. Every selection is a new object, so the screen can scroll to it again
 // even when the same position is selected twice (e.g. the same Favorite opened again).
-export type SelectedStop = { seq: string; stop: string; bound: string; id: number }
+export type SelectedStop = { seq: string; stop: string; bound: string }
 
 export type RouteStopState = {
   status: RouteStopStatus
@@ -40,7 +40,7 @@ export type RouteStopState = {
   etaRows: ETA[] | null
 }
 
-export type OpenParams = { route?: string; bound?: string; serviceType?: string; stop?: string }
+export type OpenParams = { route?: string; bound?: string; service_type?: string; stop?: string }
 
 export type RouteStopSession = {
   getState: () => RouteStopState
@@ -69,7 +69,7 @@ const INITIAL_STATE: RouteStopState = {
 }
 
 const sameRoute = (a: RouteRef | null, b: RouteRef | null): boolean =>
-  !!a && !!b && a.route === b.route && a.bound === b.bound && a.serviceType === b.serviceType
+  !!a && !!b && a.route === b.route && a.bound === b.bound && a.service_type === b.service_type
 
 /** The selected Stop's next `count` buses, in its direction and at its position; null before the first reply. */
 export function selectedArrivals(state: RouteStopState, now: string, count: number): UpcomingArrival[] | null {
@@ -91,12 +91,24 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
   // The Stop the page was opened for, and whether it was already selected during this visit.
   let pendingStop: string | null = null
   let preselectHandled = false
-  let selectionCount = 0
+  // Bumped on every Stop names load: only the latest load (e.g. after a second Retry tap) may land.
+  let namesGeneration = 0
 
   const set = (patch: Partial<RouteStopState>): void => {
     state = { ...state, ...patch }
     state = { ...state, etaRows: state.selected ? (etaByStop[state.selected.stop] ?? null) : null }
     listeners.forEach(listener => listener())
+  }
+
+  // Forget the current Route: stop polling, drop every reply still on its way, clear cached ETAs
+  // and the pending preselect.
+  const reset = (): void => {
+    routeGeneration++
+    namesGeneration++
+    stopPolling()
+    etaByStop = {}
+    pendingStop = null
+    preselectHandled = false
   }
 
   const stopPolling = (): void => {
@@ -114,7 +126,7 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
     const stop = selected.stop
     const load = async (): Promise<void> => {
       try {
-        const rows = await deps.fetchStopEtas({ stop, route: route.route, serviceType: route.serviceType })
+        const rows = await deps.fetchStopEtas({ stop, route: route.route, service_type: route.service_type })
         if (generation !== pollGeneration) return
         etaByStop = { ...etaByStop, [stop]: rows }
       } catch (e) {
@@ -130,27 +142,33 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
   }
 
   const selectPosition = (row: ROUTS | null): void => {
-    set({ selected: row ? { seq: row.seq, stop: row.stop, bound: row.bound, id: ++selectionCount } : null })
+    set({ selected: row ? { seq: row.seq, stop: row.stop, bound: row.bound } : null })
     restartPolling()
   }
 
-  // Select the Stop the page was opened for, once per visit, as soon as this Route's Stops are in.
-  const tryPreselect = (): void => {
-    if (!focused || preselectHandled || !pendingStop || state.status !== 'ready') return
-    const row = state.routeStops.find(item => item.stop === pendingStop)
-    if (!row) return
-    preselectHandled = true
-    selectPosition(row)
+  // A map marker tap: the Stop's first position on the Route. Returns false if the Route has no such Stop.
+  const selectStop = (stopId: string): boolean => {
+    const row = state.routeStops.find(item => item.stop === stopId)
+    if (row) selectPosition(row)
+    return !!row
   }
 
-  const loadStopNames = async (generation: number, routeStops: ROUTS[]): Promise<void> => {
+  // Select the Stop the page was opened for, once per visit, as soon as this Route's Stops are in.
+  // Goes through the marker-tap path, so a preselect behaves exactly like tapping that Stop's marker.
+  const tryPreselect = (): void => {
+    if (!focused || preselectHandled || !pendingStop || state.status !== 'ready') return
+    if (selectStop(pendingStop)) preselectHandled = true
+  }
+
+  const loadStopNames = async (routeStops: ROUTS[]): Promise<void> => {
+    const generation = ++namesGeneration
     set({ stopNamesStatus: 'loading' })
     try {
       const stops = await deps.getStopsFor(routeStops.map(item => item.stop))
-      if (generation === routeGeneration) set({ stops, stopNamesStatus: 'loaded' })
+      if (generation === namesGeneration) set({ stops, stopNamesStatus: 'loaded' })
     } catch (e) {
       console.error('Failed to load stop names', e)
-      if (generation === routeGeneration) set({ stopNamesStatus: 'failed' })
+      if (generation === namesGeneration) set({ stopNamesStatus: 'failed' })
     }
   }
 
@@ -162,7 +180,7 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
       const routeStops = await deps.fetchRouteStops(route)
       if (generation !== routeGeneration) return
       set({ status: 'ready', routeStops })
-      loadStopNames(generation, routeStops)
+      loadStopNames(routeStops)
       tryPreselect()
     } catch (e) {
       console.error('Failed to fetch the Route\'s Stops', e)
@@ -176,8 +194,8 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
       listeners.add(listener)
       return () => { listeners.delete(listener) }
     },
-    open: ({ route, bound, serviceType, stop }) => {
-      const ref = route && bound && serviceType ? { route, bound, serviceType } : null
+    open: ({ route, bound, service_type, stop }) => {
+      const ref = route && bound && service_type ? { route, bound, service_type } : null
       if (ref && sameRoute(ref, state.route)) {
         // Same Route, maybe another Stop to preselect.
         if ((stop ?? null) !== pendingStop) {
@@ -189,11 +207,8 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
       }
       // Another Route (or none): drop everything of the previous one, so none of it is shown for
       // (or reused by) the new Route.
-      routeGeneration++
-      stopPolling()
-      etaByStop = {}
+      reset()
       pendingStop = stop ?? null
-      preselectHandled = false
       set({ ...INITIAL_STATE, route: ref, status: ref ? 'loading' : 'invalidRoute' })
       // Routes Stop is mounted at start-up with no Route: it must not fetch then (KMB 403s bursts).
       if (ref) loadRoute(ref, routeGeneration)
@@ -213,20 +228,16 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
     select: seq => {
       selectPosition(seq === null ? null : (state.routeStops.find(item => item.seq === seq) ?? null))
     },
-    selectStop: stopId => {
-      const row = state.routeStops.find(item => item.stop === stopId)
-      if (row) selectPosition(row)
-    },
+    selectStop: stopId => { selectStop(stopId) },
     retryStopNames: () => {
-      if (state.status === 'ready') loadStopNames(routeGeneration, state.routeStops)
+      if (state.status === 'ready') loadStopNames(state.routeStops)
     },
     // Stops polling and drops replies still on their way. The session can be used again: the next
     // open() loads the Route afresh (React mounts effects twice in development).
     dispose: () => {
-      stopPolling()
-      routeGeneration++
+      reset()
       focused = false
-      state = INITIAL_STATE
+      set(INITIAL_STATE)
     },
   }
 }
@@ -235,11 +246,11 @@ export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): Rout
 const apiBound = (bound: string): string => (bound === 'I' ? 'inbound' : bound === 'O' ? 'outbound' : bound)
 
 const DEFAULT_DEPS: RouteStopDeps = {
-  fetchRouteStops: async ({ route, bound, serviceType }) => (await fetchRouteSTOP(route, apiBound(bound), serviceType)).data,
-  fetchStopEtas: async ({ stop, route, serviceType }) => (await fetchStopETA(stop, route, serviceType)).data,
+  fetchRouteStops: async ({ route, bound, service_type }) => (await fetchRouteSTOP(route, apiBound(bound), service_type)).data,
+  fetchStopEtas: async ({ stop, route, service_type }) => (await fetchStopETA(stop, route, service_type)).data,
   getStopsFor,
-  getRouteInfo: async ({ route, bound, serviceType }) => {
+  getRouteInfo: async ({ route, bound, service_type }) => {
     const { routes } = await getCachedRoutes()
-    return routes.find(r => r.route === route && r.bound === bound && r.service_type === serviceType) ?? null
+    return routes.find(r => r.route === route && r.bound === bound && r.service_type === service_type) ?? null
   },
 }
