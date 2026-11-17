@@ -218,3 +218,19 @@ index.ts
 - `favorite_to_route_stop.yaml` taps a starter Favorite row ("Open 272..."), asserts Routes Stop shows an expanded Stop, then goes back to My Buses.
 - E2E (`npm run test:e2e`, Playwright against the web export) mocks the KMB API and map tiles in `e2e/mocks.ts`; Route `N29` has three mock Stops for the map tests.
 - Domain terms (Route, Stop, ETA, Favorite, Favorite board) are defined in `GLOSSARY.md`.
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (JosefGst/android_bus_widget) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
