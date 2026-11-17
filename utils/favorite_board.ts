@@ -1,13 +1,14 @@
 // Favorite board: the user's Favorites with live ETAs, grouped by Stop name, ready to display.
 // Shared by the My Favorites screen and the home-screen widget.
 
+import { arrivals as arrivalsAt } from './arrivals'
 import type { Favorite } from './favorites'
 import { ETA, fetchStop, fetchStopETA, KMBResponse } from './fetch'
 import { Language, localized } from './language'
 import { normalizeStopName } from './string_formatting'
-import { getMinutesUntilArrival } from './time_formatting'
 
-export type Arrival = { eta: string; minutes: number | null }
+// One predicted bus as KMB gave it; Now / N min is worked out by utils/arrivals at render time.
+export type Arrival = { eta: string }
 // dest: where the Route is heading, in the board's language as KMB writes it.
 export type RouteArrivals = { route: string; stop: string; bound: string; service_type: string; dest: string; arrivals: Arrival[] }
 // stopIds: every Stop id merged into this group (several ids can share one normalized name).
@@ -35,20 +36,15 @@ async function loadEtas(favorite: Favorite): Promise<KMBResponse<ETA> | null> {
   }
 }
 
-// Soonest first; unknown (null) last.
-const byMinutes = (a: number | null, b: number | null): number => {
-  if (a === null) return b === null ? 0 : 1
-  if (b === null) return -1
-  return a - b
-}
-
-const nextMinutes = (route: RouteArrivals): number | null => route.arrivals[0]?.minutes ?? null
-
-// Each Route's arrivals soonest first, then Routes ordered by their next arrival.
-function sortRoutes(routes: Iterable<RouteArrivals>): RouteArrivals[] {
-  const sorted = Array.from(routes)
-  sorted.forEach(route => route.arrivals.sort((a, b) => byMinutes(a.minutes, b.minutes)))
-  return sorted.sort((a, b) => byMinutes(nextMinutes(a), nextMinutes(b)))
+// Each Route's arrivals soonest first (gone buses dropped), then Routes ordered by their next
+// arrival, Routes with no time last. Uses utils/arrivals so the board and the rows agree.
+function sortRoutes(routes: Iterable<RouteArrivals>, now: string): RouteArrivals[] {
+  const sorted = Array.from(routes, route => ({ ...route, arrivals: arrivalsAt(route.arrivals, now).map(({ eta }) => ({ eta })) }))
+  const nextMs = (route: RouteArrivals): number => {
+    const ms = Date.parse(route.arrivals[0]?.eta ?? '')
+    return Number.isNaN(ms) ? Infinity : ms
+  }
+  return sorted.sort((a, b) => nextMs(a) - nextMs(b))
 }
 
 export async function loadFavoriteBoard(favorites: Favorite[], now: Date, language: Language): Promise<FavoriteBoard> {
@@ -73,7 +69,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
       const key = `${favorite.stop}|${row.route}|${row.dir}`
       const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), arrivals: [] }
       group.routes.set(key, entry)
-      entry.arrivals.push({ eta: row.eta, minutes: getMinutesUntilArrival(row.eta, reference) })
+      entry.arrivals.push({ eta: row.eta })
     })
   })
 
@@ -81,7 +77,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
     groups: Array.from(groups, ([stopName, { stopIds, routes }]) => ({
       stopName,
       stopIds: Array.from(stopIds),
-      routes: sortRoutes(routes.values()),
+      routes: sortRoutes(routes.values(), reference),
     })),
     generatedTimestamp: etaResponses.find(r => r !== null)?.generated_timestamp ?? '',
   }

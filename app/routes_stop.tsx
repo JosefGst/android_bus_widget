@@ -11,7 +11,7 @@ import { StopMap } from '../components/StopMap'
 import { MapResizeHandle } from '../components/MapResizeHandle'
 import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { useUserLocation } from '../components/use_user_location'
-import { upcomingArrivals } from '../utils/arrival_display'
+import { upcomingArrivals } from '../utils/arrivals'
 import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedRoutes, ROUTS, Stop } from '../utils/fetch'
 import { localized } from '../utils/language'
@@ -255,7 +255,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
   const nowIso = new Date(now).toISOString()
   const renderCard = (item: ROUTS): React.JSX.Element => (
     <SelectedStopCard
-      arrivals={etaMap[item.stop] ? upcomingArrivals(etaMap[item.stop], nowIso, 2) : null}
+      arrivals={etaMap[item.stop] ? upcomingArrivals(etaMap[item.stop], nowIso, 2, { dir: item.bound, seq: item.seq }) : null}
       saved={includesFavorite(favorites, { route: item.route, service_type: item.service_type, stop: item.stop })}
       onSave={() => onSave(item)}
       language={language}

@@ -24,8 +24,8 @@ utils/                    # Shared utilities (NOT inside app/)
   string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses), displayPlaceName() (English title case)
   language.ts             # Language ('en'|'tc'|'sc'): phone language, saved choice, onLanguageChanged, localized()
   strings.ts              # STRINGS: the app's own text per Language (typed; a missing key is a compile error)
-  time_formatting.ts      # formatEtaToHKTime(), getMinutesUntilArrival(), formatClockTime() ("2:41 pm" / "下午2:41"; am/pm written in code because Hermes has no Chinese Intl data)
-  arrival_display.ts      # arrivalTime()/routeRow(): Now / N min / unknown, plus the bus after, for Route rows
+  time_formatting.ts      # formatEtaToHKTime(), formatClockTime() ("2:41 pm" / "下午2:41"; am/pm written in code because Hermes has no Chinese Intl data)
+  arrivals.ts             # arrivals(): ETA rows → Arrivals (Now / N min / unknown) at a moment, filtered by direction + position, gone buses dropped; routeRow()/upcomingArrivals() views
   tabs.ts                 # TAB_ROUTES and selectedTab(): which screens are tabs, which tab is highlighted
   widget_sections.ts      # widgetSections(): the home-screen widget's content, per Stop: Routes with "Now"/"N min"/"--"
   map_size.ts             # Route map height: snap sizes (1/3, 1/2, 0.85), nextMapSize() for a handle tap, saved size (`route_map_size`)
@@ -88,9 +88,9 @@ index.ts
   └─ expo-router/entry
       └─ app/_layout.tsx (2 tabs + Routes Stop page)
           ├─ app/find_route.tsx     → utils/fetch, utils/route_search, components/NumericKeypad, components/LetterKeypad
-          ├─ app/routes_stop.tsx    → utils/fetch, utils/favorites, utils/arrival_display,
+          ├─ app/routes_stop.tsx    → utils/fetch, utils/favorites, utils/arrivals,
           │                            utils/route_stop_map, utils/stops, components/StopMap, components/SelectedStopCard
-          └─ app/index.tsx          → utils/favorites, utils/favorite_board, utils/arrival_display,
+          └─ app/index.tsx          → utils/favorites, utils/favorite_board, utils/arrivals,
                                        utils/time_formatting, components/RouteBadge, components/theme
 ```
 
@@ -103,7 +103,8 @@ index.ts
 - **Language:** one `Language` (`'en' | 'tc' | 'sc'`, the KMB API's field suffixes; `tc` is the app's text in spoken Hong Kong Cantonese (粵, written with 嘅/喺/冇/撳), `sc` is Mandarin) drives screens, the Route map and the widget. `utils/language.ts` owns it: the phone language (`expo-localization`) until the user taps the language button, then the saved choice (`app_language`). Read KMB names with `localized(record, 'name' | 'orig' | 'dest', language)`, never `*_en` directly; the app's own text comes from `STRINGS[language]` (`useLanguage()` in screens and components, `getLanguage()` in the widget). Keep Stop records, not name strings, in state so a switch needs no new request. The map page gets `setLanguage` (label tiles `label/hk/<language>` + attribution). Web starts in English to match the static pre-render, then switches.
 - **Favorites:** `utils/favorites.ts` is the only module that reads or writes the Favorite list. Writes are serialized internally; screens must not keep their own copies or queues. Never pass Favorite data through navigation params.
 - **Favorite → Routes Stop:** each Route row on My Buses is a `Pressable` that pushes `/routes_stop` with `route`, `bound`, `service_type` and a `stop` param; once the Stop list loads, Routes Stop preselects that Stop through the marker-tap path (`onMarkerPress`). The in-app Back button (and Android back) returns to My Buses; on web the browser's back button does not, because the tabs keep their own history.
-- **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Buses and the widget. It rejects only when every ETA request fails, so callers keep their last board.
+- **Favorite board:** `loadFavoriteBoard()` is the single ETA pipeline for both My Buses and the widget. It rejects only when every ETA request fails, so callers keep their last board. Arrivals keep only the ETA string; minutes are worked out at render time by `utils/arrivals.ts`.
+- **Arrivals:** one KMB ETA request for a Stop + Route returns rows for **both directions** when the Stop is on both (termini and many mid-route Stops), and on a circular Route rows for both positions of a Stop (`seq`). Always pass `{ dir, seq }` to `arrivals()`/`upcomingArrivals()` where the direction is known (Routes Stop). The board needs no filter: it keys rows by `dir`.
 - **Widget:** Runs as Android background task. See `widget/AGENTS.md` for critical constraints.
 
 ---
@@ -116,7 +117,8 @@ index.ts
 | Add/modify API calls | `utils/fetch.ts` | Use `fetchJson<T>()` helper |
 | Add or change UI text / translations | `utils/strings.ts` | Add the key to `Strings`; TypeScript forces all three languages |
 | Change how the language is picked | `utils/language.ts` | `languageFromLocales`, `getLanguage`, storage key `app_language` must not change |
-| Change ETA formatting | `utils/time_formatting.ts`, `utils/strings.ts` | `formatEtaToHKTime` (24-hour HK time), `getMinutesUntilArrival`; `arrivalText` builds each arrival line, "no ETA" when the API gives no time |
+| Change which buses show, their order, or Now / N min | `utils/arrivals.ts` | `arrivals(rows, now, { dir, seq })` — the only place minutes and "has left" are worked out; board, Route page and widget all use it |
+| Change ETA formatting | `utils/time_formatting.ts`, `utils/strings.ts` | `formatEtaToHKTime` (24-hour HK time), `formatClockTime` |
 | Modify Favorite logic or starter Favorites | `utils/favorites.ts` | `add`/`remove`/`list`, `STARTER_FAVORITES`; storage key must not change |
 | Change ETA grouping/ordering | `utils/favorite_board.ts` | `loadFavoriteBoard` — used by `app/index.tsx` and `widget/widget-task-handler.tsx` |
 | React to Favorites changes | `utils/favorites.ts` | `onFavoritesChanged(listener)` |

@@ -1,4 +1,4 @@
-import type { RouteRow } from './arrival_display'
+import type { RouteRow } from './arrivals'
 import type { Language } from './language'
 import type { MapSizeName } from './map_size'
 
