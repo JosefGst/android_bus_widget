@@ -1,6 +1,6 @@
 // The home-screen widget's content: one section per Stop, each Route with its next bus.
 
-import { routeRow } from './arrival_display'
+import { routeRow } from './arrivals'
 import type { StopGroup } from './favorite_board'
 import type { Language } from './language'
 import { displayPlaceName } from './string_formatting'
@@ -21,7 +21,7 @@ export function widgetSections(groups: readonly StopGroup[], now: string, langua
       key: group.stopName,
       stopName: displayPlaceName(group.stopName, language),
       rows: group.routes.map(route => {
-        const { next } = routeRow(route.arrivals, now)
+        const { next } = routeRow(route.etas, now)
         return {
           key: `${route.stop}|${route.route}|${route.bound}`,
           route: route.route,

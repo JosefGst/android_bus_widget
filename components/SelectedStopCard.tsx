@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import React from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
-import type { UpcomingArrival } from '../utils/arrival_display'
+import type { UpcomingArrival } from '../utils/arrivals'
 import type { Language } from '../utils/language'
 import type { Strings } from '../utils/strings'
 import { formatClockTime } from '../utils/time_formatting'

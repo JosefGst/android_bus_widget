@@ -1,56 +1,56 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLanguage } from '../components/language_context'
+import { useRouteStopSession } from '../components/use_route_stop_session'
 import { RouteBadge } from '../components/RouteBadge'
 import { SelectedStopCard } from '../components/SelectedStopCard'
 import { StopMap } from '../components/StopMap'
 import { MapResizeHandle } from '../components/MapResizeHandle'
 import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { useUserLocation } from '../components/use_user_location'
-import { upcomingArrivals } from '../utils/arrival_display'
 import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
-import { ETA, fetchRouteSTOP, fetchStopETA, getCachedRoutes, ROUTS, Stop } from '../utils/fetch'
+import { ROUTS } from '../utils/fetch'
 import { localized } from '../utils/language'
 import { DEFAULT_MAP_FRACTION, loadMapSize, mapSizeName, nextMapSize, saveMapSize, snapFraction } from '../utils/map_size'
 import { buildRouteMarkers } from '../utils/route_stop_map'
-import { getStopsFor } from '../utils/stops'
+import { selectedArrivals } from '../utils/route_stop_session'
 import { displayPlaceName } from '../utils/string_formatting'
 
 // Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
 const CLOCK_TICK_MS = 10_000
-// Same pace as My Buses: fresh enough for a countdown, slow enough not to trip the KMB CDN's 403s.
-const ETA_REFRESH_MS = 30_000
 
 export default function RoutesStopScreen(): React.JSX.Element {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { language, strings } = useLanguage()
   const params = useLocalSearchParams()
-  const { route, bound, service_type } = params
+  const { route, bound, service_type, stop } = params
   const [now, setNow] = useState(Date.now())
-  const [isLoading, setLoading] = useState(true)
-  const [data, setData] = useState<ROUTS[]>([])
-  // The Route (route|bound|service_type) that `data` was loaded for; null while a load is running.
-  const [dataRouteKey, setDataRouteKey] = useState<string | null>(null)
-  const routeKey = `${route}|${bound}|${service_type}`
-  const [routeInfo, setRouteInfo] = useState<ROUTS | null>(null)
-  const [stops, setStops] = useState<Stop[]>([])
+  // ETAs refresh and the user's position is watched only while this screen has focus.
+  const isFocused = useIsFocused()
+  // Route, Stops, selection and ETAs: loading, resetting, preselecting and refresh live in the session.
+  const { state, session } = useRouteStopSession(
+    {
+      route: typeof route === 'string' ? route : undefined,
+      bound: typeof bound === 'string' ? bound : undefined,
+      service_type: typeof service_type === 'string' ? service_type : undefined,
+      stop: typeof stop === 'string' ? stop : undefined,
+    },
+    isFocused,
+  )
+  const { routeStops, stops, routeInfo, selected } = state
   // Derived per language from the Stop records, so switching language needs no new request.
   const stopNames = useMemo(() => {
     const names: { [stopId: string]: string } = {}
-    stops.forEach(stop => { names[stop.stop] = displayPlaceName(localized(stop, 'name', language), language) })
+    stops.forEach(item => { names[item.stop] = displayPlaceName(localized(item, 'name', language), language) })
     return names
   }, [stops, language])
-  const markers = useMemo(() => buildRouteMarkers(data, stops, language), [data, stops, language])
-  // The Stop list whose names finished loading; null while a load is running.
-  const [namesLoadedFor, setNamesLoadedFor] = useState<ROUTS[] | null>(null)
-  // Bumped by the Retry row to load the Stop names again.
-  const [namesAttempt, setNamesAttempt] = useState(0)
-  const namesMissing = namesLoadedFor === data && data.some(item => !stopNames[item.stop])
+  const markers = useMemo(() => buildRouteMarkers(routeStops, stops, language), [routeStops, stops, language])
+  const namesMissing = state.stopNamesStatus !== 'loading' && routeStops.some(item => !stopNames[item.stop])
   // Height of the area below the header; the map is a fraction of it, so handle and list stay on
   // screen. The map waits for this measurement so it never flashes at the wrong size.
   const [contentHeight, setContentHeight] = useState(0)
@@ -67,14 +67,9 @@ export default function RoutesStopScreen(): React.JSX.Element {
   }, [])
   const onMapResizeRelease = useCallback((fraction: number) => settleMapSize(snapFraction(fraction)), [settleMapSize])
   const onMapResizeTap = useCallback(() => settleMapSize(nextMapSize(mapFraction)), [settleMapSize, mapFraction])
-  const [selectedStop, setSelectedStop] = useState<string | null>(null)
-  const [error, setError] = useState<'invalidRoute' | 'fetchFailed' | null>(null)
-  const [etaMap, setEtaMap] = useState<{ [stopId: string]: ETA[] }>({})
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const listRef = useRef<FlatList<ROUTS>>(null)
 
-  // The user's position: watched only while this screen has focus.
-  const isFocused = useIsFocused()
   const userLocation = useUserLocation(isFocused)
   const [centerOnUserToken, setCenterOnUserToken] = useState(0)
   const [fitRouteToken, setFitRouteToken] = useState(0)
@@ -100,150 +95,25 @@ export default function RoutesStopScreen(): React.JSX.Element {
   }, [])
   useFocusEffect(useCallback(() => { reloadFavorites() }, [reloadFavorites]))
 
-  const selectStop = useCallback((stopId: string | null) => {
-    setSelectedStop(stopId)
-  }, [])
-
-  // ETAs for the selected Stop: fetched on select and on focus, then polled while the screen has
-  // focus, so the card never counts down to buses that have left. Cleanup drops a late response,
-  // so a request for the previous Route or Stop never lands in `etaMap`.
-  useEffect(() => {
-    if (!isFocused || !selectedStop || dataRouteKey !== routeKey) return
-    if (typeof route !== 'string' || typeof service_type !== 'string') return
-    let cancelled = false
-    const loadEtas = async () => {
-      try {
-        const etaRes = await fetchStopETA(selectedStop, route, service_type)
-        if (!cancelled) setEtaMap(prev => ({ ...prev, [selectedStop]: etaRes.data }))
-      } catch (e) {
-        console.error('Failed to load ETAs', e)
-        // Keep the last times on a failed refresh; show "no time" only if there were none.
-        if (!cancelled) setEtaMap(prev => (prev[selectedStop] ? prev : { ...prev, [selectedStop]: [] }))
-      }
-    }
-    loadEtas()
-    const timer = setInterval(loadEtas, ETA_REFRESH_MS)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [isFocused, selectedStop, dataRouteKey, routeKey, route, service_type])
-
-  // Selects a Stop and scrolls its row to the top, so its card (with Save) is in view.
+  // Scrolls the selected row to the top, so its card (with Save) is in view, after every new selection.
   // The scroll runs from the selected row's onLayout (scrollToSelected), not here: only then has the
   // list measured the new layout. Scrolling earlier overshoots when another Stop's card closes above
   // it, and does nothing when the list is not on screen yet (a preselect).
+  // A layout effect, so the flag is set before the selected row reports its layout.
   const scrollPending = useRef<string | null>(null)
-  const focusStop = useCallback((stopId: string) => {
-    selectStop(stopId)
-    scrollPending.current = stopId
-  }, [selectStop])
-  const scrollToSelected = useCallback((stopId: string, index: number) => {
-    if (scrollPending.current !== stopId) return
+  useLayoutEffect(() => {
+    if (selected) scrollPending.current = selected.seq
+  }, [selected])
+  const scrollToSelected = useCallback((seq: string, index: number) => {
+    if (scrollPending.current !== seq) return
     scrollPending.current = null
     requestAnimationFrame(() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 }))
   }, [])
-
-  // Preselect the Stop named by the `stop` param (e.g. from My Buses), once per opening of the page:
-  // leaving the page forgets it, so tapping the same Favorite row again selects its Stop again.
-  const handledStopRef = useRef<string | null>(null)
-  const { stop: stopParam } = params
-  useEffect(() => {
-    if (!isFocused) {
-      handledStopRef.current = null
-      return
-    }
-    if (typeof stopParam !== 'string' || dataRouteKey !== routeKey) return
-    if (!data.some(item => item.stop === stopParam)) return
-    const key = `${routeKey}|${stopParam}`
-    if (handledStopRef.current === key) return
-    handledStopRef.current = key
-    focusStop(stopParam)
-  }, [isFocused, stopParam, routeKey, dataRouteKey, data, focusStop])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
     return () => clearInterval(timer)
   }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const fetchData = async () => {
-      setLoading(true)
-      setError(null)
-      // This screen stays mounted when it is opened for another Route: drop the previous Route's
-      // Stops, ETAs and selection so none of them is shown for (or reused by) the new Route.
-      setData([])
-      setDataRouteKey(null)
-      setEtaMap({})
-      setSelectedStop(null)
-      try {
-        if (typeof route === 'string' && typeof bound === 'string' && typeof service_type === 'string') {
-          const apiBound = bound === 'I' ? 'inbound' : bound === 'O' ? 'outbound' : bound
-          const res = await fetchRouteSTOP(route, apiBound, service_type)
-          if (cancelled) return
-          setData(res.data)
-          setDataRouteKey(`${route}|${bound}|${service_type}`)
-        } else {
-          if (!cancelled) setError('invalidRoute')
-        }
-      } catch (e) {
-        console.error('Failed to fetch the Route\'s Stops', e)
-        if (!cancelled) setError('fetchFailed')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchData()
-    return () => {
-      cancelled = true
-    }
-  }, [route, bound, service_type])
-
-  // Start and end for the header, from the Route list (cached for a day). Kept apart from the Stop
-  // list load: reading the large cached list is slow on some devices and must not hold up the Stops.
-  useEffect(() => {
-    let cancelled = false
-    setRouteInfo(null)
-    // This screen is mounted at start-up with no Route; a second Route list download then would
-    // double the start-up burst that gets the app 403'd by the KMB CDN.
-    if (typeof route !== 'string') return
-    const loadRouteInfo = async () => {
-      try {
-        const { routes } = await getCachedRoutes()
-        if (cancelled) return
-        setRouteInfo(routes.find(r => r.route === route && r.bound === bound && r.service_type === service_type) ?? null)
-      } catch (e) {
-        console.error('Failed to load the Route list for the header', e)
-      }
-    }
-    loadRouteInfo()
-    return () => {
-      cancelled = true
-    }
-  }, [route, bound, service_type])
-
-  // Stop names and coordinates for the Route's Stops. A failure here must not
-  // hide the Stop list fetched above; rows fall back to Stop ids and a Retry row.
-  useEffect(() => {
-    let cancelled = false
-    const loadStopNames = async () => {
-      setNamesLoadedFor(null)
-      try {
-        const found = await getStopsFor(data.map(item => item.stop))
-        if (cancelled) return
-        setStops(found)
-      } catch (e) {
-        console.error('Failed to load stop names', e)
-      } finally {
-        if (!cancelled) setNamesLoadedFor(data)
-      }
-    }
-    loadStopNames()
-    return () => {
-      cancelled = true
-    }
-  }, [data, namesAttempt])
 
   const onSave = useCallback(async (item: ROUTS) => {
     // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
@@ -255,7 +125,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
   const nowIso = new Date(now).toISOString()
   const renderCard = (item: ROUTS): React.JSX.Element => (
     <SelectedStopCard
-      arrivals={etaMap[item.stop] ? upcomingArrivals(etaMap[item.stop], nowIso, 2) : null}
+      arrivals={selectedArrivals(state, nowIso, 2)}
       saved={includesFavorite(favorites, { route: item.route, service_type: item.service_type, stop: item.stop })}
       onSave={() => onSave(item)}
       language={language}
@@ -297,10 +167,10 @@ export default function RoutesStopScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {isLoading ? (
+      {state.status === 'idle' || state.status === 'loading' ? (
         <ActivityIndicator size="large" color={COLORS.accent} style={styles.loading} />
-      ) : error ? (
-        <Text style={styles.error}>{strings[error]}</Text>
+      ) : state.status !== 'ready' ? (
+        <Text style={styles.error}>{state.status === 'fetchFailed' ? strings.fetchFailed : strings.invalidRoute}</Text>
       ) : (
         <View style={styles.body} testID="route-content" onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
           {contentHeight > 0 && (
@@ -309,8 +179,8 @@ export default function RoutesStopScreen(): React.JSX.Element {
                 {markers.length > 0 ? (
                   <StopMap
                     markers={markers}
-                    selectedStop={selectedStop}
-                    onMarkerPress={focusStop}
+                    selectedStop={selected?.stop ?? null}
+                    onMarkerPress={session.selectStop}
                     userLocation={location}
                     centerOnUserToken={centerOnUserToken}
                     fitRouteToken={fitRouteToken}
@@ -340,7 +210,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
           )}
           {namesMissing && (
             <Pressable
-              onPress={() => setNamesAttempt(n => n + 1)}
+              onPress={session.retryStopNames}
               style={styles.retry}
               accessibilityRole="button"
               accessibilityLabel={strings.retryStopNamesLabel}
@@ -351,7 +221,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
           )}
           <FlatList
             ref={listRef}
-            data={data}
+            data={routeStops}
             contentContainerStyle={styles.list}
             ListHeaderComponent={<Text style={styles.hint}>{strings.tapYourStop}</Text>}
             onScrollToIndexFailed={info => {
@@ -362,12 +232,12 @@ export default function RoutesStopScreen(): React.JSX.Element {
             keyExtractor={(item, index) => `${item.route}-${item.bound}-${item.service_type}-${item.seq}-${item.stop}-${index}`}
             renderItem={({ item, index }) => {
               const name = stopNames[item.stop] || item.stop
-              const isSelected = item.stop === selectedStop
+              const isSelected = item.seq === selected?.seq
               return (
                 // Every row keeps an onLayout: on web, a view only reports layout if it had one when it mounted.
-                <View onLayout={() => { if (isSelected) scrollToSelected(item.stop, index) }}>
+                <View onLayout={() => { if (isSelected) scrollToSelected(item.seq, index) }}>
                   <Pressable
-                    onPress={() => (isSelected ? selectStop(null) : focusStop(item.stop))}
+                    onPress={() => session.select(isSelected ? null : item.seq)}
                     accessibilityRole="button"
                     accessibilityLabel={strings.stopRowLabel(item.seq, name)}
                     style={({ pressed }) => [styles.stopRow, pressed && styles.pressed]}

@@ -67,7 +67,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
     const { groups } = await loadFavoriteBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([
-      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5), minutes: 5 }] }] },
+      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] }] },
     ])
   })
 
@@ -184,7 +184,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
-    expect(groups[0].routes[0].arrivals.map(a => a.minutes)).toEqual([4, 20, null])
+    expect(groups[0].routes[0].etas.map(a => a.eta)).toEqual([at(4), at(20), ''])
   })
 
   it('sorts Routes within a Stop by their next arrival, with no-time Routes last', async () => {
@@ -206,6 +206,24 @@ describe('loadFavoriteBoard: arrivals', () => {
     expect(groups[0].routes.map(r => r.route)).toEqual(['C', 'B', 'A'])
   })
 
+  it('does not put a Route first because of a bus that has already left', async () => {
+    stubKmb({
+      etas: {
+        'S1/A/1': [{ eta: at(-3) }, { eta: at(10) }],
+        'S1/B/1': [{ eta: at(5) }],
+      },
+      stopNames: { S1: 'Stop' },
+    })
+
+    const { groups } = await loadFavoriteBoard(
+      ['A', 'B'].map(route => ({ stop: 'S1', route, service_type: '1' })),
+      NOW,
+      'en',
+    )
+
+    expect(groups[0].routes.map(r => r.route)).toEqual(['B', 'A'])
+  })
+
   it('keeps the same Route in two directions as separate entries', async () => {
     stubKmb({
       etas: { 'S1/272P/1': [{ dir: 'O', eta: at(5) }, { dir: 'I', eta: at(8) }] },
@@ -215,8 +233,8 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadFavoriteBoard([fav], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
-      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(5), minutes: 5 }] },
-      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', arrivals: [{ eta: at(8), minutes: 8 }] },
+      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] },
+      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', etas: [{ eta: at(8) }] },
     ])
   })
 
@@ -247,12 +265,23 @@ describe('loadFavoriteBoard: arrivals', () => {
     expect(groups[0].routes.map(r => r.stop)).toEqual(['S1', 'S2'])
   })
 
-  it('computes minutes against the given time, not the clock', async () => {
-    stubKmb({ etas: { 'S1/272P/1': [{ eta: '2030-06-01T08:30:00Z' }] }, stopNames: { S1: 'Stop' } })
+  it('orders against the given time, not the clock', async () => {
+    // At 08:00 the 07:58 bus on A has left, so B (08:10) comes before A (08:30).
+    stubKmb({
+      etas: {
+        'S1/A/1': [{ eta: '2030-06-01T07:58:00Z' }, { eta: '2030-06-01T08:30:00Z' }],
+        'S1/B/1': [{ eta: '2030-06-01T08:10:00Z' }],
+      },
+      stopNames: { S1: 'Stop' },
+    })
 
-    const { groups } = await loadFavoriteBoard([fav], new Date('2030-06-01T08:00:00Z'), 'en')
+    const { groups } = await loadFavoriteBoard(
+      ['A', 'B'].map(route => ({ stop: 'S1', route, service_type: '1' })),
+      new Date('2030-06-01T08:00:00Z'),
+      'en',
+    )
 
-    expect(groups[0].routes[0].arrivals[0].minutes).toBe(30)
+    expect(groups[0].routes.map(r => r.route)).toEqual(['B', 'A'])
   })
 
   it('still shows the other Favorites when one ETA request fails', async () => {
@@ -269,7 +298,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     expect(groups).toEqual([
       { stopName: 'Broken Stop', stopIds: ['S1'], routes: [] },
-      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', arrivals: [{ eta: at(6), minutes: 6 }] }] },
+      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(6) }] }] },
     ])
   })
 

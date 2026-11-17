@@ -11,7 +11,7 @@ const route = (code: string, stop: string, etas: string[]) => ({
   bound: 'O',
   service_type: '1',
   dest: 'X',
-  arrivals: etas.map(eta => ({ eta, minutes: null })),
+  etas: etas.map(eta => ({ eta })),
 })
 
 const groups: StopGroup[] = [

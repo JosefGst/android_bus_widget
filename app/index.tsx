@@ -7,8 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLanguage } from '../components/language_context'
 import { RouteBadge } from '../components/RouteBadge'
 import { CARD_RADIUS, COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
-import { ArrivalTime, routeRow } from '../utils/arrival_display'
-import { FavoriteBoard, loadFavoriteBoard, RouteArrivals } from '../utils/favorite_board'
+import { ArrivalTime, routeRow } from '../utils/arrivals'
+import { FavoriteBoard, loadFavoriteBoard, BoardRoute } from '../utils/favorite_board'
 import { Favorite, list as listFavorites, remove as removeFavorite } from '../utils/favorites'
 import type { Language } from '../utils/language'
 import { displayPlaceName } from '../utils/string_formatting'
@@ -198,7 +198,7 @@ export default function MyBuses(): React.JSX.Element {
 }
 
 interface RouteRowButtonProps {
-  route: RouteArrivals
+  route: BoardRoute
   stopName: string
   now: string
   language: Language
@@ -207,7 +207,7 @@ interface RouteRowButtonProps {
 }
 
 function RouteRowButton({ route, stopName, now, language, strings, onPress }: RouteRowButtonProps): React.JSX.Element {
-  const row = routeRow(route.arrivals, now)
+  const row = routeRow(route.etas, now)
   const dest = displayPlaceName(route.dest, language)
   return (
     <Pressable

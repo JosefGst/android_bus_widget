@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type ETA = {
   route: string;
   dir: string;
+  // Position of the Stop on the Route; a circular Route passes some Stops twice.
+  seq: number;
   service_type: string;
   dest_en: string;
   dest_tc?: string;
