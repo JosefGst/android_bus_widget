@@ -13,6 +13,10 @@ const STOP_CACHE_KEY = 'bus_stops_cache'
 // Keeps a burst of single-Stop requests small enough not to trip the CDN's rate limit.
 const MAX_PARALLEL_REQUESTS = 4
 
+// downloadAll: false is for the widget: it never starts the ~1 MB list download and never writes the
+// cache (the widget runs in its own context, which does not share this queue, so it could overwrite the app's writes).
+export type StopLookupOptions = { downloadAll?: boolean }
+
 type StopCache = { stops: Stop[]; generatedTimestamp: string }
 
 const isStop = (value: unknown): value is Stop =>
@@ -60,19 +64,19 @@ let queue: Promise<unknown> = Promise.resolve()
  * Stop details for the given Stop ids, in the same order. Stops that cannot be
  * loaded are left out, so callers can tell which names are still missing.
  */
-export function getStopsFor(stopIds: string[]): Promise<Stop[]> {
-  const run = queue.then(() => loadStopsFor(stopIds))
+export function getStopsFor(stopIds: string[], options: StopLookupOptions = {}): Promise<Stop[]> {
+  const run = queue.then(() => loadStopsFor(stopIds, options))
   queue = run.catch(() => undefined)
   return run
 }
 
-async function loadStopsFor(stopIds: string[]): Promise<Stop[]> {
+async function loadStopsFor(stopIds: string[], { downloadAll = true }: StopLookupOptions): Promise<Stop[]> {
   const wanted = Array.from(new Set(stopIds))
   if (wanted.length === 0) return []
 
   let cache = await readCache()
   let cacheChanged = false
-  if (!cache) {
+  if (!cache && downloadAll) {
     cache = await downloadAllStops()
     cacheChanged = cache !== null
   }
@@ -85,7 +89,7 @@ async function loadStopsFor(stopIds: string[]): Promise<Stop[]> {
     cacheChanged = true
   })
 
-  if (cacheChanged) {
+  if (cacheChanged && downloadAll) {
     try {
       await saveCache(STOP_CACHE_KEY, Array.from(byId.values()), cache?.generatedTimestamp ?? '')
     } catch (e) {

@@ -84,9 +84,9 @@ export default function MyBuses(): React.JSX.Element {
   // Stop id -> display name, for the rows in "Change my buses".
   const stopNameById = useMemo(() => {
     const names: Record<string, string> = {}
-    board.groups.forEach(group => group.stopIds.forEach(id => { names[id] = displayPlaceName(group.stopName, language) }))
+    board.groups.forEach(group => group.stopIds.forEach(id => { names[id] = group.stopName }))
     return names
-  }, [board, language])
+  }, [board])
 
   const nowIso = new Date(now).toISOString()
   const updated = formatClockTime(board.generatedTimestamp, language)
@@ -151,7 +151,7 @@ export default function MyBuses(): React.JSX.Element {
         </View>
       ) : (
         board.groups.map(group => {
-          const stopName = displayPlaceName(group.stopName, language)
+          const stopName = group.stopName
           return (
           <View key={group.stopName} style={styles.card}>
             <View style={styles.stopHeader}>

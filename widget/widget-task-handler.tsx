@@ -1,7 +1,7 @@
 import React from "react";
 import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 
-import { loadFavoriteBoard } from "../utils/favorite_board";
+import { loadFavoriteBoard, WIDGET_BOARD_DEPS } from "../utils/favorite_board";
 import { listForWidget } from "../utils/favorites";
 import { getLanguage } from "../utils/language";
 import { STRINGS } from "../utils/strings";
@@ -40,10 +40,10 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
   try {
     const board = await withTimeout(
       WIDGET_FETCH_TIMEOUT_MS,
-      listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language))
+      listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language, WIDGET_BOARD_DEPS))
     );
     const now = new Date().toISOString();
-    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, language, text)} />;
+    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, text)} />;
   } catch (e) {
     console.error("[Widget] ETA fetch failed:", e);
     return <BusETAWidget strings={text} error={text.widgetTapToRefresh} />;

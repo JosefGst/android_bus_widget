@@ -3,9 +3,10 @@
 
 import { arrivals, compareEtas } from './arrivals'
 import type { Favorite } from './favorites'
-import { ETA, fetchStop, fetchStopETA, KMBResponse } from './fetch'
+import { ETA, fetchStopETA, KMBResponse, Stop } from './fetch'
 import { Language, localized } from './language'
-import { normalizeStopName } from './string_formatting'
+import { getStopsFor } from './stops'
+import { stopDisplayName } from './string_formatting'
 
 // One ETA's time as KMB gave it; the Arrival (Now / N min) is worked out by utils/arrivals at render time.
 export type BoardEta = { eta: string }
@@ -15,14 +16,20 @@ export type BoardRoute = { route: string; stop: string; bound: string; service_t
 export type StopGroup = { stopName: string; stopIds: string[]; routes: BoardRoute[] }
 export type FavoriteBoard = { groups: StopGroup[]; generatedTimestamp: string }
 
-async function loadStopNames(stopIds: string[], language: Language): Promise<Map<string, string>> {
-  const unique = Array.from(new Set(stopIds))
-  const infos = await Promise.all(unique.map(id => fetchStop(id)))
+export type BoardDeps = { getStopsFor: (stopIds: string[]) => Promise<Stop[]> }
+const DEFAULT_DEPS: BoardDeps = { getStopsFor }
+// The widget never starts the full Stop list download (see StopLookupOptions in utils/stops).
+export const WIDGET_BOARD_DEPS: BoardDeps = { getStopsFor: stopIds => getStopsFor(stopIds, { downloadAll: false }) }
+
+// Display name per Stop id. A Stop that cannot be loaded is left out; the board shows its id.
+async function loadStopNames(stopIds: string[], language: Language, deps: BoardDeps): Promise<Map<string, string>> {
   const names = new Map<string, string>()
-  unique.forEach((id, i) => {
-    const info = infos[i]
-    names.set(id, normalizeStopName(info ? localized(info, 'name', language) : id))
-  })
+  try {
+    const stops = await deps.getStopsFor(Array.from(new Set(stopIds)))
+    stops.forEach(stop => names.set(stop.stop, stopDisplayName(stop, language)))
+  } catch (e) {
+    console.error('Failed to load Stop names', e)
+  }
   return names
 }
 
@@ -43,10 +50,10 @@ function sortRoutes(routes: Iterable<BoardRoute>, now: string): BoardRoute[] {
     .sort((a, b) => compareEtas(a.etas[0]?.eta ?? '', b.etas[0]?.eta ?? ''))
 }
 
-export async function loadFavoriteBoard(favorites: Favorite[], now: Date, language: Language): Promise<FavoriteBoard> {
+export async function loadFavoriteBoard(favorites: Favorite[], now: Date, language: Language, deps: BoardDeps = DEFAULT_DEPS): Promise<FavoriteBoard> {
   const [etaResponses, stopNames] = await Promise.all([
     Promise.all(favorites.map(loadEtas)),
-    loadStopNames(favorites.map(f => f.stop), language),
+    loadStopNames(favorites.map(f => f.stop), language, deps),
   ])
   // Fully offline: reject rather than show every Stop as "no buses", so callers keep their last board.
   if (favorites.length > 0 && etaResponses.every(r => r === null)) {

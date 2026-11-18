@@ -213,4 +213,33 @@ describe('getStopsFor', () => {
     expect(result.map(s => s.stop)).toEqual(ids)
     expect(maxInFlight).toBe(4)
   })
+
+  describe('without downloading the full list (the widget)', () => {
+    it('never requests the full list, even with no cache; loads the Stops one by one', async () => {
+      const fetchSpy = mockApi({ [STOP_URL('A')]: () => jsonResponse({ data: stop('A') }) })
+
+      const result = await getStopsFor(['A'], { downloadAll: false })
+
+      expect(result).toEqual([stop('A')])
+      expect(fetchSpy.mock.calls.map(([url]) => String(url))).toEqual([STOP_URL('A')])
+    })
+
+    it('answers from the cache and loads gap Stops without adding them to it', async () => {
+      mockApi({ [STOP_URL('B')]: () => jsonResponse({ data: stop('B') }) })
+      await saveStopCache([stop('A')])
+
+      const result = await getStopsFor(['A', 'B'], { downloadAll: false })
+
+      expect(result).toEqual([stop('A'), stop('B')])
+      expect(await readStopCache()).toEqual([stop('A')])
+    })
+
+    it('writes no cache at all when there was none', async () => {
+      mockApi({ [STOP_URL('A')]: () => jsonResponse({ data: stop('A') }) })
+
+      await getStopsFor(['A'], { downloadAll: false })
+
+      expect(await readStopCache()).toBeUndefined()
+    })
+  })
 })

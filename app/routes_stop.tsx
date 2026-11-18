@@ -18,7 +18,7 @@ import { localized } from '../utils/language'
 import { DEFAULT_MAP_FRACTION, loadMapSize, mapSizeName, nextMapSize, saveMapSize, snapFraction } from '../utils/map_size'
 import { buildRouteMarkers } from '../utils/route_stop_map'
 import { selectedArrivals } from '../utils/route_stop_session'
-import { displayPlaceName } from '../utils/string_formatting'
+import { displayPlaceName, stopDisplayName } from '../utils/string_formatting'
 
 // Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
 const CLOCK_TICK_MS = 10_000
@@ -46,7 +46,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
   // Derived per language from the Stop records, so switching language needs no new request.
   const stopNames = useMemo(() => {
     const names: { [stopId: string]: string } = {}
-    stops.forEach(item => { names[item.stop] = displayPlaceName(localized(item, 'name', language), language) })
+    stops.forEach(item => { names[item.stop] = stopDisplayName(item, language) })
     return names
   }, [stops, language])
   const markers = useMemo(() => buildRouteMarkers(routeStops, stops, language), [routeStops, stops, language])

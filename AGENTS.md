@@ -18,10 +18,10 @@ app/                      # Expo Router screens (tab-based)
   routes_stop.tsx         # Route page: header (badge, From/To), resizable map above the Stop list, Stop card with next buses + Save to My Buses; renders the Route page session
 utils/                    # Shared utilities (NOT inside app/)
   fetch.ts                # KMB API calls, types, 24h Route cache
-  stops.ts                # getStopsFor(): Stop names/coords — no-expiry Stop cache, fills gaps via /stop/{id}
+  stops.ts                # getStopsFor(): the only Stop lookup — no-expiry Stop cache, fills gaps via /stop/{id}; `{ downloadAll: false }` (widget) never downloads the full list and never writes the cache
   favorites.ts            # Favorites: the only reader/writer of the Favorite list (list/add/remove/listForWidget/onFavoritesChanged)
-  favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/index.tsx (My Buses); each Route carries its destination (`dest`)
-  string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses), displayPlaceName() (English title case)
+  favorite_board.ts       # loadFavoriteBoard(): Favorites → ETAs grouped by Stop — shared by widget/ and app/index.tsx (My Buses); Stop names are display-ready (`stopDisplayName`), looked up through an injected `getStopsFor` (`WIDGET_BOARD_DEPS` for the widget); each Route carries its destination (`dest`)
+  string_formatting.ts    # normalizeStopName() (strips ASCII and full-width parentheses), displayPlaceName() (English title case), stopDisplayName() (Stop → display name)
   language.ts             # Language ('en'|'tc'|'sc'): phone language, saved choice, onLanguageChanged, localized()
   strings.ts              # STRINGS: the app's own text per Language (typed; a missing key is a compile error)
   time_formatting.ts      # formatEtaToHKTime(), formatClockTime() ("2:41 pm" / "下午2:41"; am/pm written in code because Hermes has no Chinese Intl data)
