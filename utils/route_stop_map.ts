@@ -1,5 +1,6 @@
 import type { ROUTS, Stop } from './fetch'
-import { Language, localized } from './language'
+import { Language } from './language'
+import { stopDisplayName } from './string_formatting'
 
 /** One Stop of a Route, placed on the map. */
 export type RouteMarker = {
@@ -83,7 +84,7 @@ const toMarker = (routeStop: ROUTS, stop: Stop | undefined, language: Language):
   if (lat < HK_BOUNDS.minLat || lat > HK_BOUNDS.maxLat || lng < HK_BOUNDS.minLng || lng > HK_BOUNDS.maxLng) {
     return null
   }
-  return { stop: routeStop.stop, seq: Number(routeStop.seq), name: localized(stop, 'name', language) || routeStop.stop, lat, lng }
+  return { stop: routeStop.stop, seq: Number(routeStop.seq), name: stopDisplayName(stop, language) || routeStop.stop, lat, lng }
 }
 
 /** Markers for a Route's Stops, ordered by seq. Stops without usable coordinates are left out. */

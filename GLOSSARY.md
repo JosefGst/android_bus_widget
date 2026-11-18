@@ -10,7 +10,7 @@ Domain terms used in code, docs and reviews. Use these words, not synonyms.
 
 **Arrival**: an ETA as the user sees it at a given moment: Now, N min, or unknown. Buses more than a minute past their time have left and are dropped. Built by `arrivals()` in `utils/arrivals.ts`, the only place minutes are worked out. (The Favorite board stores plain ETA times, `BoardEta`; they become Arrivals only when shown.)
 
-**Stop name**: a Stop's name as the user reads it: in the chosen Language, platform suffix removed, English in title case. Built once by `stopDisplayName()` in `utils/string_formatting.ts`; the Favorite board and the Route page emit it, so screens and the widget show it as given and never re-derive it. Stops come from `getStopsFor()`, never from `fetchStop` directly.
+**Stop name**: a Stop's name as the user reads it: in the chosen Language, platform suffix removed, English in title case. Built by `stopDisplayName()` in `utils/string_formatting.ts` and used everywhere a Stop is named: the Favorite board (so My Buses and the widget show it as given), the Route page's Stop list and the Route map's markers. Stops come from `getStopsFor()`, never from `fetchStop` directly.
 
 **Favorite**: one `{route, service_type, stop}` triple the user follows. Two Favorites are the same when all three fields match. Owned by `utils/favorites.ts`. A Favorite covers every direction of the Route at that Stop: at a Stop both directions use, the Favorite board shows one row per direction, each with its destination. Adding a direction to Favorite was considered and rejected (Nov 2026): the board already keeps directions apart, and changing the stored format needs a migration.
 _Avoid_: "favorite stop" (a Favorite is a Route at a Stop, not a Stop), "routes to fetch".

@@ -12,7 +12,7 @@ tags:
 - runFlow: subflows/open_route_1a.yaml
 
 # Stop names come from /stop (title-cased); when that fails the rows show ids and a Retry row.
-- assertVisible: "1, Sau Mau Ping \\(Central\\)"
+- assertVisible: "1, Sau Mau Ping"
 - assertNotVisible: "Couldn't load stop names.*"
 
 # Tapping a Stop opens its card with the next buses (or "No time yet") and Save.
