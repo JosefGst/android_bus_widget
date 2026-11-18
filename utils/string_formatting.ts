@@ -1,5 +1,6 @@
 // Utility for string formatting
-import type { Language } from './language'
+import { localized, type Language } from './language'
+import type { Stop } from './fetch'
 
 /**
  * Removes any substring in parentheses from a stop name, ASCII or full-width (used in Chinese names).
@@ -19,4 +20,9 @@ const titleCaseWord = (word: string): string =>
 export function displayPlaceName(name: string, language: Language): string {
   if (language !== 'en') return name
   return name.replace(/[A-Za-z]+/g, titleCaseWord)
+}
+
+/** A Stop's name as the user reads it: in the chosen Language, platform suffix removed, English in title case. */
+export function stopDisplayName(stop: Stop, language: Language): string {
+  return displayPlaceName(normalizeStopName(localized(stop, 'name', language)), language)
 }

@@ -84,9 +84,9 @@ export default function MyBuses(): React.JSX.Element {
   // Stop id -> display name, for the rows in "Change my buses".
   const stopNameById = useMemo(() => {
     const names: Record<string, string> = {}
-    board.groups.forEach(group => group.stopIds.forEach(id => { names[id] = displayPlaceName(group.stopName, language) }))
+    board.groups.forEach(group => group.stopIds.forEach(id => { names[id] = group.stopName }))
     return names
-  }, [board, language])
+  }, [board])
 
   const nowIso = new Date(now).toISOString()
   const updated = formatClockTime(board.generatedTimestamp, language)
@@ -150,13 +150,11 @@ export default function MyBuses(): React.JSX.Element {
           })}
         </View>
       ) : (
-        board.groups.map(group => {
-          const stopName = displayPlaceName(group.stopName, language)
-          return (
+        board.groups.map(group => (
           <View key={group.stopName} style={styles.card}>
             <View style={styles.stopHeader}>
               <MaterialIcons name="place" size={26} color={COLORS.inkMuted} />
-              <Text style={styles.stopName}>{stopName}</Text>
+              <Text style={styles.stopName}>{group.stopName}</Text>
             </View>
             {group.routes.length === 0 ? (
               <Text style={styles.noBuses}>{strings.noBusesForStop}</Text>
@@ -165,7 +163,7 @@ export default function MyBuses(): React.JSX.Element {
                 <RouteRowButton
                   key={`${route.stop}|${route.route}|${route.bound}`}
                   route={route}
-                  stopName={stopName}
+                  stopName={group.stopName}
                   now={nowIso}
                   language={language}
                   strings={strings}
@@ -177,8 +175,7 @@ export default function MyBuses(): React.JSX.Element {
               ))
             )}
           </View>
-          )
-        })
+        ))
       )}
 
       {hasFavorites && !isLoading && (

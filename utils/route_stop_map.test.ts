@@ -62,6 +62,11 @@ describe('buildRouteMarkers', () => {
     expect(markers.map(m => m.name)).toEqual(['大學站', 'CENTRAL'])
   })
 
+  it('names markers with the Stop name the list shows: suffix removed, English in title case', () => {
+    const markers = buildRouteMarkers([routeStop('A', '1')], [stop('A', '22.3', '114.1', 'SAU MAU PING (CENTRAL)')], 'en')
+    expect(markers[0].name).toBe('Sau Mau Ping')
+  })
+
   it('falls back to the Stop id when there is no name', () => {
     const markers = buildRouteMarkers([routeStop('A', '1')], [stop('A', '22.3', '114.1', '')], 'en')
     expect(markers[0].name).toBe('A')
