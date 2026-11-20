@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { add, includesFavorite, list, listForWidget, onFavoritesChanged, remove, STARTER_FAVORITES } from './favorites'
+import { add, favoriteFor, includesFavorite, list, listForWidget, onFavoritesChanged, remove, STARTER_FAVORITES } from './favorites'
 
 // The storage key is part of the persisted contract: existing users' Favorites live under it.
 const STORAGE_KEY = 'baseRoutesToFetch'
@@ -40,6 +40,57 @@ describe('list', () => {
       JSON.stringify([{ stop: 'a', route: 'b', service_type: '1', extra: 'ignored' }]),
     )
     expect(await list()).toEqual([{ stop: 'a', route: 'b', service_type: '1' }])
+  })
+})
+
+describe('direction', () => {
+  beforeEach(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, '[]')
+  })
+
+  it('keeps the direction of a saved Favorite', async () => {
+    await add({ route: '272S', service_type: '1', stop: 'DIAMOND_HILL', bound: 'O' })
+    expect(await list()).toEqual([{ route: '272S', service_type: '1', stop: 'DIAMOND_HILL', bound: 'O' }])
+  })
+
+  it('keeps one Favorite per direction at the same Stop and Route, and removes them one at a time', async () => {
+    const outbound = { route: '272S', service_type: '1', stop: 'DIAMOND_HILL', bound: 'O' as const }
+    const inbound = { ...outbound, bound: 'I' as const }
+    await add(outbound)
+    await add(inbound)
+    expect(await list()).toEqual([outbound, inbound])
+    await remove(outbound)
+    expect(await list()).toEqual([inbound])
+  })
+})
+
+describe('favoriteFor', () => {
+  it('saves the direction of the Route page it is saved from', () => {
+    expect(favoriteFor({ route: '272S', service_type: '1', bound: 'O' }, 'DIAMOND_HILL')).toEqual({
+      route: '272S', service_type: '1', stop: 'DIAMOND_HILL', bound: 'O',
+    })
+  })
+
+  it('saves without a direction when the Route page has none KMB recognises', () => {
+    expect(favoriteFor({ route: '272S', service_type: '1', bound: 'X' }, 'DIAMOND_HILL')).toEqual({
+      route: '272S', service_type: '1', stop: 'DIAMOND_HILL',
+    })
+  })
+})
+
+describe('includesFavorite with direction', () => {
+  const base = { route: '272S', service_type: '1', stop: 'DIAMOND_HILL' }
+
+  it('counts a directed Favorite as saved only for its own direction', () => {
+    const saved = [{ ...base, bound: 'O' as const }]
+    expect(includesFavorite(saved, { ...base, bound: 'O' })).toBe(true)
+    expect(includesFavorite(saved, { ...base, bound: 'I' })).toBe(false)
+  })
+
+  it('counts a legacy Favorite without direction as saved for either direction', () => {
+    const saved = [base]
+    expect(includesFavorite(saved, { ...base, bound: 'O' })).toBe(true)
+    expect(includesFavorite(saved, { ...base, bound: 'I' })).toBe(true)
   })
 })
 
