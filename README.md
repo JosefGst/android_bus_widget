@@ -13,10 +13,13 @@
 A simple React Native app built with Expo, to fetch KMB bus arrival times and the ability to save favorite bus stops. The favorite bus stops are also displayed in an Android widget, which is the main advantage compared to other similar apps.
 
 <div style="display: flex; gap: 16px;">
-  <img src="./assets/images/home_screen.jpeg" alt="Home Screen" width="32%" />
-  <img src="./assets/images/routes_stop_screen.jpeg" alt="Routes Stop Screen" width="32%" />
-  <img src="./assets/images/my_favorites_screen.jpeg" alt="My Favorites Screen" width="32%" />
+  <img src="./assets/images/my_favorites_screen.jpeg" alt="My Buses Screen" width="32%" />
+  <img src="./assets/images/find_route_screen.jpeg" alt="Find a Route Screen" width="32%" />
+  <img src="./assets/images/routes_stop_screen.jpeg" alt="Route Stops Screen" width="32%" />
 </div>
+
+### Widget
+<img src="./assets/images/widget_screenshot.png" alt="Bus ETA Widget" width="32%" />
 
 ## Features
 - Free and open source
