@@ -168,7 +168,7 @@ export const routeButton = (page: Page, route: string) =>
 
 /**
  * On Routes Stop: open the Stop's card (unless it is still open from an earlier visit), then Save to My Buses.
- * The screen stays; the button turns into "Saved to My Buses".
+ * Saving returns to My Buses.
  */
 export async function saveStop(page: Page, stopName: string) {
   const card = page.getByRole('button', { name: /^Saved? to My Buses$/ });
@@ -176,5 +176,6 @@ export async function saveStop(page: Page, stopName: string) {
   await expect(row).toBeVisible();
   if (!(await card.isVisible())) await row.click();
   await page.getByRole('button', { name: 'Save to My Buses' }).click();
-  await expect(page.getByRole('button', { name: 'Saved to My Buses' })).toBeVisible();
+  // Saving returns the user to My Buses.
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
 }
