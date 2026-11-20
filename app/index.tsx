@@ -132,14 +132,10 @@ export default function MyBuses(): React.JSX.Element {
         <View style={styles.card}>
           {favorites.map(favorite => {
             const stopName = stopNameById[favorite.stop] ?? favorite.stop
-            // A directed Favorite says where it heads, so two directions of one Route can be told apart.
-            const dest = favorite.bound === undefined ? undefined : board.groups
-              .flatMap(group => group.routes)
-              .find(r => r.stop === favorite.stop && r.route === favorite.route && r.bound === favorite.bound)?.dest
             return (
-              <View key={`${favorite.stop}|${favorite.route}|${favorite.service_type}|${favorite.bound ?? ''}`} style={styles.editRow}>
+              <View key={`${favorite.stop}|${favorite.route}|${favorite.service_type}`} style={styles.editRow}>
                 <RouteBadge route={favorite.route} />
-                <Text style={styles.editStop}>{dest ? `${stopName} · ${strings.toDestination} ${displayPlaceName(dest, language)}` : stopName}</Text>
+                <Text style={styles.editStop}>{stopName}</Text>
                 <Pressable
                   onPress={() => onRemove(favorite)}
                   accessibilityRole="button"

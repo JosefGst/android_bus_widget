@@ -3,12 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 // Favorites: the {route, service_type, stop} triples the user follows.
 // The only module that reads or writes the persisted Favorite list.
 
-// bound: the direction the user saved it from ('O' outbound, 'I' inbound, as KMB writes it).
-// Absent on a legacy Favorite, which covers every direction of the Route at the Stop.
-export type Bound = 'O' | 'I'
-export type Favorite = { route: string; service_type: string; stop: string; bound?: Bound }
-
-const isBound = (value: unknown): value is Bound => value === 'O' || value === 'I'
+export type Favorite = { route: string; service_type: string; stop: string }
 
 // Persisted contract: existing users' Favorites live under this key. Do not rename.
 const STORAGE_KEY = 'baseRoutesToFetch'
@@ -34,29 +29,18 @@ const parseStored = (saved: string | null): Favorite[] | null => {
   try {
     const parsed: unknown = JSON.parse(saved)
     if (!Array.isArray(parsed) || !parsed.every(isFavorite)) return null
-    return parsed.map(({ route, service_type, stop, bound }) =>
-      isBound(bound) ? { stop, route, service_type, bound } : { stop, route, service_type },
-    )
+    return parsed.map(({ route, service_type, stop }) => ({ stop, route, service_type }))
   } catch {
     return null
   }
 }
 
-/** The Favorite to save for `stop` on the Route page described by `routeRef` (its direction included). */
-export function favoriteFor(routeRef: { route: string; service_type: string; bound: string }, stop: string): Favorite {
-  const { route, service_type, bound } = routeRef
-  return isBound(bound) ? { route, service_type, stop, bound } : { route, service_type, stop }
-}
-
 const sameFavorite = (a: Favorite, b: Favorite): boolean =>
-  a.route === b.route && a.service_type === b.service_type && a.stop === b.stop && a.bound === b.bound
+  a.route === b.route && a.service_type === b.service_type && a.stop === b.stop
 
-/**
- * Whether `favorite` is covered by `favorites`: same route, service type and Stop, and either
- * the same direction or a legacy Favorite with no direction (which covers both).
- */
+/** Whether `favorite` (same route, service type and Stop) is in `favorites`. */
 export function includesFavorite(favorites: readonly Favorite[], favorite: Favorite): boolean {
-  return favorites.some(f => sameFavorite(f, favorite) || (f.bound === undefined && sameFavorite(f, { ...favorite, bound: undefined })))
+  return favorites.some(f => sameFavorite(f, favorite))
 }
 
 export async function list(): Promise<Favorite[]> {
