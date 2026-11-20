@@ -1,0 +1,39 @@
+name: Refresh Fares
+
+# Monthly: rebuild utils/generated/fares.json from hk-bus-crawling and open a PR if it changed.
+# The script fails (no PR) when the data looks broken; see scripts/fare_table.js and ADR 0002.
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Rebuild the Fare table
+        run: npm run gen:fares
+
+      - name: Open a PR if the Fares changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/refresh-fares
+          commit-message: Refresh KMB Fares
+          title: Refresh KMB Fares
+          body: |
+            Monthly rebuild of `utils/generated/fares.json` from hk-bus-crawling.
+            Review the diff: fares change rarely, so a large diff deserves a look.
+          delete-branch: true
