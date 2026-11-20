@@ -21,4 +21,7 @@ _Avoid_: "favorite stop" (a Favorite is a Route at a Stop, not a Stop), "routes 
 
 **Language**: the one setting that picks English, Hong Kong Cantonese in Traditional characters (粵, `tc`; KMB names stay formal written Chinese) or Simplified Chinese (简, `sc`) for everything the user reads: screens, Route map labels and the widget. Follows the phone until the user picks one with the header button. Owned by `utils/language.ts`; the codes match the KMB API's field suffixes.
 
+**Fare**: the adult Octopus price to ride a Route from a given Stop to its terminus. It can differ from Stop to Stop on a Route that has section fares. Not shown for the terminus, nor for a Route with no fare data. Looked up by the Stop's position on the Route (`seq`), so a circular Route's two visits to one Stop can have different Fares.
+_Avoid_: "price", "ticket".
+
 **Route page session**: the state of an open Routes Stop page: its Route, the Route's Stops, the selected Stop (a position on the Route, `seq`) and that Stop's ETAs. Owned by `utils/route_stop_session.ts`; the screen sends events (open, focus, blur, select) and renders the state.
