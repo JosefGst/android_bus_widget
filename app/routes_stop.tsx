@@ -118,9 +118,15 @@ export default function RoutesStopScreen(): React.JSX.Element {
   const onSave = useCallback(async (item: ROUTS) => {
     // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
     const saved = await addFavorite(favoriteFor(item, item.stop))
-    if (!saved) console.error('Failed to save Favorite')
+    if (!saved) {
+      console.error('Failed to save Favorite')
+      await reloadFavorites()
+      return
+    }
     await reloadFavorites()
-  }, [reloadFavorites])
+    // Saved: show the user where it landed. My Buses re-reads its Favorites when it gains focus.
+    router.navigate('/')
+  }, [reloadFavorites, router])
 
   const nowIso = new Date(now).toISOString()
   const renderCard = (item: ROUTS): React.JSX.Element => (
