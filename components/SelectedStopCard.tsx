@@ -10,6 +10,8 @@ import { COLORS, FONT_SIZES, FONTS } from './theme'
 interface SelectedStopCardProps {
   /** null while the ETAs load. */
   arrivals: UpcomingArrival[] | null
+  /** The Fare from this Stop to the terminus; null when there is none to show. */
+  fare: number | null
   saved: boolean
   onSave: () => void
   language: Language
@@ -18,7 +20,7 @@ interface SelectedStopCardProps {
 
 /** The open Stop: its next two buses and a Save to My Buses button. Shown under its row in the stop list,
  * which already names the Stop. */
-export function SelectedStopCard({ arrivals, saved, onSave, language, strings }: SelectedStopCardProps): React.JSX.Element {
+export function SelectedStopCard({ arrivals, fare, saved, onSave, language, strings }: SelectedStopCardProps): React.JSX.Element {
   return (
     <View style={styles.card}>
       {arrivals === null ? (
@@ -43,6 +45,7 @@ export function SelectedStopCard({ arrivals, saved, onSave, language, strings }:
           ))}
         </View>
       )}
+      {fare !== null && <Text style={styles.fare}>{strings.fare(fare.toFixed(1))}</Text>}
       <Pressable
         onPress={onSave}
         disabled={saved}
@@ -58,6 +61,7 @@ export function SelectedStopCard({ arrivals, saved, onSave, language, strings }:
 }
 
 const styles = StyleSheet.create({
+  fare: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   card: {
     backgroundColor: COLORS.surface,
     borderWidth: 3,

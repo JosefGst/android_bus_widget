@@ -17,7 +17,7 @@ import { ROUTS } from '../utils/fetch'
 import { localized } from '../utils/language'
 import { DEFAULT_MAP_FRACTION, loadMapSize, mapSizeName, nextMapSize, saveMapSize, snapFraction } from '../utils/map_size'
 import { buildRouteMarkers } from '../utils/route_stop_map'
-import { selectedArrivals } from '../utils/route_stop_session'
+import { fareAt, selectedArrivals } from '../utils/route_stop_session'
 import { displayPlaceName, stopDisplayName } from '../utils/string_formatting'
 
 // Minutes are whole numbers, so a 10 s tick keeps the countdown current without constant redraws.
@@ -132,6 +132,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
   const renderCard = (item: ROUTS): React.JSX.Element => (
     <SelectedStopCard
       arrivals={selectedArrivals(state, nowIso, 2)}
+      fare={fareAt(state, item.seq)}
       saved={includesFavorite(favorites, favoriteFor(item, item.stop))}
       onSave={() => onSave(item)}
       language={language}
@@ -239,6 +240,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
             renderItem={({ item, index }) => {
               const name = stopNames[item.stop] || item.stop
               const isSelected = item.seq === selected?.seq
+              const fare = fareAt(state, item.seq)
               return (
                 // Every row keeps an onLayout: on web, a view only reports layout if it had one when it mounted.
                 <View onLayout={() => { if (isSelected) scrollToSelected(item.seq, index) }}>
@@ -252,6 +254,7 @@ export default function RoutesStopScreen(): React.JSX.Element {
                       <Text style={[styles.seqText, isSelected && styles.seqTextSelected]}>{item.seq}</Text>
                     </View>
                     <Text style={styles.stopName}>{name}</Text>
+                    {fare !== null && <Text style={styles.stopFare}>${fare.toFixed(1)}</Text>}
                   </Pressable>
                   {isSelected && <View style={styles.listCard}>{renderCard(item)}</View>}
                 </View>
@@ -322,6 +325,7 @@ const styles = StyleSheet.create({
   seqText: { fontSize: 17, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
   seqTextSelected: { color: COLORS.onAccent },
   stopName: { flex: 1, fontSize: 20, fontFamily: FONTS.regular, color: COLORS.ink },
+  stopFare: { fontSize: 18, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.inkMuted },
   listCard: { marginVertical: 6 },
   retry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: TOUCH_TARGET },
   retryText: { fontSize: 18, fontFamily: FONTS.regular, color: COLORS.accent },

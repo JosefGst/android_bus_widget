@@ -55,6 +55,7 @@ export type Strings = {
   nextBus: string
   afterThat: string
   atTime: (time: string) => string
+  fare: (amount: string) => string
   saveToMyBuses: string
   savedToMyBuses: string
   wholeRoute: string
@@ -114,6 +115,7 @@ const EN: Strings = {
   nextBus: 'Next bus',
   afterThat: 'After that',
   atTime: time => `at ${time}`,
+  fare: amount => `Fare $${amount}`,
   saveToMyBuses: 'Save to My Buses',
   savedToMyBuses: 'Saved to My Buses',
   wholeRoute: 'Whole route',
@@ -173,6 +175,7 @@ const TC: Strings = {
   nextBus: '下一班',
   afterThat: '跟住嗰班',
   atTime: time => `${time} 到`,
+  fare: amount => `車費 $${amount}`,
   saveToMyBuses: '加入我嘅巴士',
   savedToMyBuses: '已經加入我嘅巴士',
   wholeRoute: '成條路線',
@@ -232,6 +235,7 @@ const SC: Strings = {
   nextBus: '下一班',
   afterThat: '再下一班',
   atTime: time => `${time} 到达`,
+  fare: amount => `车费 $${amount}`,
   saveToMyBuses: '收藏到我的巴士',
   savedToMyBuses: '已收藏到我的巴士',
   wholeRoute: '整条路线',
