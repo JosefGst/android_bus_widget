@@ -1,5 +1,5 @@
 import type { ETA, ROUTS, Stop } from './fetch'
-import { createRouteStopSession, RouteStopDeps, RouteStopSession, selectedArrivals } from './route_stop_session'
+import { createRouteStopSession, RouteStopDeps, RouteStopSession, selectedArrivals, fareAt } from './route_stop_session'
 
 // A promise the test settles by hand, so replies can arrive in any order.
 type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void; reject: (e: Error) => void }
@@ -59,6 +59,24 @@ describe('Route page session', () => {
 
     expect(kmb.requests()).toBe(0)
     expect(session.getState().status).toBe('invalidRoute')
+  })
+
+  it('gives each position on the open Route its Fare, and none before a Route is open', async () => {
+    const kmb = fakeDeps()
+    session = createRouteStopSession(kmb.deps)
+    // Fares by seq for Route 1A outbound only.
+    const lookup = (route: { route: string; bound: string; service_type: string }, seq: string | number): number | null =>
+      route.route === '1A' && route.bound === 'O' ? ({ 1: 6.7, 2: 5.8 } as Record<number, number>)[Number(seq)] ?? null : null
+
+    expect(fareAt(session.getState(), '1', lookup)).toBeNull()
+
+    session.open({ route: '1A', bound: 'O', service_type: '1' })
+    kmb.routeStops[0].reply.resolve([routeStop('1A', 1, 'S1'), routeStop('1A', 2, 'S2'), routeStop('1A', 3, 'S3')])
+    kmb.routeInfo[0].reply.resolve(routeStop('1A', 0, ''))
+    await flush()
+
+    const state = session.getState()
+    expect([1, 2, 3].map(seq => fareAt(state, String(seq), lookup))).toEqual([6.7, 5.8, null])
   })
 
   it('loads the Route\'s Stops, their names and the header', async () => {
