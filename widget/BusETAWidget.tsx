@@ -65,30 +65,27 @@ function renderBody({ strings, sections, isLoading, error }: BusETAWidgetProps) 
               key={row.key}
               style={{
                 width: "match_parent",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
+                flexDirection: "column",
                 backgroundColor: ROW,
                 borderRadius: 14,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
+                flexGap: 2,
               }}
             >
-              <FlexWidget style={{ flexDirection: "row", alignItems: "center", flexGap: 8, flex: 1 }}>
+              <FlexWidget style={{ width: "match_parent", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <FlexWidget style={{ backgroundColor: WHITE, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2 }}>
                   <TextWidget text={row.route} style={{ fontSize: 22, fontWeight: "bold", color: INK }} />
                 </FlexWidget>
-                <FlexWidget style={{ flex: 1 }}>
-                  <TextWidget text={row.dest} style={{ fontSize: 14, color: MUTED }} maxLines={1} truncate="END" />
-                </FlexWidget>
+                {row.isNow ? (
+                  <FlexWidget style={{ backgroundColor: NOW_BACKGROUND, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2 }}>
+                    <TextWidget text={row.time} style={{ fontSize: 22, fontWeight: "bold", color: NOW_INK }} />
+                  </FlexWidget>
+                ) : (
+                  <TextWidget text={row.time} style={{ fontSize: 24, fontWeight: "bold", color: WHITE }} />
+                )}
               </FlexWidget>
-              {row.isNow ? (
-                <FlexWidget style={{ backgroundColor: NOW_BACKGROUND, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2 }}>
-                  <TextWidget text={row.time} style={{ fontSize: 22, fontWeight: "bold", color: NOW_INK }} />
-                </FlexWidget>
-              ) : (
-                <TextWidget text={row.time} style={{ fontSize: 24, fontWeight: "bold", color: WHITE }} />
-              )}
+              <TextWidget text={row.dest} style={{ fontSize: 14, color: MUTED }} maxLines={2} truncate="END" />
             </FlexWidget>
           ))}
         </FlexWidget>
