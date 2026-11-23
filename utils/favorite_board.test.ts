@@ -5,7 +5,7 @@ import { BoardDeps, loadFavoriteBoard, WIDGET_BOARD_DEPS } from './favorite_boar
 // A fake KMB API keyed by URL. Anything not listed fails like a network error.
 type FakeKmb = {
   // key: `${stop}/${route}/${service_type}` -> ETA rows, or 'fail'
-  etas?: Record<string, { route?: string; dir?: string; eta: string; dest?: string; destTc?: string }[] | 'fail'>
+  etas?: Record<string, { route?: string; dir?: string; seq?: number; eta: string; dest?: string; destTc?: string }[] | 'fail'>
   // key: stop id -> English name, or 'fail'
   stopNames?: Record<string, string | 'fail'>
   // key: stop id -> Traditional Chinese name (also sent as the Simplified name)
@@ -24,6 +24,7 @@ const loadBoard = (favorites: Parameters<typeof loadFavoriteBoard>[0], now: Date
 
 function stubKmb({ etas = {}, stopNames = {}, chineseStopNames = {}, generatedTimestamp = '2026-01-01T12:00:00Z' }: FakeKmb) {
   fakeDeps = {
+    fareFor: () => null,
     getStopsFor: async ids =>
       ids.flatMap(id => {
         const name = stopNames[id]
@@ -44,6 +45,7 @@ function stubKmb({ etas = {}, stopNames = {}, chineseStopNames = {}, generatedTi
         data: rows.map(r => ({
           route: r.route ?? route,
           dir: r.dir ?? 'O',
+          seq: r.seq ?? 1,
           service_type,
           dest_en: r.dest ?? 'X',
           ...(r.destTc ? { dest_tc: r.destTc, dest_sc: r.destTc } : {}),
@@ -77,7 +79,7 @@ describe('loadFavoriteBoard: grouping by Stop', () => {
     const { groups } = await loadBoard([{ stop: 'S1', route: '272P', service_type: '1' }], NOW, 'en')
 
     expect(groups).toEqual([
-      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] }] },
+      { stopName: 'Tuen Mun Station', stopIds: ['S1'], routes: [{ route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', fare: null, etas: [{ eta: at(5) }] }] },
     ])
   })
 
@@ -243,8 +245,8 @@ describe('loadFavoriteBoard: arrivals', () => {
     const { groups } = await loadBoard([fav], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
-      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(5) }] },
-      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', etas: [{ eta: at(8) }] },
+      { route: '272P', stop: 'S1', bound: 'O', service_type: '1', dest: 'X', fare: null, etas: [{ eta: at(5) }] },
+      { route: '272P', stop: 'S1', bound: 'I', service_type: '1', dest: 'X', fare: null, etas: [{ eta: at(8) }] },
     ])
   })
 
@@ -308,7 +310,7 @@ describe('loadFavoriteBoard: arrivals', () => {
 
     expect(groups).toEqual([
       { stopName: 'Broken Stop', stopIds: ['S1'], routes: [] },
-      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', etas: [{ eta: at(6) }] }] },
+      { stopName: 'Working Stop', stopIds: ['S2'], routes: [{ route: '272X', stop: 'S2', bound: 'O', service_type: '1', dest: 'X', fare: null, etas: [{ eta: at(6) }] }] },
     ])
   })
 
@@ -343,7 +345,7 @@ describe('loadFavoriteBoard: direction', () => {
     const { groups } = await loadBoard([{ stop: 'DH', route: '272S', service_type: '1', bound: 'O' }], NOW, 'en')
 
     expect(groups[0].routes).toEqual([
-      { route: '272S', stop: 'DH', bound: 'O', service_type: '1', dest: 'Science Park', etas: [{ eta: at(5) }] },
+      { route: '272S', stop: 'DH', bound: 'O', service_type: '1', dest: 'Science Park', fare: null, etas: [{ eta: at(5) }] },
     ])
   })
 
@@ -446,5 +448,30 @@ describe('loadFavoriteBoard: Stop lookup', () => {
       expect(urlsRequested()).not.toContain(BULK_URL)
       expect(await AsyncStorage.getItem('bus_stops_cache')).toBeNull()
     })
+  })
+})
+
+describe('loadFavoriteBoard: fares', () => {
+  // Fares for 272S outbound only: $9.5 at seq 3, $4.0 at seq 4.
+  const fareFor = (route: { route: string; bound: string; service_type: string }, seq: string | number): number | null =>
+    route.route === '272S' && route.bound === 'O' ? ({ 3: 9.5, 4: 4 } as Record<number, number>)[Number(seq)] ?? null : null
+
+  it('gives each Route row the Fare at the position KMB reports for its Stop and direction', async () => {
+    stubKmb({
+      etas: { 'DH/272S/1': [{ dir: 'O', seq: 3, eta: at(5) }, { dir: 'I', seq: 9, eta: at(8) }], 'DH2/272S/1': [{ dir: 'O', seq: 4, eta: at(6) }] },
+      stopNames: { DH: 'Diamond Hill', DH2: 'Other' },
+    })
+    fakeDeps = { ...fakeDeps, fareFor }
+
+    const { groups } = await loadBoard(
+      [{ stop: 'DH', route: '272S', service_type: '1' }, { stop: 'DH2', route: '272S', service_type: '1' }],
+      NOW,
+      'en',
+    )
+
+    expect(groups.map(g => g.routes.map(r => [r.bound, r.fare]))).toEqual([
+      [['O', 9.5], ['I', null]],
+      [['O', 4]],
+    ])
   })
 })

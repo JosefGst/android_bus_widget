@@ -11,6 +11,7 @@ const route = (code: string, stop: string, etas: string[]) => ({
   bound: 'O',
   service_type: '1',
   dest: 'X',
+  fare: null,
   etas: etas.map(eta => ({ eta })),
 })
 

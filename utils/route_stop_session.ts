@@ -4,6 +4,7 @@
 
 import { upcomingArrivals, UpcomingArrival } from './arrivals'
 import { ETA, fetchRouteSTOP, fetchStopETA, getCachedRoutes, ROUTS, Stop } from './fetch'
+import { fareFor, FareLookup } from './fares'
 import { getStopsFor } from './stops'
 
 // Same pace as My Buses: fresh enough for a countdown, slow enough not to trip the KMB CDN's 403s.
@@ -75,6 +76,11 @@ const sameRoute = (a: RouteRef | null, b: RouteRef | null): boolean =>
 export function selectedArrivals(state: RouteStopState, now: string, count: number): UpcomingArrival[] | null {
   if (!state.selected || !state.etaRows) return null
   return upcomingArrivals(state.etaRows, now, count, { dir: state.selected.bound, seq: state.selected.seq })
+}
+
+/** The Fare at a position (`seq`) on the open Route; null with no Route open, at the terminus or without fare data. */
+export function fareAt(state: RouteStopState, seq: string, lookup: FareLookup = fareFor): number | null {
+  return state.route ? lookup(state.route, seq) : null
 }
 
 export function createRouteStopSession(deps: RouteStopDeps = DEFAULT_DEPS): RouteStopSession {
