@@ -33,24 +33,24 @@ describe('widgetSections', () => {
         key: 'Fo Yin Road',
         stopName: 'Fo Yin Road',
         rows: [
-          { key: 'S1|272X|O', route: '272X', dest: 'To Tuen Mun Ferry Pier', time: '3 min', isNow: false },
-          { key: 'S1|272P|O', route: '272P', dest: 'To Tuen Mun Ferry Pier', time: '--', isNow: false },
+          { key: 'S1|272X|O', route: '272X', dest: 'Tuen Mun Ferry Pier', time: '3', unit: 'min', isNow: false },
+          { key: 'S1|272P|O', route: '272P', dest: 'Tuen Mun Ferry Pier', time: '--', unit: '', isNow: false },
         ],
       },
-      { key: 'Siu Hong Station', stopName: 'Siu Hong Station', rows: [{ key: 'S2|967|O', route: '967', dest: 'To Tuen Mun Ferry Pier', time: 'Now', isNow: true }] },
+      { key: 'Siu Hong Station', stopName: 'Siu Hong Station', rows: [{ key: 'S2|967|O', route: '967', dest: 'Tuen Mun Ferry Pier', time: 'Now', unit: '', isNow: true }] },
     ])
   })
 
   it('counts the minutes from now, not from when the board was loaded', () => {
-    expect(widgetSections(groups, inMinutes(2), STRINGS.en, 'en')[0].rows[0].time).toBe('1 min')
+    expect(widgetSections(groups, inMinutes(2), STRINGS.en, 'en')[0].rows[0]).toMatchObject({ time: '1', unit: 'min' })
   })
 
   it('writes the time in the chosen language and leaves Chinese Stop names as they are', () => {
     const chinese: StopGroup[] = [{ ...groups[1], stopName: '兆康站' }]
     expect(widgetSections(chinese, NOW, STRINGS.tc, 'tc')).toEqual([
-      { key: '兆康站', stopName: '兆康站', rows: [{ key: 'S2|967|O', route: '967', dest: '去 TUEN MUN FERRY PIER', time: '到站', isNow: true }] },
+      { key: '兆康站', stopName: '兆康站', rows: [{ key: 'S2|967|O', route: '967', dest: 'TUEN MUN FERRY PIER', time: '到站', unit: '', isNow: true }] },
     ])
-    expect(widgetSections([groups[0]], NOW, STRINGS.tc, 'tc')[0].rows[0].time).toBe('3 分')
+    expect(widgetSections([groups[0]], NOW, STRINGS.tc, 'tc')[0].rows[0]).toMatchObject({ time: '3', unit: '分鐘' })
   })
 
   it('leaves out Stops with no Routes to show', () => {
