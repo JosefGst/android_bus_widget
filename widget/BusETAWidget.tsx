@@ -74,8 +74,13 @@ function renderBody({ strings, sections, isLoading, error }: BusETAWidgetProps) 
                 paddingVertical: 6,
               }}
             >
-              <FlexWidget style={{ backgroundColor: WHITE, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2 }}>
-                <TextWidget text={row.route} style={{ fontSize: 22, fontWeight: "bold", color: INK }} />
+              <FlexWidget style={{ flexDirection: "row", alignItems: "center", flexGap: 8, flex: 1 }}>
+                <FlexWidget style={{ backgroundColor: WHITE, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2 }}>
+                  <TextWidget text={row.route} style={{ fontSize: 22, fontWeight: "bold", color: INK }} />
+                </FlexWidget>
+                <FlexWidget style={{ flex: 1 }}>
+                  <TextWidget text={row.dest} style={{ fontSize: 14, color: MUTED }} maxLines={1} truncate="END" />
+                </FlexWidget>
               </FlexWidget>
               {row.isNow ? (
                 <FlexWidget style={{ backgroundColor: NOW_BACKGROUND, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2 }}>

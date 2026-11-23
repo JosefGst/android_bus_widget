@@ -43,7 +43,7 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
       listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language, WIDGET_BOARD_DEPS))
     );
     const now = new Date().toISOString();
-    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, text)} />;
+    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, text, language)} />;
   } catch (e) {
     console.error("[Widget] ETA fetch failed:", e);
     return <BusETAWidget strings={text} error={text.widgetTapToRefresh} />;
