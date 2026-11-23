@@ -1,5 +1,5 @@
 import React from "react";
-import type { WidgetTaskHandlerProps } from "react-native-android-widget";
+import type { WidgetInfo, WidgetTaskHandlerProps } from "react-native-android-widget";
 
 import { loadFavoriteBoard, WIDGET_BOARD_DEPS } from "../utils/favorite_board";
 import { listForWidget } from "../utils/favorites";
@@ -34,7 +34,8 @@ function withTimeout<T>(ms: number, promise: Promise<T>): Promise<T> {
  * Loads the Favorite board and returns the finished widget. Never rejects:
  * any failure or timeout renders the "Tap to refresh" state instead.
  */
-export async function renderBusWidget(): Promise<React.JSX.Element> {
+export async function renderBusWidget(widgetInfo?: Pick<WidgetInfo, "width" | "screenInfo">): Promise<React.JSX.Element> {
+  const widthShare = widgetInfo ? widgetInfo.width / widgetInfo.screenInfo.screenWidthDp : undefined;
   const language = await getLanguage();
   const text = STRINGS[language];
   try {
@@ -43,10 +44,10 @@ export async function renderBusWidget(): Promise<React.JSX.Element> {
       listForWidget().then((favorites) => loadFavoriteBoard(favorites, new Date(), language, WIDGET_BOARD_DEPS))
     );
     const now = new Date().toISOString();
-    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, text)} />;
+    return <BusETAWidget strings={text} sections={widgetSections(board.groups, now, text, language)} widthShare={widthShare} />;
   } catch (e) {
     console.error("[Widget] ETA fetch failed:", e);
-    return <BusETAWidget strings={text} error={text.widgetTapToRefresh} />;
+    return <BusETAWidget strings={text} error={text.widgetTapToRefresh} widthShare={widthShare} />;
   }
 }
 
@@ -55,6 +56,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === "WIDGET_DELETED") return;
 
   // Every other action (added, update, resized, click) shows Loading, then refreshes the data.
-  props.renderWidget(<BusETAWidget strings={STRINGS[await getLanguage()]} isLoading={true} />);
-  props.renderWidget(await renderBusWidget());
+  props.renderWidget(<BusETAWidget strings={STRINGS[await getLanguage()]} isLoading={true} widthShare={props.widgetInfo.width / props.widgetInfo.screenInfo.screenWidthDp} />);
+  props.renderWidget(await renderBusWidget(props.widgetInfo));
 }
