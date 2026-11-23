@@ -2,22 +2,17 @@
 
 import { routeRow } from './arrivals'
 import type { StopGroup } from './favorite_board'
-import type { Language } from './language'
 import type { Strings } from './strings'
-import { displayPlaceName } from './string_formatting'
 
-export type WidgetRow = { key: string; route: string; dest: string; time: string; unit: string; isNow: boolean }
+export type WidgetRow = { key: string; route: string; time: string; isNow: boolean }
 export type WidgetSection = { key: string; stopName: string; rows: WidgetRow[] }
 
 /**
  * Sections in board order. The Stop name is a heading over its Routes rather than part of each row,
  * so it gets the widget's full width: launchers can draw the widget much smaller than its slot.
- * Each row carries the final destination (without the "To" label, which the widget draws itself
- * and drops on narrow tiles) so the direction is clear.
- * The ETA is two lines: the minutes (or "Now" / "--") and, under it, the unit.
  * Minutes are counted from `now`, so a widget drawn later than the board stays right.
  */
-export function widgetSections(groups: readonly StopGroup[], now: string, strings: Strings, language: Language): WidgetSection[] {
+export function widgetSections(groups: readonly StopGroup[], now: string, strings: Strings): WidgetSection[] {
   return groups
     .filter(group => group.routes.length > 0)
     .map(group => ({
@@ -28,9 +23,7 @@ export function widgetSections(groups: readonly StopGroup[], now: string, string
         return {
           key: `${route.stop}|${route.route}|${route.bound}`,
           route: route.route,
-          dest: displayPlaceName(route.dest, language),
-          time: next.kind === 'now' ? strings.arrivingNow : next.kind === 'minutes' ? String(next.minutes) : '--',
-          unit: next.kind === 'minutes' ? strings.minutesUnit : '',
+          time: next.kind === 'now' ? strings.arrivingNow : next.kind === 'minutes' ? strings.minutesShort(String(next.minutes)) : '--',
           isNow: next.kind === 'now',
         }
       }),
