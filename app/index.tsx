@@ -221,6 +221,7 @@ function RouteRowButton({ route, stopName, now, language, strings, onPress }: Ro
       <View style={styles.destination}>
         <Text style={styles.toLabel}>{strings.toDestination}</Text>
         <Text style={styles.destText}>{dest}</Text>
+        {route.fare !== null && <Text style={styles.fareText}>{strings.fare(route.fare.toFixed(1))}</Text>}
       </View>
       <View style={styles.times}>
         <NextArrival time={row.next} strings={strings} />
@@ -282,6 +283,7 @@ const styles = StyleSheet.create({
   destination: { flex: 1, minWidth: 0 },
   toLabel: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   destText: { fontSize: FONT_SIZES.body, fontFamily: FONTS.bold, fontWeight: '700', color: COLORS.ink },
+  fareText: { fontSize: FONT_SIZES.label, fontFamily: FONTS.regular, color: COLORS.inkMuted },
   times: { alignItems: 'flex-end', gap: 2 },
   minutesRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   minutes: { fontSize: FONT_SIZES.minutes, fontFamily: FONTS.bold, fontWeight: '700', lineHeight: FONT_SIZES.minutes + 4, color: COLORS.ink },

@@ -2,6 +2,7 @@
 // Shared by the My Favorites screen and the home-screen widget.
 
 import { arrivals, compareEtas } from './arrivals'
+import { fareFor, FareLookup } from './fares'
 import type { Favorite } from './favorites'
 import { ETA, fetchStopETA, KMBResponse, Stop } from './fetch'
 import { Language, localized } from './language'
@@ -11,15 +12,16 @@ import { stopDisplayName } from './string_formatting'
 // One ETA's time as KMB gave it; the Arrival (Now / N min) is worked out by utils/arrivals at render time.
 export type BoardEta = { eta: string }
 // dest: where the Route is heading, in the board's language as KMB writes it.
-export type BoardRoute = { route: string; stop: string; bound: string; service_type: string; dest: string; etas: BoardEta[] }
+// fare: the Fare at the Stop's position (seq) as KMB reports it; on a circular Route, the first one seen.
+export type BoardRoute = { route: string; stop: string; bound: string; service_type: string; dest: string; fare: number | null; etas: BoardEta[] }
 // stopIds: every Stop id merged into this group (several ids can share one normalized name).
 export type StopGroup = { stopName: string; stopIds: string[]; routes: BoardRoute[] }
 export type FavoriteBoard = { groups: StopGroup[]; generatedTimestamp: string }
 
-export type BoardDeps = { getStopsFor: (stopIds: string[]) => Promise<Stop[]> }
-const DEFAULT_DEPS: BoardDeps = { getStopsFor }
+export type BoardDeps = { getStopsFor: (stopIds: string[]) => Promise<Stop[]>; fareFor?: FareLookup }
+const DEFAULT_DEPS: BoardDeps = { getStopsFor, fareFor }
 // The widget never starts the full Stop list download (see StopLookupOptions in utils/stops).
-export const WIDGET_BOARD_DEPS: BoardDeps = { getStopsFor: stopIds => getStopsFor(stopIds, { downloadAll: false }) }
+export const WIDGET_BOARD_DEPS: BoardDeps = { getStopsFor: stopIds => getStopsFor(stopIds, { downloadAll: false }), fareFor }
 
 // Display name per Stop id. A Stop that cannot be loaded is left out; the board shows its id.
 async function loadStopNames(stopIds: string[], language: Language, deps: BoardDeps): Promise<Map<string, string>> {
@@ -74,7 +76,7 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
       // Two Favorites can cover one direction (a legacy one and a directed one); the first supplies the row.
       if (rowOwner.get(key) !== undefined && rowOwner.get(key) !== i) return
       rowOwner.set(key, i)
-      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), etas: [] }
+      const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), fare: (deps.fareFor ?? fareFor)({ route: row.route, bound: row.dir, service_type: favorite.service_type }, row.seq), etas: [] }
       group.routes.set(key, entry)
       entry.etas.push({ eta: row.eta })
     })
