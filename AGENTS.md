@@ -37,7 +37,6 @@ index.ts
                                        utils/time_formatting, components/RouteBadge, components/theme
 ```
 
-
 ## Agent skills
 
 ### Issue tracker

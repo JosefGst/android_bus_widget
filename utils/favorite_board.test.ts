@@ -329,6 +329,53 @@ describe('loadFavoriteBoard: arrivals', () => {
   })
 })
 
+describe('loadFavoriteBoard: direction', () => {
+  const both = [
+    { dir: 'O', eta: at(5), dest: 'Science Park' },
+    { dir: 'I', eta: at(8), dest: 'Diamond Hill' },
+  ]
+  const etas = { 'DH/272S/1': both }
+  const stopNames = { DH: 'Diamond Hill' }
+
+  it('shows only the saved direction for a directed Favorite', async () => {
+    stubKmb({ etas, stopNames })
+
+    const { groups } = await loadBoard([{ stop: 'DH', route: '272S', service_type: '1', bound: 'O' }], NOW, 'en')
+
+    expect(groups[0].routes).toEqual([
+      { route: '272S', stop: 'DH', bound: 'O', service_type: '1', dest: 'Science Park', etas: [{ eta: at(5) }] },
+    ])
+  })
+
+  it('shows one row per direction when both directions are saved', async () => {
+    stubKmb({ etas, stopNames })
+
+    const { groups } = await loadBoard([
+      { stop: 'DH', route: '272S', service_type: '1', bound: 'O' },
+      { stop: 'DH', route: '272S', service_type: '1', bound: 'I' },
+    ], NOW, 'en')
+
+    expect(groups[0].routes.map(r => [r.bound, r.etas])).toEqual([
+      ['O', [{ eta: at(5) }]],
+      ['I', [{ eta: at(8) }]],
+    ])
+  })
+
+  it('shows a legacy Favorite in both directions without duplicating rows or arrivals', async () => {
+    stubKmb({ etas, stopNames })
+
+    const { groups } = await loadBoard([
+      { stop: 'DH', route: '272S', service_type: '1' },
+      { stop: 'DH', route: '272S', service_type: '1', bound: 'O' },
+    ], NOW, 'en')
+
+    expect(groups[0].routes.map(r => [r.bound, r.etas])).toEqual([
+      ['O', [{ eta: at(5) }]],
+      ['I', [{ eta: at(8) }]],
+    ])
+  })
+})
+
 describe('loadFavoriteBoard: offline', () => {
   it('rejects when every ETA request fails, so callers can keep their last board', async () => {
     stubKmb({ etas: { 'S1/272P/1': 'fail', 'S2/272X/1': 'fail' }, stopNames: { S1: 'A', S2: 'B' } })

@@ -63,13 +63,17 @@ export async function loadFavoriteBoard(favorites: Favorite[], now: Date, langua
 
   // stopName -> its Stop ids and (stop+route+direction -> arrivals). Maps keep first-seen order.
   const groups = new Map<string, { stopIds: Set<string>; routes: Map<string, BoardRoute> }>()
+  const rowOwner = new Map<string, number>()
   favorites.forEach((favorite, i) => {
     const stopName = stopNames.get(favorite.stop) ?? favorite.stop
     const group = groups.get(stopName) ?? { stopIds: new Set<string>(), routes: new Map<string, BoardRoute>() }
     groups.set(stopName, group)
     group.stopIds.add(favorite.stop)
-    etaResponses[i]?.data.forEach(row => {
+    etaResponses[i]?.data.filter(row => favorite.bound === undefined || row.dir === favorite.bound).forEach(row => {
       const key = `${favorite.stop}|${row.route}|${row.dir}`
+      // Two Favorites can cover one direction (a legacy one and a directed one); the first supplies the row.
+      if (rowOwner.get(key) !== undefined && rowOwner.get(key) !== i) return
+      rowOwner.set(key, i)
       const entry = group.routes.get(key) ?? { route: row.route, stop: favorite.stop, bound: row.dir, service_type: favorite.service_type, dest: localized(row, 'dest', language), etas: [] }
       group.routes.set(key, entry)
       entry.etas.push({ eta: row.eta })

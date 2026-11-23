@@ -12,7 +12,7 @@ import { StopMap } from '../components/StopMap'
 import { MapResizeHandle } from '../components/MapResizeHandle'
 import { COLORS, FONT_SIZES, SCREEN_GUTTER, TOUCH_TARGET, FONTS } from '../components/theme'
 import { useUserLocation } from '../components/use_user_location'
-import { add as addFavorite, Favorite, includesFavorite, list as listFavorites } from '../utils/favorites'
+import { add as addFavorite, Favorite, favoriteFor, includesFavorite, list as listFavorites } from '../utils/favorites'
 import { ROUTS } from '../utils/fetch'
 import { localized } from '../utils/language'
 import { DEFAULT_MAP_FRACTION, loadMapSize, mapSizeName, nextMapSize, saveMapSize, snapFraction } from '../utils/map_size'
@@ -117,16 +117,22 @@ export default function RoutesStopScreen(): React.JSX.Element {
 
   const onSave = useCallback(async (item: ROUTS) => {
     // add() is idempotent and serialized, so rapid taps can't duplicate or lose a Favorite.
-    const saved = await addFavorite({ route: item.route, service_type: item.service_type, stop: item.stop })
-    if (!saved) console.error('Failed to save Favorite')
+    const saved = await addFavorite(favoriteFor(item, item.stop))
+    if (!saved) {
+      console.error('Failed to save Favorite')
+      await reloadFavorites()
+      return
+    }
     await reloadFavorites()
-  }, [reloadFavorites])
+    // Saved: show the user where it landed. My Buses re-reads its Favorites when it gains focus.
+    router.navigate('/')
+  }, [reloadFavorites, router])
 
   const nowIso = new Date(now).toISOString()
   const renderCard = (item: ROUTS): React.JSX.Element => (
     <SelectedStopCard
       arrivals={selectedArrivals(state, nowIso, 2)}
-      saved={includesFavorite(favorites, { route: item.route, service_type: item.service_type, stop: item.stop })}
+      saved={includesFavorite(favorites, favoriteFor(item, item.stop))}
       onSave={() => onSave(item)}
       language={language}
       strings={strings}

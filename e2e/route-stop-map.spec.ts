@@ -117,14 +117,11 @@ test('Whole route fits all stops back into view after zooming to one', async ({ 
   await expect(pin(page, 1)).toHaveClass(/selected/);
 });
 
-test('Save to My Buses saves the stop without leaving the screen', async ({ page }) => {
+test('Save to My Buses saves the stop and returns to My Buses', async ({ page }) => {
   await stopRow(page, 2, 'Yau Ma Tei Map Stop').click();
   await page.getByRole('button', { name: 'Save to My Buses' }).click();
 
-  await expect(page.getByRole('button', { name: 'Saved to My Buses' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: `Route: ${MAP_ROUTE}` })).toBeVisible();
-
-  await page.getByRole('tab', { name: 'My Buses' }).click();
+  await expect(page.getByRole('heading', { name: 'My Buses' })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Open N29 at Yau Ma Tei Map Stop/ })).toBeVisible();
 });
 
